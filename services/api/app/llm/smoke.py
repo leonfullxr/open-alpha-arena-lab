@@ -201,7 +201,7 @@ def _create_competition(
     root = Path(__file__).resolve().parents[4]
     try:
         rules = json.loads((root / "configs/alpha_2025_baseline.json").read_text("utf-8"))
-        prompt = (root / "prompts/baseline-v1.md").read_bytes()
+        prompt = (root / "prompts/baseline-v2.md").read_bytes()
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         raise SmokeRunError("SMOKE_BASELINE_UNAVAILABLE") from None
     rules["inference_budget_usd"] = format(config["max_spend_usd"], "f")
@@ -230,7 +230,7 @@ def _create_competition(
                 PromptVersion(
                     id=prompt_id,
                     name=f"live-smoke-{competition_id}",
-                    version=1,
+                    version=2,
                     template_bytes=prompt,
                     sha256=sha256_hex(prompt),
                 )

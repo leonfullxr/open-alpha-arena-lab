@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -9,7 +10,8 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from app.db.models import Account, AgentRun, Competition
+from app.db.models import Account, AgentRun, Competition, MarketSnapshot, PromptVersion
+from app.llm.inputs import build_agent_request_bytes
 from app.llm.smoke import (
     _create_competition,
     _load_config,
@@ -25,6 +27,7 @@ from app.market.types import (
     MarketQuote,
     MarketQuoteSet,
 )
+from app.worker import _provider_config, build_agent_input
 from sqlalchemy import create_engine, select, text
 from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import sessionmaker
@@ -128,7 +131,7 @@ def test_smoke_setup_and_preflight_on_migrated_postgres_without_provider_calls()
         competition_id = _create_competition(factory, repo_config, snapshot_receipt)
         with factory() as db:
             competition = db.get(Competition, competition_id)
-            assert competition is not None
+            assert competition is not None and competition.started_at is not None
             agents = db.scalars(
                 select(AgentRun)
                 .where(AgentRun.competition_id == competition_id)
@@ -142,6 +145,30 @@ def test_smoke_setup_and_preflight_on_migrated_postgres_without_provider_calls()
             assert competition.rules_bytes
             assert INDICATOR_POLICY in competition.rules_bytes.decode("utf-8")
             assert str(INDICATOR_WARMUP_BARS) in competition.rules_bytes.decode("utf-8")
+            prompt = db.get(PromptVersion, agents[0].prompt_version_id)
+            account = db.scalar(select(Account).where(Account.agent_run_id == agents[0].id))
+            snapshot = db.get(MarketSnapshot, snapshot_receipt.snapshot_id)
+            assert prompt is not None and prompt.version == 2
+            assert account is not None and snapshot is not None
+            expected_prompt = (root / "prompts/baseline-v2.md").read_bytes()
+            assert prompt.template_bytes == expected_prompt
+            settings = json.loads(agents[0].model_settings_bytes)
+            provider_config = _provider_config(agents[0].provider, agents[0].model, settings)
+            user_prompt = build_agent_input(
+                logical_at=competition.started_at + timedelta(seconds=180),
+                competition=competition,
+                snapshot=snapshot,
+                account=account,
+                positions=(),
+            )
+            request_body = json.loads(
+                build_agent_request_bytes(
+                    provider_config,
+                    system_prompt_bytes=prompt.template_bytes,
+                    user_prompt_bytes=user_prompt,
+                )
+            )
+            assert request_body["messages"][0]["content"] == expected_prompt.decode("utf-8")
 
         _preflight_smoke_inputs(factory, competition_id, snapshot_receipt, repo_config, rounds=1)
     finally:

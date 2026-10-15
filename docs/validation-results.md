@@ -4,9 +4,11 @@ This record distinguishes primary checks from delegate reports. Production has n
 
 ## Primary platform checks
 
-At `0aa4618`, a fresh migrated PostgreSQL database passed the complete backend suite: 76 tests. The funding checkpoint `2733cf0` passed 104 tests in an isolated checkout against another fresh migrated database. Ruff, strict source mypy, web type checking/build and fourteen Worker tests passed at that checkpoint. Later execution-evidence and collector changes need their final combined run.
+The primary ran the complete backend suite at `3fbba44` against a disposable PostgreSQL database migrated through all ten Alembic revisions: **122 passed**. This includes the twenty-round/two-agent worker competition, a subprocess restart after round ten, exact ledger reconciliation, competing execution workers, stale fences, crash rollback, immutable evidence, safe public exports and authorization. Ruff, strict mypy over 56 implementation files, generated contracts, web type checking/build, fifteen Worker tests and Wrangler's deployment dry run passed. Alembic reported no schema drift. Test warnings came from upstream Starlette/httpx compatibility and Alembic's legacy path separator.
 
-The primary collected a trusted six-symbol Hyperliquid snapshot and approximately 25,900 candles. A second collection exposed an append-only candle update bug; that restart path is being corrected. Actual hourly BTC funding records had 54 ms and 6 ms offsets after the hour, which informed the bounded five-second matching policy. No genuine model call has been sent yet.
+A fresh real Hyperliquid collection stored 3,066 completed candles and a trusted six-symbol snapshot. A repeated collection appended a new snapshot without rewriting candles. The earlier immutable-update failure is fixed: completed candles are append-only, contradictory facts fail closed, catch-up uses bounded chunks, and feature windows use the frozen `trailing_500_v1` policy. A candle fetch or gap failure still publishes fresh trusted prices for protective exits, while new inference stops before an attempt or spend reservation. Actual hourly BTC funding records had 54 ms and 6 ms offsets after the hour, which informed the bounded five-second matching policy.
+
+The genuine two-model smoke is in progress. Its first two provider calls returned HTTP 429; no genuine model decision or fill is claimed. The exact 48,894-byte request artifact was independently SHA-256 verified in the browser. No provider error body or transport header is published.
 
 Both production npm audits returned zero findings. The Python audit found one development-only pytest advisory, duplicated by the advisory feed. The constraint was raised to `>=9.0.3,<10`, the lock resolved pytest 9.1.1, and the repeat installed-package audit returned no known vulnerabilities. These are dated dependency checks, not a guarantee against unknown vulnerabilities.
 
@@ -79,8 +81,25 @@ All thirteen deliberate wrong implementations were killed. The first sweep expos
 
 Read-only Muse reviews covered infrastructure, landing, frontend, the platform and funding checkpoints. The platform review found the multi-agent creation rejection, protective-exit account projection loss and incorrect benchmark fee key; all were corrected. Its funding review at `2733cf0` found no further medium-or-higher issue in its scope. Primary runtime verification subsequently found migration/collector paths absent from that source-only verdict; a review verdict does not replace executable checks.
 
-The runtime implementer reports a twenty-round, two-agent PostgreSQL run using actual Alembic migrations, exact reconciliation and an accelerated schema-local database clock. A subprocess reconnects after round ten. Separate cases cover crash rollback, competing executors and expired fences. The primary must rerun this final checkpoint before acceptance. SQLite numeric storage is excluded from authoritative reconciliation evidence.
+The primary reran the final PostgreSQL worker proof through real Alembic migrations. Its schema-local database clock advances through the frozen 180-second cadence; deadlines stay immutable. SQLite numeric storage is excluded from authoritative reconciliation evidence.
 
-[Landing validation](landing-validation.md) records all five requested viewport captures, connected motion, resize, reduced motion, canvas failure and the observed loading budget. Primary preliminary simulation checks passed chart selection, series toggling, keyboard tooltips, pagination, model navigation, mobile overflow fixes and browser-side artifact hashes. Final v3 replay, funding, admin and live-mode browser checks remain pending.
+[Landing validation](landing-validation.md) records all five requested viewport captures, connected motion, resize, reduced motion, canvas failure and the observed loading budget. Browser checks on the v3 replay confirmed fill-to-decision linkage, exact rules hashes, position lifecycle facts and the funding-history empty state. The admin browser created a provider reference, prompt version and draft competition, then rejected start with a missing credential and checked configuration without contacting a provider. Long names and SHA-256 feedback exposed a mobile grid overflow; the corrected page measures 390 px at a 390 px viewport. The genuine live dashboard connected its event stream, displayed current market quotes and exposed the real provider failures.
+
+## Final boundary mutations
+
+In an isolated checkout of `3fbba44`, all ten deliberate changes below failed their behavioral PostgreSQL or runtime tests. The unchanged focused suite passed five tests; each source file was restored byte for byte. These supplement the finance, authentication, funding and Worker mutations above.
+
+| Guard deliberately broken | Final result |
+| --- | --- |
+| Export transaction is read-only | Killed |
+| Export uses a repeatable snapshot during a concurrent write | Killed |
+| Unknown rules fields withhold exact raw bytes | Killed |
+| Round quote pin cannot change after first assignment | Killed |
+| Round's other evidence columns remain immutable | Killed |
+| Candle catch-up fetch stays bounded | Killed |
+| Stale candle windows block inference | Killed |
+| Candle failure retains fresh protective prices | Killed |
+| Live input requires complete warmed evidence | Killed |
+| Smoke account insertion follows its agent flush | Killed |
 
 The metadata service processed nineteen original prose/screenshot artifacts. It reported no AI provenance or invisible Unicode. Eight WebP screenshots lost ICC profile metadata; no pixel removal or statistical watermark detection was performed. Prose edits use plain language; no claim of human authorship or undetectability follows from these checks.
