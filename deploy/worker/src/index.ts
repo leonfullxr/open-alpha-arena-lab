@@ -234,7 +234,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     const rateLimit = await checkRateLimit(env, `admin:${verified.claims.sub}`);
     if (rateLimit) return rateLimit;
     if (isAdminApi) return proxy(request, url, env, verified.token);
-    const assetPath = isAdminPage ? "/admin/index.html" : url.pathname;
+    const assetPath = isAdminPage ? "/admin/" : url.pathname;
     return secureAsset(await env.ASSETS.fetch(assetRequest(request, assetPath)), true);
   }
 
@@ -249,7 +249,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
   }
 
   if (url.pathname === "/simulation" || url.pathname.startsWith("/simulation/")) {
-    return secureAsset(await env.ASSETS.fetch(assetRequest(request, "/index.html")));
+    return secureAsset(await env.ASSETS.fetch(assetRequest(request, "/")));
   }
   return secureAsset(await env.ASSETS.fetch(request));
 }

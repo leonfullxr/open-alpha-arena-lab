@@ -1,17 +1,31 @@
 # Edge Worker
 
-The Worker serves Vite assets from `dist/web`, applies the anchored public API allowlist, and protects `/admin`, `/admin-assets/*`, and the explicit admin API routes with Cloudflare Access JWT verification. Its origin is fixed in code at `https://arena-origin.leonfuller.com`. It forwards a verified admin JWT only in `X-Arena-User-JWT`; `X-Arena-Origin-Token` and the Cloudflare Access service token authenticate transport to the origin independently.
+The Worker serves Vite assets from `dist/web`, applies the anchored public API allowlist, and protects `/admin`, `/admin-assets/*`, and explicit admin API routes with Cloudflare Access JWT verification. Its API origin is fixed in code at `https://arena-origin.leonfuller.com`.
 
-The checked-in Wrangler config has no route, custom domain, Workers subdomain, or preview URL enabled. It also has no rate-limit namespace because that identifier belongs to the target account. API requests fail closed with `503` until an account-owned `ARENA_RATE_LIMITER` binding exists. Before enabling an entry point, add a Wrangler `ratelimits` binding named `ARENA_RATE_LIMITER` with a positive integer namespace unique to the account and a reviewed `simple` limit and period. Do not deploy a placeholder namespace.
+The default `open-alpha-arena-edge` Worker remains disabled: it has no route, Workers.dev hostname, preview URL, or account-owned rate-limit namespace. The named `landing` environment deploys only the frontend as `open-alpha-arena-landing` on Workers.dev. It has no backend secrets, Access configuration, or rate-limit binding. Therefore public API requests fail closed with `503`, admin pages/APIs remain unavailable with `403`, and unknown API paths return `404`. Even if Access is configured later, API forwarding remains unavailable until a reviewed rate-limit binding and backend secrets are added.
 
-Set `ACCESS_ISSUER`, `ACCESS_AUDIENCE`, and the comma-separated exact `ADMIN_SUBJECTS` list as non-secret Worker variables. Add these secret bindings through Wrangler's secret interface:
+Build and verify before a release:
 
 ```sh
-npx wrangler secret put ARENA_ORIGIN_TOKEN
-npx wrangler secret put CF_ACCESS_CLIENT_ID
-npx wrangler secret put CF_ACCESS_CLIENT_SECRET
+npm ci
+npm run build
+npm ci --prefix deploy/worker
+npm --prefix deploy/worker run typecheck
+npm --prefix deploy/worker test
+npm --prefix deploy/worker run verify:assets
 ```
 
-The deploy command is deliberately absent from the workflow. Local review uses `npm run deploy:dry-run` after the frontend build. Remote deployment, route enablement, Access application configuration, origin tunnel checks, and account-bound rate-limit provisioning require a separate release review.
+`verify:assets` starts the real Wrangler local runtime with the built `dist/web` directory, then checks that `/simulation` and nested simulation URLs return HTML directly without a redirect, `/` remains available, admin access fails closed, unknown API paths return `404`, and public API calls fail closed with `503` when no rate limiter is configured.
+
+After release review, deploy only the frontend environment with:
+
+```sh
+cd deploy/worker
+npx wrangler deploy --env landing
+```
+
+This publishes the frontend to the Worker’s Workers.dev hostname only. It does not publish or enable the API, provision rate limiting, configure an Access application, or expose admin functionality. Do not enable the default Worker until its route, Access policy, origin secrets, and account-owned rate-limit namespace have a separate reviewed configuration.
+
+The Worker config intentionally contains no origin or Access service secrets. If a later reviewed environment needs origin proxying, configure `ARENA_ORIGIN_TOKEN`, `CF_ACCESS_CLIENT_ID`, and `CF_ACCESS_CLIENT_SECRET` as Wrangler secrets. Set `ACCESS_ISSUER`, `ACCESS_AUDIENCE`, and the exact comma-separated `ADMIN_SUBJECTS` as non-secret variables.
 
 `style-src 'unsafe-inline'` is limited to CSS declarations because the landing and simulation interfaces use React style properties for measured canvas dimensions, tile positions, and labels. Scripts remain restricted to same-origin files; no inline script allowance is present.
