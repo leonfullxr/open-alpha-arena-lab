@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-bookworm@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4
+        env:
+          POSTGRES_DB: arena
+          POSTGRES_USER: arena
+          POSTGRES_PASSWORD: ci-only-arena-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U arena -d arena"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      APP_MODE: demo
+      AUTH_MODE: local
+      DATABASE_URL: postgresql+psycopg://arena:ci-only-arena-password@localhost:5432/arena
+      MARKET_PROVIDER: demo
+      EXECUTION_MODE: paper
+      ENABLE_REAL_TRADING: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: npm ci
+      - run: npm run api:generate
+      - run: git diff --exit-code -- apps/web/src/api/public.generated.ts apps/web/src/admin/admin.generated.ts
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm ci --prefix deploy/worker
+      - run: npm --prefix deploy/worker run typecheck
+      - run: npm --prefix deploy/worker test
+      - run: npm --prefix deploy/worker run deploy:dry-run
+      - run: uv sync --frozen
+      - run: PYTHONPATH=services/api uv run python scripts/export-openapi.py
+      - run: git diff --exit-code -- contracts/public.openapi.json contracts/admin.openapi.json
+      - run: PYTHONPATH=services/api uv run python -m app.cli migrate
+      - run: uv run ruff check services/api tests
+      - run: uv run mypy services/api
+      - run: PYTHONPATH=services/api uv run pytest

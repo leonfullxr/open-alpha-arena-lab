@@ -16,3 +16,11 @@ htmlcov/
 backups/
 *.pdf
 OPEN_ALPHA_ARENA_LAB_CODEX_MASTER_PROMPT.md
+
+.wrangler/
+.dev.vars
+.dev.vars.*
+*.tsbuildinfo
+.mypy_cache/
+*.sqlite3
+*.sqlite3-*
