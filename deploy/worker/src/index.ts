@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}$`),
   new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}/(?:equity|leaderboard|events|decisions|positions|trades|export|stream)$`),
   new RegExp(`^${PUBLIC_ROOT}/models/${ID}$`),
+  new RegExp(`^${PUBLIC_ROOT}/decisions/${ID}/artifact$`),
   new RegExp(`^${PUBLIC_ROOT}/ticker$`),
   new RegExp(`^${PUBLIC_ROOT}/status$`),
 ];
@@ -94,7 +95,6 @@ async function verifyAdmin(request: Request, env: Env): Promise<{ token: string;
       requiredClaims: ["exp", "iat", "sub"],
     });
     if (typeof verified.payload.sub !== "string" || !allowedSubjects.has(verified.payload.sub)) return null;
-    if (typeof verified.payload.iat !== "number" || typeof verified.payload.exp !== "number") return null;
     return { token, claims: verified.payload };
   } catch {
     return null;

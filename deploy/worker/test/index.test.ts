@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/index";
 
 const apiOrigin = "https://arena-origin.leonfuller.com";
+const accessIssuer = "https://tenant.cloudflareaccess.com";
+const accessAudience = "admin-audience";
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
@@ -19,6 +21,25 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
     ARENA_RATE_LIMITER: { limit: vi.fn(async () => ({ success: true })) },
     ...overrides,
   };
+}
+
+async function signedAccessToken(
+  privateKey: CryptoKey,
+  kid: string,
+  overrides: {
+    issuer?: string;
+    audience?: string;
+    subject?: string | null;
+    issuedAt?: boolean;
+    expiresAt?: string | null;
+  } = {},
+): Promise<string> {
+  let token = new SignJWT({}).setProtectedHeader({ alg: "RS256", kid });
+  token = token.setIssuer(overrides.issuer ?? accessIssuer).setAudience(overrides.audience ?? accessAudience);
+  if (overrides.subject !== null) token = token.setSubject(overrides.subject ?? "admin-user-1");
+  if (overrides.issuedAt !== false) token = token.setIssuedAt();
+  if (overrides.expiresAt !== null) token = token.setExpirationTime(overrides.expiresAt ?? "5m");
+  return token.sign(privateKey);
 }
 
 afterEach(() => {
@@ -168,29 +189,25 @@ describe("edge request boundaries", () => {
   });
 
   it("forwards only the verified admin JWT in the dedicated backend header", async () => {
-    const issuer = "https://tenant.cloudflareaccess.com";
-    const audience = "admin-audience";
+    const issuer = accessIssuer;
+    const audience = accessAudience;
     const { publicKey, privateKey } = await generateKeyPair("RS256");
     const jwk = await exportJWK(publicKey);
     jwk.kid = "edge-test-key";
     jwk.alg = "RS256";
     jwk.use = "sig";
-    const token = await new SignJWT({})
-      .setProtectedHeader({ alg: "RS256", kid: jwk.kid })
-      .setIssuer(issuer)
-      .setAudience(audience)
-      .setSubject("admin-user-1")
-      .setIssuedAt()
-      .setExpirationTime("5m")
-      .sign(privateKey);
-    const unauthorizedToken = await new SignJWT({})
-      .setProtectedHeader({ alg: "RS256", kid: jwk.kid })
-      .setIssuer(issuer)
-      .setAudience(audience)
-      .setSubject("visitor-user-2")
-      .setIssuedAt()
-      .setExpirationTime("5m")
-      .sign(privateKey);
+    const token = await signedAccessToken(privateKey, String(jwk.kid));
+    const invalidKeyPair = await generateKeyPair("RS256");
+    const invalidTokens = await Promise.all([
+      signedAccessToken(privateKey, String(jwk.kid), { audience: "wrong-audience" }),
+      signedAccessToken(privateKey, String(jwk.kid), { issuer: "https://wrong.cloudflareaccess.com" }),
+      signedAccessToken(privateKey, String(jwk.kid), { expiresAt: null }),
+      signedAccessToken(privateKey, String(jwk.kid), { issuedAt: false }),
+      signedAccessToken(privateKey, String(jwk.kid), { subject: null }),
+      signedAccessToken(privateKey, String(jwk.kid), { expiresAt: "-10s" }),
+      signedAccessToken(invalidKeyPair.privateKey, String(jwk.kid)),
+      signedAccessToken(privateKey, String(jwk.kid), { subject: "visitor-user-2" }),
+    ]);
 
     const originFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('{"ok":true}', { status: 200, headers: { "content-type": "application/json" } }));
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -214,11 +231,15 @@ describe("edge request boundaries", () => {
         origin: "https://arena.test",
       },
     });
-    const unauthorized = await worker.fetch(new Request("https://arena.test/api/v1/admin/status", {
-      headers: { "cf-access-jwt-assertion": unauthorizedToken },
-    }), env);
-    expect(unauthorized.status).toBe(403);
+    const denied = await Promise.all(invalidTokens.map((invalidToken) => worker.fetch(
+      new Request("https://arena.test/api/v1/admin/status", {
+        headers: { "cf-access-jwt-assertion": invalidToken },
+      }),
+      env,
+    )));
+    expect(denied.map((response) => response.status)).toEqual(Array(invalidTokens.length).fill(403));
     expect(originFetch).not.toHaveBeenCalled();
+    expect(env.ASSETS.fetch).not.toHaveBeenCalled();
 
     const response = await worker.fetch(request, env);
 
