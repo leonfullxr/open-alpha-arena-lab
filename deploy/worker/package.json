@@ -6,7 +6,8 @@
     "types": "wrangler types",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "deploy:dry-run": "wrangler deploy --dry-run"
+    "deploy:dry-run": "wrangler deploy --dry-run",
+    "verify:assets": "node scripts/verify-assets-routing.mjs"
   },
   "dependencies": {
     "jose": "6.2.12"

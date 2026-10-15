@@ -266,15 +266,47 @@ describe("edge request boundaries", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("rewrites simulation routes to the landing entry and sends a restrictive CSP", async () => {
+  it("rewrites simulation routes to the canonical landing path and sends a restrictive CSP", async () => {
     const fetchAsset = vi.fn(async (request: Request) => new Response(new URL(request.url).pathname));
     const env = makeEnv({ ASSETS: { ...makeEnv().ASSETS, fetch: fetchAsset } });
     const response = await worker.fetch(new Request("https://arena.test/simulation/competition/c1"), env);
+    const exactRoute = await worker.fetch(new Request("https://arena.test/simulation"), env);
 
-    expect(await response.text()).toBe("/index.html");
+    expect(await response.text()).toBe("/");
+    expect(await exactRoute.text()).toBe("/");
+    expect(fetchAsset.mock.calls.map(([request]) => new URL(request.url).pathname)).toEqual(["/", "/"]);
     expect(response.headers.get("content-security-policy")).toContain("script-src 'self'");
     expect(response.headers.get("content-security-policy")).toContain("style-src 'self' 'unsafe-inline'");
     expect(response.headers.get("x-frame-options")).toBe("DENY");
+  });
+
+  it("rewrites authorized admin pages to the canonical protected directory", async () => {
+    const { publicKey, privateKey } = await generateKeyPair("RS256");
+    const jwk = await exportJWK(publicKey);
+    jwk.kid = "edge-admin-page-key";
+    jwk.alg = "RS256";
+    jwk.use = "sig";
+    const token = await signedAccessToken(privateKey, String(jwk.kid));
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      return url === `${accessIssuer}/cdn-cgi/access/certs`
+        ? Response.json({ keys: [jwk] })
+        : new Response("unexpected outbound request", { status: 500 });
+    }));
+    const fetchAsset = vi.fn(async (request: Request) => new Response(new URL(request.url).pathname));
+    const env = makeEnv({
+      ASSETS: { ...makeEnv().ASSETS, fetch: fetchAsset },
+      ACCESS_ISSUER: accessIssuer,
+      ACCESS_AUDIENCE: accessAudience,
+      ADMIN_SUBJECTS: "admin-user-1",
+    });
+    const response = await worker.fetch(new Request("https://arena.test/admin/competitions", {
+      headers: { "cf-access-jwt-assertion": token },
+    }), env);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("/admin/");
+    expect(fetchAsset).toHaveBeenCalledTimes(1);
   });
 
   it("keeps admin entry routes behind Access and rejects unlisted admin APIs", async () => {
