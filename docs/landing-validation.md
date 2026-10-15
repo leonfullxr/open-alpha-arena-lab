@@ -27,3 +27,5 @@ After simulation integration, a production-preview browser trace loaded five Jav
 ## Limits
 
 Safari, physical mobile hardware and a complete assistive-technology session have not been tested. The recorded captures establish the landing checkpoint; later shared-shell changes require a final regression check. Production hosting remains unreviewed and undeployed.
+
+Final integration budget check, 2026-10-15: all seventeen emitted JavaScript/CSS files across the landing, simulation and admin entries total 143,777 bytes at gzip level 6 (165,997 bytes at level 1). Even that complete-build sum is below the landing's 256,000-byte allowance; fonts and artwork are excluded. The accepted landing-only browser trace and animation observations above remain the direct loading/motion measurements. Final Home and Methodology navigation and the landing's zero API requests were checked again during simulation regression.

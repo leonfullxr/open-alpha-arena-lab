@@ -8,7 +8,7 @@ The primary ran the complete backend suite after the independent-review correcti
 
 A fresh real Hyperliquid collection stored 3,066 completed candles and a trusted six-symbol snapshot. A repeated collection appended a new snapshot without rewriting candles. The earlier immutable-update failure is fixed: completed candles are append-only, contradictory facts fail closed, catch-up uses bounded chunks, and feature windows use the frozen `trailing_500_v1` policy. A candle fetch or gap failure still publishes fresh trusted prices for protective exits, while new inference stops before an attempt or spend reservation. Actual hourly BTC funding records had 54 ms and 6 ms offsets after the hour, which informed the bounded five-second matching policy.
 
-The genuine five-round/two-model smoke finished with ten terminal HTTP 429 responses. Its ten retained spend reservations total $0.518984, below the configured $2.50 cap; actual provider usage and billing were not reported. Both accounts reconcile exactly, with no fills or trade journals. Successful model and fill acceptance remain pending. The exact first 48,894-byte request artifact was independently SHA-256 verified in the browser. Historical v1 requests remain unchanged; subsequent runs use the corrected version-2 prompt. No provider error body or transport header is published. The [public API archive](evidence/provider-smoke-2026-10-15.json) contains all ten byte-preserving request artifacts and the safe finished-run export; [the smoke record](live-smoke.md) explains its limits.
+The genuine five-round/two-model smoke finished with ten terminal HTTP 429 responses. Its ten retained spend reservations total $0.518984, below the configured $2.50 cap; actual provider usage and billing were not reported. Both accounts reconcile exactly, with no fills or trade journals. Successful model and fill acceptance remain pending. The exact first 48,894-byte request artifact was independently SHA-256 verified in the browser. Archive checks verified all ten request hashes, the canonical snapshot hash inside each request, identical snapshots/prompts/logical times within each round, matching frozen-rules hashes and the body-size limit. Historical v1 requests remain unchanged; subsequent runs use the corrected version-2 prompt. No provider error body or transport header is published. The [public API archive](evidence/provider-smoke-2026-10-15.json) contains all ten byte-preserving request artifacts and the safe finished-run export; [the smoke record](live-smoke.md) explains its limits.
 
 Both production npm audits returned zero findings. The Python audit found one development-only pytest advisory, duplicated by the advisory feed. The constraint was raised to `>=9.0.3,<10`, the lock resolved pytest 9.1.1, and the repeat installed-package audit returned no known vulnerabilities. These are dated dependency checks, not a guarantee against unknown vulnerabilities.
 
@@ -57,6 +57,20 @@ The first funding sweep killed eight of thirteen mutations. New first-insert and
 | Hourly rate is not divided again | Killed |
 | Funding payment sign | Killed |
 
+## Review remediation mutations
+
+The primary killed all seven additional mutations after the final review. One initial fault injection exposed a test session left open after a failed assertion; cleanup now closes it in `finally`, and the repeated mutation sweep finished with assertion failures rather than timeouts. Source bytes were restored after every run.
+
+| Guard deliberately broken | Final result |
+| --- | --- |
+| Accepted response survives inference lease expiry | Killed |
+| Reconciliation precedes inline protective effects | Killed |
+| Tiny journal imbalance is reported exactly | Killed |
+| Malformed candle is normalized at the HTTP boundary | Killed |
+| Published HTTP status is an integer | Killed |
+| Published HTTP status stays within 100–599 | Killed |
+| Published HTTP status preserves the recorded value | Killed |
+
 ## Worker proxy mutations
 
 All thirteen deliberate wrong implementations were killed. The first sweep exposed missing JWT cases, which were added before the final pass. JOSE owns required-claim validation; its redundant manual check was removed.
@@ -80,6 +94,8 @@ All thirteen deliberate wrong implementations were killed. The first sweep expos
 ## Independent review and runtime evidence
 
 Read-only Muse reviews covered infrastructure, landing, frontend, the platform and funding checkpoints. The platform review found the multi-agent creation rejection, protective-exit account projection loss and incorrect benchmark fee key; all were corrected. Its funding review at `2733cf0` found no further medium-or-higher issue in its scope. Primary runtime verification subsequently found migration/collector paths absent from that source-only verdict; a review verdict does not replace executable checks. The final Opus fallback review found an expired inference lease incorrectly blocking accepted execution, a malformed-candle exception skipping fresh prices, inline protection preceding reconciliation, and a leftover SQLite journal tolerance. Each was corrected with a behavioral regression. Twelve accepted responses now progress after lease expiry and a database reconnect; wrong fences and late inference remain rejected. Ledger comparison runs before inline protection, and all dialects require exact journal balance.
+
+A read-only Opus follow-up at `0256f55` found no confirmed medium-or-higher product defect. Its remaining clock-flake note was corrected by sharing the existing fixture deadline; the four recovery cases passed again. The review loop stopped on that verdict, with primary checks retained.
 
 The primary reran the final PostgreSQL worker proof through real Alembic migrations. Its schema-local database clock advances through the frozen 180-second cadence; deadlines stay immutable. SQLite numeric storage is excluded from authoritative reconciliation evidence.
 
