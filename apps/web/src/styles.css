@@ -87,7 +87,7 @@ h1, h2 { font-weight: 450; letter-spacing: -.011em; }
 .chart-wrap { grid-column: 1 / span 6; grid-row: 1; position: relative; width: calc(100% + 40px); aspect-ratio: 1183 / 860; }
 .chart-art { width: 100%; height: 100%; }
 .chart-caption { position: absolute; top: calc(100% + 2px); left: 0; right: 0; }
-.chart-labels { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.chart-labels { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; overflow: visible; opacity: var(--chart-transition-opacity, 1); }
 .chart-label { opacity: 0; }
 .chart-wrap.is-chart-landed .chart-label { animation: label-in .5s ease-out calc(var(--label-index) * 90ms) both; }
 .chart-label path { stroke: #64635f; stroke-width: .75; fill: none; vector-effect: non-scaling-stroke; }

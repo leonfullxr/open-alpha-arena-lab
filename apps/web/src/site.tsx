@@ -45,7 +45,7 @@ function ChartLabels(): React.JSX.Element {
 
 function Hero(): React.JSX.Element {
   return <section className="hero section" aria-labelledby="hero-title">
-    <div className="hero-art"><SectionArt stage={0} label="A charcoal mountain of 220 layered market profiles, traced with muted pastel family lines." /></div>
+    <div className="hero-art"><SectionArt stage={0} label="A charcoal mountain of densely layered market profiles, traced with muted pastel family lines." /></div>
     <div className="hero-copy shell hero-reveal">
       <h1 id="hero-title">An open research lab for AI trading<br className="desktop-break" /> in financial markets.</h1>
       <p className="hero-description">We study AI decisions through controlled paper experiments. Shared market inputs and a public record make each decision and outcome possible to inspect.</p>

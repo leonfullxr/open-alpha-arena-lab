@@ -41,6 +41,26 @@ export const slices: Slice[] = Array.from({ length: SLICE_COUNT }, (_, id) => {
   return { id, depth, points, baseline, color };
 });
 
+export const mountainSlices: Slice[] = slices.slice(0, -1).flatMap((left, index) => {
+  const right = slices[index + 1]!;
+  return Array.from({ length: 3 }, (_, segment) => {
+    const fraction = segment / 3;
+    return {
+      id: left.id + fraction,
+      depth: left.depth + (right.depth - left.depth) * fraction,
+      baseline: left.baseline + (right.baseline - left.baseline) * fraction,
+      color: fraction === 0 ? left.color : null,
+      points: left.points.map((point, pointIndex) => {
+        const next = right.points[pointIndex]!;
+        return {
+          x: point.x + (next.x - point.x) * fraction,
+          y: point.y + (next.y - point.y) * fraction,
+        };
+      }),
+    };
+  });
+}).concat(slices.slice(-1));
+
 export const selectedSlice = slices[137]!;
 export const spanBounds = [0, 0.17, 0.33, 0.51, 0.66, 0.84, 1] as const;
 const selectedYMin = Math.min(...selectedSlice.points.map((point) => point.y));

@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
-import { ART_HEIGHT, ART_WIDTH, CHART_BASE, CHART_TOP, FAMILY_COLORS, SLICE_COUNT, chartPointAt, mixColor, selectedSlice, slices, spanBounds, type Slice } from './geometry';
+import { ART_HEIGHT, ART_WIDTH, CHART_BASE, CHART_TOP, FAMILY_COLORS, SLICE_COUNT, chartPointAt, mixColor, mountainSlices, selectedSlice, slices, spanBounds, type Slice } from './geometry';
 import { BrandMark, paintBrandMark } from './branding';
 
 type Stage = 0 | 1 | 2 | 3 | 4;
 type Vec = { x: number; y: number };
 type Anchor = { stage: Stage; element: HTMLElement; canvas: HTMLCanvasElement; documentLeft: number; documentTop: number; width: number; height: number; drawnKey: string };
 type Box = { left: number; top: number; width: number; height: number };
-type Flight = { start: number; end: number; started: number; duration: number };
+type Flight = { start: number; end: number; started: number; velocity: number };
 
 const forwardRatios = [0, 0.54, 0.62, 0.87, 0.4] as const;
 const reverseHysteresis = [0, 0.13, 0.13, 0.13, 0.13] as const;
@@ -53,10 +53,9 @@ function gridSlicePolygon(id: number): Vec[] {
 
 const gridPolygons = Array.from({ length: SLICE_COUNT }, (_, id) => gridSlicePolygon(id));
 
-function drawSlice(ctx: CanvasRenderingContext2D, points: Vec[], id: number, alpha = 1, selected = false, selectedFill = 0.13): void {
+function paintSlice(ctx: CanvasRenderingContext2D, id: number, alpha: number, selected: boolean, selectedFill = 0.13): void {
   const slice = slices[id]!;
   const emphasis = FAMILY_COLORS[4];
-  path(ctx, points, true);
   ctx.fillStyle = selected ? mixColor(emphasis, selectedFill * alpha) : slice.color ? mixColor(slice.color, 0.14 * alpha) : `rgba(33,32,28,${(id === selectedSlice.id ? 0.045 : 0.035) * alpha})`;
   ctx.fill();
   ctx.strokeStyle = selected ? mixColor(emphasis, alpha) : slice.color ? mixColor(slice.color, 0.82 * alpha) : `rgba(249,249,248,${(0.075 + slice.depth * 0.045) * alpha})`;
@@ -64,16 +63,23 @@ function drawSlice(ctx: CanvasRenderingContext2D, points: Vec[], id: number, alp
   ctx.stroke();
 }
 
-function drawMountain(ctx: CanvasRenderingContext2D, box: Box): void {
+function drawSlice(ctx: CanvasRenderingContext2D, points: Vec[], id: number, alpha = 1, selected = false, selectedFill = 0.13): void {
+  path(ctx, points, true);
+  paintSlice(ctx, id, alpha, selected, selectedFill);
+}
+
+function drawMountain(ctx: CanvasRenderingContext2D, box: Box, alpha = 1): void {
   ctx.save();
   scaledBox(ctx, box);
-  for (const slice of slices) {
+  ctx.beginPath(); ctx.rect(0, 0, ART_WIDTH, ART_HEIGHT); ctx.clip();
+  ctx.globalAlpha = alpha;
+  for (const slice of mountainSlices) {
     const points = slicePolygon(slice);
     path(ctx, points, true);
     const shade = Math.round(52 + slice.depth * 6);
     ctx.fillStyle = `rgb(${shade},${shade + 1},${shade - 3})`;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(249,249,248,.14)';
+    ctx.strokeStyle = 'rgba(249,249,248,.26)';
     ctx.lineWidth = .5;
     ctx.stroke();
     if (slice.color) {
@@ -111,7 +117,7 @@ function chartSpanPolygon(index: number): Vec[] {
 
 const chartSpans = Array.from({ length: 6 }, (_, index) => chartSpanPolygon(index));
 
-function drawChart(ctx: CanvasRenderingContext2D, box: Box, fill = 1, separated = 0): void {
+function drawChart(ctx: CanvasRenderingContext2D, box: Box, fill = 1, separated = 0, cubeOpacity = separated, includeCubes = true): void {
   ctx.save();
   scaledBox(ctx, box);
   for (let rule = 1; rule < 5; rule += 1) {
@@ -151,9 +157,21 @@ function drawChart(ctx: CanvasRenderingContext2D, box: Box, fill = 1, separated 
     ctx.restore();
   }
   ctx.restore();
+  if (includeCubes && cubeOpacity > 0) {
+    for (const identity of latticeCubeIdentities) {
+      const cube = chartCubeFor(identity, box);
+      drawCube(ctx, cube.x, cube.y, cube.size, cube.color, .98 * cubeOpacity);
+    }
+  }
 }
 
 type Cube = { x: number; y: number; size: number; color: string; depth: number; family: number; within: number };
+type CubeIdentity = { family: number; within: number };
+
+const latticeCubeIdentities: CubeIdentity[] = [
+  ...Array.from({ length: 42 }, (_, within) => ({ family: 5, within })),
+  ...Array.from({ length: 5 * 48 }, (_, index) => ({ family: Math.floor(index / 48), within: index % 48 })),
+];
 
 function cubeFor(family: number, within: number, box: Box): Cube {
   let x: number; let y: number;
@@ -183,6 +201,51 @@ function cubeFor(family: number, within: number, box: Box): Cube {
   };
 }
 
+function latticeCubes(box: Box): Cube[] {
+  return latticeCubeIdentities.map(({ family, within }) => cubeFor(family, within, box));
+}
+
+function radicalInverse(value: number, base: number): number {
+  let number = value;
+  let place = 1 / base;
+  let result = 0;
+  while (number > 0) {
+    result += number % base * place;
+    number = Math.floor(number / base);
+    place /= base;
+  }
+  return result;
+}
+
+function chartCubeFor(identity: CubeIdentity, box: Box): Cube {
+  const count = identity.family === 5 ? 42 : 48;
+  const start = spanBounds[identity.family]!;
+  const end = spanBounds[identity.family + 1]!;
+  const nominalSize = (12 + (identity.within % 4) * 1.5) * box.width / ART_WIDTH;
+  const halfWidth = nominalSize * ART_WIDTH / box.width;
+  const xMargin = (halfWidth + 5) / ART_WIDTH;
+  const availableSpan = Math.max(0, end - start - xMargin * 2);
+  const xRatio = start + xMargin + availableSpan * (identity.within + 0.5) / count;
+  const contour = chartPointAt(xRatio);
+  const availablePlotHeight = Math.max(0, (CHART_BASE - contour.y - 8) * box.height / ART_HEIGHT);
+  const size = Math.min(nominalSize, availablePlotHeight / (2 * 1.16));
+  const verticalExtent = size * 1.16 * ART_HEIGHT / box.height;
+  const top = contour.y + verticalExtent + 4;
+  const bottom = CHART_BASE - verticalExtent - 4;
+  const availableHeight = Math.max(0, bottom - top);
+  const heightPosition = .16 + .68 * radicalInverse(identity.within + 1 + identity.family * count, 2);
+  const y = top + availableHeight * heightPosition;
+  return {
+    x: box.left + xRatio * box.width,
+    y: box.top + y / ART_HEIGHT * box.height,
+    size,
+    color: FAMILY_COLORS[identity.family]!,
+    depth: y,
+    family: identity.family,
+    within: identity.within,
+  };
+}
+
 function drawCube(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string, alpha = 1): void {
   const d = size * 1.16;
   const top = [{ x, y: y - d }, { x: x + size, y: y - d / 2 }, { x, y }, { x: x - size, y: y - d / 2 }];
@@ -195,21 +258,22 @@ function drawCube(ctx: CanvasRenderingContext2D, x: number, y: number, size: num
   }
 }
 
+function drawLatticeLinks(ctx: CanvasRenderingContext2D, point: Cube, center: Vec, neighbor: Cube | undefined, alpha: number): void {
+  ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(point.x, point.y);
+  ctx.strokeStyle = `rgba(249,249,248,${.075 * alpha})`; ctx.lineWidth = .7; ctx.stroke();
+  if (neighbor) {
+    ctx.beginPath(); ctx.moveTo(neighbor.x, neighbor.y); ctx.lineTo(point.x, point.y);
+    ctx.strokeStyle = `rgba(249,249,248,${.055 * alpha})`; ctx.lineWidth = .65; ctx.stroke();
+  }
+}
+
 function drawLattice(ctx: CanvasRenderingContext2D, box: Box, alpha = 1, includeCubes = true): void {
   const center = { x: box.left + box.width / 2, y: box.top + box.height * .431 };
-  const points: Cube[] = [
-    ...Array.from({ length: 42 }, (_, index) => cubeFor(5, index, box)),
-    ...Array.from({ length: 5 * 48 }, (_, index) => cubeFor(Math.floor(index / 48), index % 48, box)),
-  ];
+  const points = latticeCubes(box);
   points.sort((a, b) => a.depth - b.depth);
   for (const point of points) {
-    ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(point.x, point.y);
-    ctx.strokeStyle = `rgba(249,249,248,${.075 * alpha})`; ctx.lineWidth = .7; ctx.stroke();
-    if (point.within > 0) {
-      const neighbor = cubeFor(point.family, point.within - 1, box);
-      ctx.beginPath(); ctx.moveTo(neighbor.x, neighbor.y); ctx.lineTo(point.x, point.y);
-      ctx.strokeStyle = `rgba(249,249,248,${.055 * alpha})`; ctx.lineWidth = .65; ctx.stroke();
-    }
+    const neighbor = point.within > 0 ? cubeFor(point.family, point.within - 1, box) : undefined;
+    drawLatticeLinks(ctx, point, center, neighbor, alpha);
     if (includeCubes) drawCube(ctx, point.x, point.y, point.size, point.color, .98 * alpha);
   }
 }
@@ -274,13 +338,6 @@ const gridSpanTemplates = Array.from({ length: 6 }, (_, span) => {
   return resamplePolygon([...top.slice(first, last + 1), { x: top[last]!.x, y: polygon[121]!.y }, { x: top[first]!.x, y: polygon[121]!.y }], morphCount);
 });
 const chartSpanTemplates = chartSpans.map((polygon) => resamplePolygon(polygon, morphCount));
-const cubeSpanTemplates = Array.from({ length: 6 }, (_, family) => {
-  const cube = cubeFor(family, 10, { left: 0, top: 0, width: 1183, height: 1183 });
-  const size = cube.size * 3.2; const d = size * 1.16;
-  const polygon = [{ x: cube.x, y: cube.y - d }, { x: cube.x + size, y: cube.y - d / 2 }, { x: cube.x + size, y: cube.y + d / 2 }, { x: cube.x, y: cube.y + d }, { x: cube.x - size, y: cube.y + d / 2 }, { x: cube.x - size, y: cube.y - d / 2 }];
-  return resamplePolygon(polygon, morphCount);
-});
-
 function interpolateTemplate(ctx: CanvasRenderingContext2D, source: Vec[], sourceBox: Box, sourceWidth: number, sourceHeight: number, target: Vec[], targetBox: Box, targetWidth: number, targetHeight: number, progress: number, color: string, alpha = 1): void {
   ctx.beginPath();
   for (let index = 0; index < morphCount; index += 1) {
@@ -299,6 +356,8 @@ function interpolateTemplate(ctx: CanvasRenderingContext2D, source: Vec[], sourc
 
 function transferMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number): void {
   const amount = Math.min(1, Math.max(0, progress));
+  const gridFade = smoothstep(amount / .3);
+  drawMountain(ctx, source, 1 - gridFade);
   const targetScaleX = target.width / gridWidth;
   const targetScaleY = target.height / gridHeight;
   for (let id = 0; id < SLICE_COUNT; id += 1) {
@@ -323,9 +382,7 @@ function transferMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target
     }
     ctx.closePath();
     const selected = id === selectedSlice.id;
-    ctx.fillStyle = selected ? mixColor(FAMILY_COLORS[4], .13) : slice.color ? mixColor(slice.color, .14) : 'rgba(33,32,28,.018)'; ctx.fill();
-    ctx.strokeStyle = selected ? FAMILY_COLORS[4] : slice.color ? mixColor(slice.color, .78) : 'rgba(33,32,28,.17)';
-    ctx.lineWidth = selected ? 2 : .8; ctx.stroke();
+    paintSlice(ctx, id, gridFade * (selected ? 1 : 0.65), selected);
   }
 }
 
@@ -335,13 +392,58 @@ function transferGridChart(ctx: CanvasRenderingContext2D, source: Box, target: B
   }
 }
 
-function transferChartLattice(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number): void {
-  for (let family = 0; family < 6; family += 1) {
-    interpolateTemplate(ctx, chartSpanTemplates[family]!, source, ART_WIDTH, ART_HEIGHT, cubeSpanTemplates[family]!, target, 1183, 1183, progress, FAMILY_COLORS[family]!, .94);
+function unitClamp(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function smoothstep(value: number): number {
+  const amount = unitClamp(value);
+  return amount * amount * (3 - 2 * amount);
+}
+
+function transferChartLattice(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number, split: number): void {
+  const chartOpacity = 1 - smoothstep(progress / .44);
+  ctx.save(); ctx.globalAlpha = chartOpacity;
+  drawChart(ctx, source, 1, split, 0, false);
+  ctx.restore();
+
+  const identities = latticeCubeIdentities;
+  const destinations = latticeCubes(target);
+  const cubeOpacity = Math.max(split, smoothstep(progress / .16));
+  const moving = identities.map((identity, index) => {
+    const destination = destinations[index]!;
+    const origin = chartCubeFor(identity, source);
+    const delay = .16 * index / Math.max(1, identities.length - 1);
+    const travel = smoothstep(unitClamp((progress - .16 - delay) / (.84 - delay)));
+    const dx = destination.x - origin.x; const dy = destination.y - origin.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const side = index % 2 === 0 ? 1 : -1;
+    const bend = (24 + index % 7 * 3) * Math.min(source.width, target.width) / ART_WIDTH * side;
+    const controlX = (origin.x + destination.x) / 2 - dy / distance * bend;
+    const controlY = (origin.y + destination.y) / 2 + dx / distance * bend;
+    const inverse = 1 - travel;
+    return {
+      ...destination,
+      x: inverse * inverse * origin.x + 2 * inverse * travel * controlX + travel * travel * destination.x,
+      y: inverse * inverse * origin.y + 2 * inverse * travel * controlY + travel * travel * destination.y,
+      size: origin.size + (destination.size - origin.size) * travel,
+    };
+  });
+  const drawOrder = moving.map((point, index) => ({ point, index })).sort((a, b) => a.point.depth - b.point.depth);
+  const center = { x: target.left + target.width / 2, y: target.top + target.height * .431 };
+  const connectionOpacity = smoothstep((progress - .64) / .36);
+  for (const { point, index } of drawOrder) {
+    const identity = identities[index]!;
+    const previousIndex = identity.family === 5
+      ? identity.within - 1
+      : 42 + identity.family * 48 + identity.within - 1;
+    drawLatticeLinks(ctx, point, center, identity.within > 0 ? moving[previousIndex] : undefined, connectionOpacity);
+    drawCube(ctx, point.x, point.y, point.size, point.color, .98 * cubeOpacity);
   }
 }
 
 function transferLatticeMark(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number): void {
+  drawLattice(ctx, source, 1 - smoothstep(progress / .9));
   const artwork = getLogoArtwork();
   const bounds = logoBox(target);
   const clusters = Array.from({ length: 6 }, (_, family) => cubeFor(family, 12, source));
@@ -349,36 +451,24 @@ function transferLatticeMark(ctx: CanvasRenderingContext2D, source: Box, target:
     const sourcePoint = clusters[strip % 6]!;
     const endY = bounds.top + logoStrips[strip]!.top / artwork.height * bounds.height;
     const endHeight = logoStrips[strip]!.height / artwork.height * bounds.height;
-    const width = bounds.width * Math.max(.02, progress);
+    const width = bounds.width * progress;
     const startLeft = sourcePoint.x - bounds.width * .08;
     const left = startLeft + (bounds.left - startLeft) * progress;
     const centerY = sourcePoint.y + (endY + endHeight / 2 - sourcePoint.y) * progress;
-    const height = Math.max(1, endHeight * progress);
+    const height = endHeight * progress;
     const stripInfo = logoStrips[strip]!;
     ctx.drawImage(artwork, 0, stripInfo.top, artwork.width, stripInfo.height, left, centerY - height / 2, width, height);
   }
   if (progress >= .99) ctx.drawImage(artwork, bounds.left, bounds.top, bounds.width, bounds.height);
 }
 
-function transfer(ctx: CanvasRenderingContext2D, from: Stage, to: Stage, progress: number, boxes: Map<Stage, Box>): void {
+function transfer(ctx: CanvasRenderingContext2D, from: Stage, to: Stage, progress: number, boxes: Map<Stage, Box>, split: number): void {
   const source = boxes.get(from); const target = boxes.get(to);
   if (!source || !target) return;
   if (from === 0 && to === 1) transferMountainGrid(ctx, source, target, progress);
   else if (from === 1 && to === 2) transferGridChart(ctx, source, target, progress);
-  else if (from === 2 && to === 3) transferChartLattice(ctx, source, target, progress);
+  else if (from === 2 && to === 3) transferChartLattice(ctx, source, target, progress, split);
   else if (from === 3 && to === 4) transferLatticeMark(ctx, source, target, progress);
-}
-
-function ease(t: number): number {
-  const x1 = .22; const y1 = .61; const x2 = .24; const y2 = 1;
-  let low = 0; let high = 1; let tValue = t;
-  for (let iteration = 0; iteration < 12; iteration += 1) {
-    const x = 3 * (1 - tValue) ** 2 * tValue * x1 + 3 * (1 - tValue) * tValue ** 2 * x2 + tValue ** 3;
-    if (Math.abs(x - t) < .001) break;
-    if (x < t) low = tValue; else high = tValue;
-    tValue = (low + high) / 2;
-  }
-  return 3 * (1 - tValue) ** 2 * tValue * y1 + 3 * (1 - tValue) * tValue ** 2 * y2 + tValue ** 3;
 }
 
 function cubicBezierProgress(progress: number, x1: number, y1: number, x2: number, y2: number): number {
@@ -421,10 +511,16 @@ function paintLocal(anchor: Anchor, ratio: number, options: { stagePosition: num
   else if (anchor.stage === 4 && options.settledStage >= 4) drawMark(ctx, box, alpha);
 }
 
-function sampleFlight(flight: Flight | null, now: number, settled: number): number {
-  if (!flight) return settled;
-  const progress = Math.min(1, (now - flight.started) / flight.duration);
-  return flight.start + (flight.end - flight.start) * ease(progress);
+function sampleFlightState(flight: Flight | null, now: number, settled: number): { position: number; velocity: number } {
+  if (!flight) return { position: settled, velocity: 0 };
+  const elapsed = Math.max(0, (now - flight.started) / 1000);
+  const omega = 9;
+  const displacement = flight.start - flight.end;
+  const coefficient = flight.velocity + omega * displacement;
+  const decay = Math.exp(-omega * elapsed);
+  const position = unitClamp((flight.end + (displacement + coefficient * elapsed) * decay) / 4) * 4;
+  const velocity = (flight.velocity - omega * coefficient * elapsed) * decay;
+  return { position, velocity };
 }
 
 export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement | null>, hostRef: React.RefObject<HTMLDivElement | null>): void {
@@ -489,18 +585,24 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
     const paint = (now: number): void => {
       frame = 0;
       globalContext.clearRect(0, 0, viewportWidth, viewportHeight);
-      let position = sampleFlight(flight, now, settledStage);
-      if (flight && now - flight.started >= flight.duration) { position = flight.end; flight = null; }
+      const flightState = sampleFlightState(flight, now, settledStage);
+      let position = flightState.position;
+      if (flight && Math.abs(position - flight.end) < .001 && Math.abs(flightState.velocity) < .01) { position = flight.end; flight = null; }
       const transitionStage = Math.floor(position);
       const transitionProgress = position - transitionStage;
       const activePair = transitionProgress > .001 && transitionStage < 4;
       const splitElapsed = chartLandedAt ? Math.max(0, now - chartLandedAt - 600) : 0;
       const split = media.matches ? 1 : cubicBezierProgress(Math.min(1, splitElapsed / 450), .33, 1, .68, 1);
+      const chartOpacity = media.matches || document.documentElement.classList.contains('canvas-unavailable')
+        ? 1
+        : position < 2 ? 1 : position < 3 ? 1 - smoothstep((position - 2) / .44) : 0;
+      const chartWrap = byStage.get(2)?.element.closest<HTMLElement>('.chart-wrap');
+      chartWrap?.style.setProperty('--chart-transition-opacity', String(chartOpacity));
       const currentBoxes = boxes();
       for (const anchor of anchors) {
         const box = currentBoxes.get(anchor.stage)!;
         const onScreen = box.top < viewportHeight + 120 && box.top + box.height > -120;
-        let localVisible = onScreen;
+        let localVisible = onScreen && !(anchor.stage === 2 && settledStage >= 3 && !media.matches);
         if (activePair && transitionStage < 4) {
           const from = transitionStage as Stage; const to = (transitionStage + 1) as Stage;
           if ((from === 0 && to === 1) || (from === 2 && to === 3) || (from === 3 && to === 4)) localVisible = localVisible && anchor.stage !== from && anchor.stage !== to;
@@ -511,7 +613,7 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
       }
       if (activePair) {
         const from = transitionStage as Stage; const to = (transitionStage + 1) as Stage;
-        transfer(globalContext, from, to, transitionProgress, currentBoxes);
+        transfer(globalContext, from, to, transitionProgress, currentBoxes, split);
       }
       if (!chartLandedAt && settledStage >= 2 && position >= 2) {
         chartLandedAt = now;
@@ -536,19 +638,19 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
       const target = targetStageAt(scrollY);
       if (target !== settledStage) {
         const now = performance.now();
-        const current = sampleFlight(flight, now, settledStage);
-        const sourceStage = Math.max(0, Math.min(4, Math.floor(current))) as Stage;
+        const current = sampleFlightState(flight, now, settledStage);
+        const sourceStage = Math.max(0, Math.min(4, Math.floor(current.position))) as Stage;
         const sourceAnchor = byStage.get(sourceStage);
         const targetAnchor = byStage.get(target);
         const sourceVisible = sourceAnchor !== undefined && sourceAnchor.documentTop - scrollY < viewportHeight && sourceAnchor.documentTop + sourceAnchor.height - scrollY > 0;
         const targetVisible = targetAnchor !== undefined && targetAnchor.documentTop - scrollY < viewportHeight && targetAnchor.documentTop + targetAnchor.height - scrollY > 0;
         if (target < 2) { chartLandedAt = 0; updateChartClass(false); }
         settledStage = target;
-        if (media.matches || (Math.abs(target - current) > 1 && targetVisible && !sourceVisible)) {
+        if (media.matches || (Math.abs(target - current.position) > 1 && targetVisible && !sourceVisible)) {
           flight = null;
           if (target >= 2) { if (!chartLandedAt) chartLandedAt = now; updateChartClass(true); }
         } else {
-          flight = { start: current, end: target, started: now, duration: 760 * Math.max(.3, Math.abs(target - current)) };
+          flight = { start: current.position, end: target, started: now, velocity: current.velocity };
         }
       }
       schedule();
@@ -575,11 +677,11 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
 }
 
 export function svgFallback(stage: Stage): React.JSX.Element {
-  if (stage === 0) return <svg className="scene-fallback" viewBox={`0 0 ${ART_WIDTH} ${ART_HEIGHT}`} aria-hidden="true">{slices.map((slice) => {
+  if (stage === 0) return <svg className="scene-fallback" viewBox={`0 0 ${ART_WIDTH} ${ART_HEIGHT}`} aria-hidden="true">{mountainSlices.map((slice) => {
     const polygon = slicePolygon(slice);
     const band = slice.points.slice(12 + (slice.id % 5) * 5, 81 + (slice.id % 5) * 5);
     return <g key={slice.id}>
-      <path d={polygon.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' ') + 'Z'} fill={`rgb(${Math.round(52 + slice.depth * 6)},${Math.round(53 + slice.depth * 6)},${Math.round(49 + slice.depth * 6)})`} stroke="rgba(249,249,248,.14)" strokeWidth=".5" />
+      <path d={polygon.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' ') + 'Z'} fill={`rgb(${Math.round(52 + slice.depth * 6)},${Math.round(53 + slice.depth * 6)},${Math.round(49 + slice.depth * 6)})`} stroke="rgba(249,249,248,.26)" strokeWidth=".5" />
       {slice.color ? <path d={band.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' ')} fill="none" stroke={mixColor(slice.color, .58)} strokeWidth={slice.id === selectedSlice.id ? 4 : 3} /> : null}
     </g>;
   })}</svg>;

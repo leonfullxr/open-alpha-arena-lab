@@ -42,12 +42,13 @@ The local browser regression script compares the actual transfer paths with the 
 
 The user's four landing screenshots establish the visual targets for this revision. Their 1920 by 1080 captures include 149 pixels of browser chrome, so comparison captures use a 1920 by 931 page viewport. The content spans x280 to x1640, the hero heading starts at y346 and the hero divider sits at y718.
 
-The terrain has a shared base and 220 profiles with decreasing elevation toward the foreground. The chart samples the selected profile, fills six pastel spans and opens narrow gaps without translating their coordinates. Its leaders attach to that same plotted contour. The lattice uses five colored clusters and a gray center, with shaded cube faces. The original OA monogram uses outlines from the bundled Newsreader font, a fine mosaic pattern and a tiled frame. Header and footer use a dark version of the same geometry; the favicon retains the mosaic colors.
+The terrain has a shared base and 220 source profiles with decreasing elevation toward the foreground. The later density revision interpolates between those profiles to render 658 contours, while retaining the original grid and selected profile. The chart samples the selected profile, fills six pastel spans and opens narrow gaps without translating their coordinates. Its leaders attach to that same plotted contour. The lattice uses five colored clusters and a gray center, with shaded cube faces. The original OA monogram uses outlines from the bundled Newsreader font, a fine mosaic pattern and a tiled frame. Header and footer use a dark version of the same geometry; the favicon retains the mosaic colors.
 
 | Scene | Revision capture |
 | --- | --- |
 | Mountain and hero | [Desktop hero](screenshots/landing-reference-hero.png) |
 | Filled chart and callouts | [Desktop chart](screenshots/landing-reference-chart.png) |
+| Formed chart cubes in transit | [Cube transfer](screenshots/landing-reference-cube-transfer.png) |
 | Cube field | [Desktop lattice](screenshots/landing-reference-lattice.png) |
 | Original tiled OA mark | [Desktop mark](screenshots/landing-reference-team.png) |
 | Stacked mobile hero | [Mobile hero](screenshots/landing-reference-mobile.png) |
@@ -65,3 +66,15 @@ The primary independently built the final source and captured all ten scenes. Th
 Luna checked 1920 by 931, 1440 by 900, 1024 by 768, 768 by 1024 and 390 by 844 with no document overflow. Forward and reverse scrolling, Home and Methodology navigation, chart labels, the lattice legend and the final mark after resize passed. A reduced-motion session retained nonzero artwork dimensions. Manually activating the app's canvas-unavailable class exposed all five SVG fallbacks with geometry and matching layout boxes; the fallback capture visibly rendered the mountain, profile grid and filled chart. This last check exercised the fallback presentation, rather than simulating a failed canvas context.
 
 GPT-6.1 Sol reviewed the source, capture tool and four desktop comparisons and found no medium-or-higher defect. The user's visual acceptance remains pending. This revision does not establish Safari, physical-device or complete assistive-technology coverage; simulation layout work and the accessibility pass remain separate follow-ups.
+
+## Density and motion follow-up
+
+The opening mountain now renders 658 contours in both Canvas and SVG. Its silhouette, placement and 220 source profiles stay fixed. The chart forms the arena's 282 shaded cubes inside its six filled regions before departure. Those same cube identities follow reversible curved routes into the existing lattice; chart context fades during departure and lattice connections appear near arrival. A scalar critically damped phase carries position and velocity across scroll retargeting. The mountain-to-grid and lattice-to-mark handoffs also crossfade their source artwork.
+
+The primary captured ten controlled-clock chart-to-arena frames from actual Canvas drawing calls. All 282 cubes were present in the formed chart, each sampled transfer frame and the settled arena. Departure centers matched within numerical precision; the near-arrival centers matched the settled lattice within 0.05 CSS pixels. A reverse scroll crossed the actual hysteresis boundary and restored the chart; a rapid forward/reverse retarget also restored all 282 visible chart cubes. These checks establish geometry and visibility, not physical-device frame rate. The earlier callback timing measurements describe the original integration, rather than this revised animation.
+
+The checks caught a double-applied chart transform and an opaque paint flash at the mountain's departure. Cube coordinates are now applied once. Transferring profiles share the settled grid's paint function and fade in, while the retained mountain clips to its original artwork box. The screenshots above were refreshed after the density and cube changes; local controlled-frame captures also cover the first and final handoffs.
+
+The primary's final build and all three earlier animation regressions passed again. The grid endpoint differed from its settled geometry by less than one CSS pixel, and the final mark remained visible after tall-window navigation and bottom-of-page resize. Sol's read-only follow-up found no remaining medium-or-higher defect in cube containment, identity routes, spring retargeting, handoffs or reduced-motion handling.
+
+Luna's independent live checks at 1440 by 900 and 390 by 844 found no remaining defect. Forward and reverse transitions, quick reversal below hysteresis, contained chart cubes and captions, arena and mark endpoints, and document overflow checks passed. The revised first transfer retained visible artwork until the grid settled. A reduced-motion mobile session retained chart and lattice ink and the contained six-item legend. Both validation browser sessions were stopped after the checks.
