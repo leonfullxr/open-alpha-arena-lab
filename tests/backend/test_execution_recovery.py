@@ -140,6 +140,7 @@ def test_expired_inference_leases_recover_twelve_responded_jobs_after_restart(
 
     assert _PG_URL is not None
     schema, admin_engine, engine = _migrated_schema(monkeypatch)
+    db: Session | None = None
     try:
         db, first_job_id, first_fence, _, _ = _setup(
             engine=engine, output=_proposal_output("BTC")
@@ -299,6 +300,8 @@ def test_expired_inference_leases_recover_twelve_responded_jobs_after_restart(
             with pytest.raises(ValueError, match="fence is stale"):
                 execute_job(reopened, first_job_id, first_fence + 1, "unused-on-stale-fence")
     finally:
+        if db is not None:
+            db.close()
         engine.dispose()
         with admin_engine.begin() as connection:
             connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
@@ -316,6 +319,7 @@ def test_clean_inline_protection_reconciles_before_other_symbol_entry(
 
     assert _PG_URL is not None
     schema, admin_engine, engine = _migrated_schema(monkeypatch)
+    db: Session | None = None
     try:
         db, first_job_id, first_fence, quote_set_id, account_id = _setup(engine=engine)
         competition = db.get(Competition, "competition-1")
@@ -412,6 +416,8 @@ def test_clean_inline_protection_reconciles_before_other_symbol_entry(
         ) == (3 if expected_accepted else 2)
         db.close()
     finally:
+        if db is not None:
+            db.close()
         engine.dispose()
         with admin_engine.begin() as connection:
             connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
