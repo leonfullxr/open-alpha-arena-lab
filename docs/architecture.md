@@ -15,3 +15,13 @@ Public API `/api/v1/public/*` is read-only, bounded and separately documented. A
 Production path: browser -> Worker with Static Assets -> service-authenticated Cloudflare Tunnel -> Debian API. Fixed origin `https://arena-origin.leonfuller.com`; frontend target `arena.leonfuller.com`. Worker allowlists paths/methods, strips visitor internal headers, streams SSE, and validates admin Access JWT independently of backend RBAC. The origin transport token does not grant visitor admin rights. Local Argon2id sessions and production Access modes are mutually exclusive. Default offline demo makes no external requests.
 
 Account/DNS/Tunnel/Access resources and production deployment remain unverified until a concrete build is reviewed. Tailscale remains the server recovery channel. No alternate public production entry points or production-connected previews.
+
+## Transaction and identity refinements
+
+Read-only Opus design review identified lock-upgrade deadlocks, late-committing sequence gaps and Tunnel identity substitution as implementation risks. Serialize short competition writes using one order: competition `FOR UPDATE`, job, account, then positions in stable order. The per-competition event counter advances inside the same transaction, so published sequence order follows commit order. Never keep a transaction open during an external model request.
+
+Persist dispatch before network I/O, with a monotonic worker fence. An expired uncertain dispatch becomes an audited terminal `PROVIDER_ERROR` / `DISPATCH_UNCERTAIN` and is never automatically dispatched again. An undispatched job past its deadline is `PROVIDER_TIMEOUT` / `NOT_DISPATCHED`. Dispatch/input artifacts and response artifacts are separate append-only evidence. Application-level idempotency does not promise exactly-once provider billing.
+
+The Worker validates the visitor's Access JWT and forwards that same signed value as `X-Arena-User-JWT`; it strips visitor-supplied copies first. The backend verifies signature, RS256, issuer, audience, exp/iat/sub and an explicit subject allowlist again. This is independent of the Tunnel service assertion, which may overwrite `Cf-Access-Jwt-Assertion`. A separate origin token authenticates transport only. No fallback between local and Access authentication modes.
+
+Financial operations use a Decimal precision-60 context. Amounts are quantized to 18 fractional digits before ledger balancing and insertion, with numeric(38,18) overflow rejected. Exact snapshot/prompt bytes are hashed before storing; queryable JSON is not the evidence hash source.

@@ -1,0 +1,98 @@
+name: open-alpha-arena-lab
+
+services:
+  db:
+    image: postgres:16.4-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?copy .env.example to .env}
+      POSTGRES_USER: ${POSTGRES_USER:?copy .env.example to .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  init:
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    env_file: .env
+    command: ["sh", "-ec", "python -m app.cli migrate && python -m app.cli seed-demo"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+  api:
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    env_file: .env
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    ports:
+      - "127.0.0.1:3000:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    restart: unless-stopped
+  collector:
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    env_file: .env
+    command: ["python", "-m", "app.worker", "collector"]
+    profiles: [workers]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+  scheduler:
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    env_file: .env
+    command: ["python", "-m", "app.worker", "scheduler"]
+    profiles: [workers]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+  executor:
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    env_file: .env
+    command: ["python", "-m", "app.worker", "executor"]
+    profiles: [workers]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
