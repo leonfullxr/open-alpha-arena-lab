@@ -1,92 +1,62 @@
-# Landing validation
+# Landing reference validation
 
-The original integration checkpoint was checked on 2026-10-15 in local Chromium against the Vite development build. The landing was accepted before simulation frontend implementation began. The reference fidelity revision below follows the user's subsequent visual review.
+This revision replaces the illustrative geometry and authored spring animation at `1596ce7` with a reconstruction based on the current public Nof1 renderer, inspected on 15 October 2026. Open Alpha Arena keeps its own name, copy and OA mark. Earlier validation reports and screenshots remain in Git history; they describe superseded approximations, including 658 interpolated contours, 282 chart cubes and equal-height logo-strip flights.
 
-The five scenes use original deterministic geometry: 220 terrain slices, a 20 by 11 grid, six annotated chart spans, six lattice families, and a 36-strip tiled mark. The chart and grid captions identify conceptual artwork. The layout follows the supplied PDF's measurements and palette; original geometry and transfer trajectories are adaptations, rather than recovered reference animation data.
+## Reference evidence
 
-## Browser evidence
+**EXACT — public implementation and DOM/CSS.** The current page serves renderer chunk `0gvneg1-scdrw.js`, SHA-256 `fe3a8eec9144bc31bdd60c62ddd5345a9470e2eecbfc856b0ebab9492be9fd02`, and shared geometry chunk `1ktnajvnydr6e.js`, SHA-256 `fe9ae6fdddf18a8ab3fe8014bd07eb9b9dad183880d2487d50ebbc3f4ef07b88`. The page, assets and extraction scripts are retained in the local ignored `.review/reference-20261015/` directory. No production code loads the reference JavaScript.
 
-| Viewport | Capture |
-| --- | --- |
-| 1363 × 936 | [Hero](screenshots/landing-1363x936.webp) |
-| 1440 × 900 | [Hero](screenshots/landing-1440x900.webp) |
-| 1024 × 768 | [Hero](screenshots/landing-1024x768.webp) |
-| 768 × 1024 | [Hero](screenshots/landing-768x1024.webp) |
-| 390 × 844 | [Hero](screenshots/landing-390x844.webp) |
+The public generator establishes 220 source panels, 721 samples per profile, selected panel 122, a 20 × 11 grid, six chart boundaries and a deterministic orthographic lattice. The lattice contains **512 cubes**, with family counts 96/60/160/100/60/36; an initial working-note total of 824 was an arithmetic error. An independent VM execution of the public pure generators checked reconstructed mountain, chart, lattice and departure-packing data. Review caught and corrected noise hash argument order, foreground depth, random-number consumption and chart-boundary interpolation.
 
-Settled illustrations: [grid](screenshots/landing-grid.webp), [chart](screenshots/landing-chart.webp), [lattice](screenshots/landing-lattice.webp), [mark](screenshots/landing-mark.webp).
+The reference runs its main **WebGL2 path through SwiftShader** in our ordinary headless Chromium session. Its auxiliary chart/lattice canvases are 2D even in that path. The software-WebGL deprecation warning does not mean the reference selected its Canvas painter. Reduced motion was false. The first active WebGL2 context was not lost; no shader/context errors or painter-fallback warning appeared.
 
-The primary inspected desktop, tablet and mobile layouts, five accessible scene anchors, one page H1, contained copy and horizontal overflow. Slow and fast scrolling, reverse transfers, pauses, Home navigation and desktop-to-mobile resize were exercised. Review found and corrected overlapping tablet hero artwork, desktop grid auto-placement, a blank mountain after resize, and missing settled artwork in reduced-motion mode.
+**OBSERVED FALLBACK.** A separate reference session launched with `--disable-webgl` emitted the exact Canvas-painter fallback warning. Its settled mountain was captured separately from the WebGL2 mountain, so shader edge treatment is not confused with geometry. The user's earlier fallback observations remain evidence for crossfades, retained chart outlines/scaffolding, and the persistent models legend, rather than proof of spatial flight paths.
 
-A separate Chromium process with reduced motion forced on retained all five static illustrations and readable content. A temporary test document made canvas contexts unavailable; all five SVG fallbacks and headings remained present. The temporary document was removed after the check.
+**NATIVE TO VERIFY.** Software WebGL is not physical GPU validation. Source code establishes trajectories and clocks where listed in the [motion manifest](landing-motion-manifest.md). The replica uses the reconstructed native WebGL shader, followed by the reference's cached-Canvas compositing approach. Independent shader comparisons and timed illustration samples support this reconstruction; they do not certify every complete page frame. Physical-device, Safari and complete assistive-technology sessions remain outside this pass.
 
-During a desktop forward/reverse scroll sample, animation instrumentation recorded 307 callbacks, a maximum of one pending callback, 0.9 ms p95 callback time and 2.8 ms maximum callback time. There were no callbacks during a 400 ms settled interval. These are headless Chromium callback timings, not a measured frame-rate guarantee for physical devices.
+## Layout and assets
 
-After simulation integration, a production-preview browser trace loaded five JavaScript/CSS resources totaling 82,281 gzip bytes (about 80.4 KiB), below the 250 KiB limit. Fonts and artwork are excluded. The trace contained no API calls, chart modules or admin modules. Navigation to the simulation removed all landing canvases, reset scroll to zero and left no canvas-failure class. The landing remained readable with the API unavailable. The self-hosted Newsreader font is 121,024 bytes.
+The page uses normal document scrolling, a static header, 1440 px container, 24/40 px gutters, 12-column desktop grids, 64 px column gaps and the 1024 px stacked breakpoint. Hero geometry uses the overlapping source grid and viewport-height cap. Section sizes follow content and art aspect ratios instead of fixed desktop heights. On-chart annotations appear at 1280 px and use DOM text, 160 px balanced boxes, non-scaling leaders and a 3 px background text stroke. Below that breakpoint, the chart reserves its 6% gap overhang and has a six-item explanation list 32 px beneath it.
 
-## Limits
+Signifier Roman/Italic faces are available in the local comparison build, with provenance in `apps/web/public/fonts/SOURCES.md`. Newsreader's OFL does not cover those faces. The project copy changes line wrapping; this page does not assert Nof1's research, team, backing or results. The OA mark and simulation navigation intentionally differ from the reference.
 
-Safari, physical mobile hardware and a complete assistive-technology session have not been tested. The recorded captures establish the landing checkpoint; later shared-shell changes require a final regression check. Production hosting remains unreviewed and undeployed.
+At 1363 × 936, our Chromium document client width is 1363 px. The supplied earlier measurements used 1348 px after a 15 px scrollbar. Comparisons here use equal actual browser client widths; earlier absolute coordinates are not silently treated as identical measurements.
 
-Final integration budget check, 2026-10-15: all seventeen emitted JavaScript/CSS files across the landing, simulation and admin entries total 143,777 bytes at gzip level 6 (165,997 bytes at level 1). Even that complete-build sum is below the landing's 256,000-byte allowance; fonts and artwork are excluded. The accepted landing-only browser trace and animation observations above remain the direct loading/motion measurements. Final Home and Methodology navigation and the landing's zero API requests were checked again during simulation regression.
-
-## Landing follow-up, 2026-10-15
-
-The follow-up fixes three animation defects found during a read-only GPT-6.1 Sol review. The mountain-to-grid transfer now scales its destination to match the settled grid. Resize measures the current scroll position before selecting a scene. Scene thresholds stay within the document's reachable scroll range, so the final mark appears in tall windows.
-
-Luna validated the production preview at 1440 by 900, 768 by 1024 and 390 by 844. All five scenes rendered, copy fit, and document width matched each viewport. Forward and reverse scrolling, Home and Methodology navigation passed. At 1440 by 1200, the final mark rendered after fresh navigation to the bottom and after increasing the height from 900 while already at the bottom. The primary independently built the frontend and ran the three browser regressions. Sol's correction review found no medium-or-higher defect.
-
-The local browser regression script compares the actual transfer paths with the settled canvas paths and checks the final mark's pixels. All three checks failed when their corresponding fixes were removed. Mutation sources were restored byte for byte. The scripts, logs and follow-up screenshots remain local evidence. Safari, physical-device and assistive-technology checks remain pending.
-
-## Reference fidelity revision
-
-The user's four landing screenshots establish the visual targets for this revision. Their 1920 by 1080 captures include 149 pixels of browser chrome, so comparison captures use a 1920 by 931 page viewport. The content spans x280 to x1640, the hero heading starts at y346 and the hero divider sits at y718.
-
-The terrain has a shared base and 220 source profiles with decreasing elevation toward the foreground. The later density revision interpolates between those profiles to render 658 contours, while retaining the original grid and selected profile. The chart samples the selected profile, fills six pastel spans and opens narrow gaps without translating their coordinates. Its leaders attach to that same plotted contour. The lattice uses five colored clusters and a gray center, with shaded cube faces. The original OA monogram uses outlines from the bundled Newsreader font, a fine mosaic pattern and a tiled frame. Header and footer use a dark version of the same geometry; the favicon retains the mosaic colors.
-
-| Scene | Revision capture |
-| --- | --- |
-| Mountain and hero | [Desktop hero](screenshots/landing-reference-hero.png) |
-| Filled chart and callouts | [Desktop chart](screenshots/landing-reference-chart.png) |
-| Formed chart cubes in transit | [Cube transfer](screenshots/landing-reference-cube-transfer.png) |
-| Cube field | [Desktop lattice](screenshots/landing-reference-lattice.png) |
-| Original tiled OA mark | [Desktop mark](screenshots/landing-reference-team.png) |
-| Stacked mobile hero | [Mobile hero](screenshots/landing-reference-mobile.png) |
-
-To repeat the captures against a running frontend, use `chrome-devtools-axi` and Node:
+## Repeat the comparison
 
 ```sh
-node scripts/capture-landing.mjs http://localhost:5173 /tmp/arena-landing-captures
+npm install
+npm run build
+npm run dev -- --port 4173
 ```
 
-Set `CHROME_DEVTOOLS_AXI_BIN` if the browser command is outside `PATH`. The script writes five desktop and five mobile screenshots plus a manifest of actual viewport, scroll and element bounds. It checks dimensions, missing content and overflow. Inspect the resulting artwork against the references; passing those geometry checks does not establish visual fidelity. The script's baseline hero capture matched the independent manual capture byte for byte.
+Open `http://localhost:4173/`. The build and browser captures require no API or provider credentials. To capture all five scenes at 1363 × 936, 1440 × 900, 1024 × 768, 768 × 1024 and 390 × 844:
 
-The primary independently built the final source and captured all ten scenes. The five saved revision screenshots match those independent captures byte for byte. The three animation regressions passed again: the mountain-to-grid endpoint matched the settled grid within one CSS pixel, and the final mark rendered both after a bottom-of-page resize from 1440 by 900 to 1440 by 1200 and after fresh navigation in the taller viewport. The updated preview at port 4173 loaded the revised assets, made no API requests and had no horizontal overflow at 1920 by 931.
+```sh
+node scripts/capture-landing.mjs http://localhost:4173 /tmp/arena-landing-captures
+node scripts/capture-landing.mjs https://www.nof1.ai/ /tmp/nof1-reference-captures
+```
 
-Luna checked 1920 by 931, 1440 by 900, 1024 by 768, 768 by 1024 and 390 by 844 with no document overflow. Forward and reverse scrolling, Home and Methodology navigation, chart labels, the lattice legend and the final mark after resize passed. A reduced-motion session retained nonzero artwork dimensions. Manually activating the app's canvas-unavailable class exposed all five SVG fallbacks with geometry and matching layout boxes; the fallback capture visibly rendered the mountain, profile grid and filled chart. This last check exercised the fallback presentation, rather than simulating a failed canvas context.
+The script records actual scroll, client width, heading/font state and art/section bounds, checks missing/zero-sized art and document overflow, and saves 25 screenshots per page. Its geometry checks are not a pixel-fidelity assertion. Set `CHROME_DEVTOOLS_AXI_BIN` if the browser command is outside `PATH`.
 
-GPT-6.1 Sol reviewed the source, capture tool and four desktop comparisons and found no medium-or-higher defect. The user's visual acceptance remains pending. This revision does not establish Safari, physical-device or complete assistive-technology coverage; simulation layout work and the accessibility pass remain separate follow-ups.
+To sample all four native illustration transitions while scrolling pauses after each trigger:
 
-## Density and motion follow-up
+```sh
+node scripts/capture-landing-motion.mjs http://localhost:4173 /tmp/arena-motion-captures
+```
 
-The opening mountain now renders 658 contours in both Canvas and SVG. Its silhouette, placement and 220 source profiles stay fixed. The chart forms the arena's 282 shaded cubes inside its six filled regions before departure. Those same cube identities follow reversible curved routes into the existing lattice; chart context fades during departure and lattice connections appear near arrival. A scalar critically damped phase carries position and velocity across scroll retargeting. The mountain-to-grid and lattice-to-mark handoffs also crossfade their source artwork.
+This tool copies actual Canvas layers inside animation callbacks and records elapsed times at nominal 0/100/200/300/450/600/900/1200/1800/2400 ms checkpoints. It saves 40 PNGs plus a manifest. The images exclude DOM text and chart scaffolding; the static capture tool covers those. Sampling adds overhead, and this is not a frame-rate benchmark or a calibrated 60 fps recording.
 
-The primary captured ten controlled-clock chart-to-arena frames from actual Canvas drawing calls. All 282 cubes were present in the formed chart, each sampled transfer frame and the settled arena. Departure centers matched within numerical precision; the near-arrival centers matched the settled lattice within 0.05 CSS pixels. A reverse scroll crossed the actual hysteresis boundary and restored the chart; a rapid forward/reverse retarget also restored all 282 visible chart cubes. These checks establish geometry and visibility, not physical-device frame rate. The earlier callback timing measurements describe the original integration, rather than this revised animation.
+## Current verification
 
-The checks caught a double-applied chart transform and an opaque paint flash at the mountain's departure. Cube coordinates are now applied once. Transferring profiles share the settled grid's paint function and fade in, while the retained mountain clips to its original artwork box. The screenshots above were refreshed after the density and cube changes; local controlled-frame captures also cover the first and final handoffs.
+`npm run check` passed TypeScript checking and the production build. Reference and replica capture matrices cover all five scenes at the five requested viewports, with fonts ready and no horizontal document overflow.
 
-The primary's final build and all three earlier animation regressions passed again. The grid endpoint differed from its settled geometry by less than one CSS pixel, and the final mark remained visible after tall-window navigation and bottom-of-page resize. Sol's read-only follow-up found no remaining medium-or-higher defect in cube containment, identity routes, spring retargeting, handoffs or reduced-motion handling.
+The public generators and reconstructed data compare to numerical precision: maximum mountain-coordinate error 2.84e-12, chart error 1.25e-12, grid and lattice coordinates exact. Independent WebGL comparisons over about 3.66 million RGBA bytes per tested composition found at most one byte value of difference; context restoration replayed an identical frame. The static hero-art crop's mean RGB difference from the reference was about 0.57/255 per channel. This is evidence for the tested art crop, not an assertion about full-page pixel parity. All five art anchor bounds matched the live reference at 1363 × 936 and 1440 × 900 to the capture manifest's 0.1 px precision. Art dimensions matched at all five viewports; smaller-layout document positions depend on the retained project copy. The [anchor comparison](evidence/landing-anchor-comparison-2026-10-15.json) records both sets of bounds and their deltas.
 
-Luna's independent live checks at 1440 by 900 and 390 by 844 found no remaining defect. Forward and reverse transitions, quick reversal below hysteresis, contained chart cubes and captions, arena and mark endpoints, and document overflow checks passed. The revised first transfer retained visible artwork until the grid settled. A reduced-motion mobile session retained chart and lattice ink and the contained six-item legend. Both validation browser sessions were stopped after the checks.
+Twenty native browser checks and twenty separate forced-no-WebGL checks passed; their states and the five final shell checks are retained in the [browser results](evidence/landing-browser-checks-2026-10-15.json). These cover stage ownership, chart separation and retained outlines, the persistent legend, forward/reverse hysteresis, End/Home, restored scroll, bottom resize and mobile overflow. Additional interruption checks caught four defects and then verified their fixes: repeated reversal retains phase, incoming endpoints stay hidden behind transfers, interrupted chart departure retains its landed split state, and early logo departure retains the moving cube mass. The independent Sol 6.1 review reported no remaining verified medium-or-higher rendering/lifecycle finding.
 
-## Terrain depth and continuous handoffs
+Actual context loss switched to Canvas fallback; restoration rebuilt native rendering without a GL error. Forced reduced motion exposed settled art at all five anchors. Complete Canvas failure exposed all five SVG scenes, the split chart and its explanatory list. The final responsive shell checks cover 1363, 1024, 768 and 390 px widths.
 
-The next user review showed that interpolating more copies of one profile did not establish the requested depth, and that endpoint checks did not establish perceived smoothness. The terrain now follows the reference's broad silhouette and shallow, uneven summit saddle. Separate depth-dependent rear ridges and an offset foreground face replace the previous scaled cone. Filled, irregular pastel strata and fine gray contours expose the overlapping faces. The chart and grid keep their original source geometry.
+Representative captures are [hero](screenshots/landing-fidelity-hero.webp), [chart](screenshots/landing-fidelity-chart.webp), [lattice](screenshots/landing-fidelity-lattice.webp), [OA mark](screenshots/landing-fidelity-mark.webp), [mobile chart](screenshots/landing-fidelity-mobile-chart.webp), and [mid-transfer illustration](screenshots/landing-fidelity-transfer.webp). The [capture manifest](evidence/landing-captures-2026-10-15.json) records the full static matrix. The [timed sample manifest](evidence/landing-motion-samples-2026-10-15.json) records the illustration samples' actual times and stage state.
 
-The mountain is cached as one artwork layer, so its crossfade applies group opacity rather than accumulating alpha over hundreds of polygons. Moving profiles retain charcoal mass before blending into the pale grid. The phase spring uses omega 4 instead of 9; chart context fades over a broader part of the transfer, and moving cubes share the settled artwork's depth ordering. Grid-to-chart overlays fade into the arriving plot, and transparent mark strips avoid white rectangles over the dark section.
-
-Local artwork follows the sampled phase during interrupted scrolls. Destination scenes no longer appear early and disappear again as the animation catches up. Resize recomputes and settles the absolute current stage without replaying the journey; unselected grid profiles remain after the selected profile transfers. The arena trigger moved from 0.87 to 0.52 viewport heights so more destination artwork is visible during arrival. The capture script now allows 4.2 seconds for the slower animation and chart formation to settle.
-
-Sol's final read-only review found no remaining medium-or-higher defect, including independent forward/reverse jump, resize and persistent-grid checks. Luna compared near-arrival and settled artwork at the same scroll positions on desktop and mobile: the arena was already visibly formed, without a perceptual blank interval or target pop. Mobile had no horizontal overflow. Reduced-motion rendering retained the scenes. The saved reference captures now show this revised terrain; the earlier animation timings remain historical observations.
-
-The primary independently built the final source and repeated the three animation regressions against the served build. The grid's last transferred paths matched its settled paths within one CSS pixel; tall-window and bottom-resize mark checks passed. The cube transfer retained 282 cubes at departure, sampled intermediate frames and arrival, and passed true reverse and rapid retarget checks. The browser harness observes the new offscreen transfer layer before composition, excluding fully transparent fills. Ten desktop/mobile reference captures were regenerated after the final fixes.
+Remaining parity limits are physical-device/Safari behavior and calibrated full-page temporal comparison. The OA bitmap, project text and simulation navigation intentionally retain this project's identity. No deployment or source publication was performed.

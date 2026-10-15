@@ -1,0 +1,683 @@
+{
+  "reference": "https://www.nof1.ai/",
+  "replica": "http://localhost:4173/",
+  "precisionCSSPixels": 0.1,
+  "note": "Own project text changes downstream documentY at narrower viewports. Anchor dimensions match all25captures; full bounds match at the two large desktop viewports. This is not pixel parity.",
+  "results": [
+    {
+      "name": "1363x936-hero",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "referenceArt": {
+        "x": 612.5,
+        "y": 140.3,
+        "width": 750.5,
+        "height": 545.6,
+        "documentY": 140.3
+      },
+      "replicaArt": {
+        "x": 612.5,
+        "y": 140.3,
+        "width": 750.5,
+        "height": 545.6,
+        "documentY": 140.3
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1363x936-grid",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "referenceArt": {
+        "x": 825.8,
+        "y": 179.9,
+        "width": 497.3,
+        "height": 351,
+        "documentY": 782.9
+      },
+      "replicaArt": {
+        "x": 825.8,
+        "y": 179.9,
+        "width": 497.3,
+        "height": 351,
+        "documentY": 782.9
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0.0,
+        "height": 0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1363x936-chart",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "referenceArt": {
+        "x": 40,
+        "y": 276.8,
+        "width": 609.5,
+        "height": 443.1,
+        "documentY": 1326.8
+      },
+      "replicaArt": {
+        "x": 40,
+        "y": 276.8,
+        "width": 609.5,
+        "height": 443.1,
+        "documentY": 1326.8
+      },
+      "delta": {
+        "x": 0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1363x936-lattice",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "referenceArt": {
+        "x": 713.5,
+        "y": 119.9,
+        "width": 609.5,
+        "height": 609.5,
+        "documentY": 1961.9
+      },
+      "replicaArt": {
+        "x": 713.5,
+        "y": 119.9,
+        "width": 609.5,
+        "height": 609.5,
+        "documentY": 1961.9
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1363x936-team",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "referenceArt": {
+        "x": 938,
+        "y": 331.1,
+        "width": 385,
+        "height": 385,
+        "documentY": 2834.1
+      },
+      "replicaArt": {
+        "x": 938,
+        "y": 331.1,
+        "width": 385,
+        "height": 385,
+        "documentY": 2834.1
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1440x900-hero",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "referenceArt": {
+        "x": 644.4,
+        "y": 140.3,
+        "width": 795.6,
+        "height": 578.4,
+        "documentY": 140.3
+      },
+      "replicaArt": {
+        "x": 644.4,
+        "y": 140.3,
+        "width": 795.6,
+        "height": 578.4,
+        "documentY": 140.3
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1440x900-grid",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "referenceArt": {
+        "x": 870.7,
+        "y": 179.6,
+        "width": 529.3,
+        "height": 373.6,
+        "documentY": 815.6
+      },
+      "replicaArt": {
+        "x": 870.7,
+        "y": 179.6,
+        "width": 529.3,
+        "height": 373.6,
+        "documentY": 815.6
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1440x900-chart",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "referenceArt": {
+        "x": 40,
+        "y": 277.2,
+        "width": 648,
+        "height": 471.1,
+        "documentY": 1382.2
+      },
+      "replicaArt": {
+        "x": 40,
+        "y": 277.2,
+        "width": 648,
+        "height": 471.1,
+        "documentY": 1382.2
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0.0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1440x900-lattice",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "referenceArt": {
+        "x": 752,
+        "y": 120.3,
+        "width": 648,
+        "height": 648,
+        "documentY": 2045.3
+      },
+      "replicaArt": {
+        "x": 752,
+        "y": 120.3,
+        "width": 648,
+        "height": 648,
+        "documentY": 2045.3
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1440x900-team",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "referenceArt": {
+        "x": 989.3,
+        "y": 300,
+        "width": 410.7,
+        "height": 410.7,
+        "documentY": 2956
+      },
+      "replicaArt": {
+        "x": 989.3,
+        "y": 300,
+        "width": 410.7,
+        "height": 410.7,
+        "documentY": 2956
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": 0
+      }
+    },
+    {
+      "name": "1024x768-hero",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "referenceArt": {
+        "x": 471.8,
+        "y": 140.3,
+        "width": 552.2,
+        "height": 401.4,
+        "documentY": 140.3
+      },
+      "replicaArt": {
+        "x": 471.8,
+        "y": 140.3,
+        "width": 552.2,
+        "height": 401.4,
+        "documentY": 140.3
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1024x768-grid",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "referenceArt": {
+        "x": 628,
+        "y": 179.7,
+        "width": 356,
+        "height": 251.3,
+        "documentY": 638.7
+      },
+      "replicaArt": {
+        "x": 628,
+        "y": 179.7,
+        "width": 356,
+        "height": 251.3,
+        "documentY": 638.7
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0.0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "1024x768-chart",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "referenceArt": {
+        "x": 40,
+        "y": 276.9,
+        "width": 415.1,
+        "height": 301.8,
+        "documentY": 1286.9
+      },
+      "replicaArt": {
+        "x": 40,
+        "y": 277,
+        "width": 415.1,
+        "height": 301.8,
+        "documentY": 1083
+      },
+      "delta": {
+        "x": 0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": -203.9
+      }
+    },
+    {
+      "name": "1024x768-lattice",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "referenceArt": {
+        "x": 544,
+        "y": 119.8,
+        "width": 440,
+        "height": 440,
+        "documentY": 2042.8
+      },
+      "replicaArt": {
+        "x": 544,
+        "y": 119.8,
+        "width": 440,
+        "height": 440,
+        "documentY": 1735.8
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0,
+        "documentY": -307.0
+      }
+    },
+    {
+      "name": "1024x768-team",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "referenceArt": {
+        "x": 712,
+        "y": 324,
+        "width": 272,
+        "height": 272,
+        "documentY": 2769
+      },
+      "replicaArt": {
+        "x": 712,
+        "y": 306.1,
+        "width": 272,
+        "height": 272,
+        "documentY": 2499.1
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0,
+        "documentY": -269.9
+      }
+    },
+    {
+      "name": "768x1024-hero",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "referenceArt": {
+        "x": -105.4,
+        "y": 338,
+        "width": 921.6,
+        "height": 670,
+        "documentY": 338
+      },
+      "replicaArt": {
+        "x": -105.4,
+        "y": 338,
+        "width": 921.6,
+        "height": 670,
+        "documentY": 338
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0.0,
+        "height": 0,
+        "documentY": 0
+      }
+    },
+    {
+      "name": "768x1024-grid",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "referenceArt": {
+        "x": 40,
+        "y": 80,
+        "width": 688,
+        "height": 485.6,
+        "documentY": 1049
+      },
+      "replicaArt": {
+        "x": 40,
+        "y": 80,
+        "width": 688,
+        "height": 485.6,
+        "documentY": 1049
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0.0,
+        "documentY": 0
+      }
+    },
+    {
+      "name": "768x1024-chart",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "referenceArt": {
+        "x": 40,
+        "y": 80.1,
+        "width": 649,
+        "height": 471.8,
+        "documentY": 1964.1
+      },
+      "replicaArt": {
+        "x": 40,
+        "y": 80.2,
+        "width": 649,
+        "height": 471.8,
+        "documentY": 1829.2
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0.0,
+        "documentY": -134.9
+      }
+    },
+    {
+      "name": "768x1024-lattice",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "referenceArt": {
+        "x": 40,
+        "y": 79.8,
+        "width": 688,
+        "height": 688,
+        "documentY": 3058.8
+      },
+      "replicaArt": {
+        "x": 40,
+        "y": 80,
+        "width": 688,
+        "height": 688,
+        "documentY": 2789
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0,
+        "documentY": -269.8
+      }
+    },
+    {
+      "name": "768x1024-team",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "referenceArt": {
+        "x": 154.7,
+        "y": 107.6,
+        "width": 458.7,
+        "height": 458.7,
+        "documentY": 4219.6
+      },
+      "replicaArt": {
+        "x": 154.7,
+        "y": 141.2,
+        "width": 458.7,
+        "height": 458.7,
+        "documentY": 3984.2
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": -235.4
+      }
+    },
+    {
+      "name": "390x844-hero",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "referenceArt": {
+        "x": -53.5,
+        "y": 487.8,
+        "width": 468,
+        "height": 340.2,
+        "documentY": 487.8
+      },
+      "replicaArt": {
+        "x": -53.5,
+        "y": 487.8,
+        "width": 468,
+        "height": 340.2,
+        "documentY": 487.8
+      },
+      "delta": {
+        "x": 0.0,
+        "width": 0,
+        "height": 0.0,
+        "documentY": 0.0
+      }
+    },
+    {
+      "name": "390x844-grid",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "referenceArt": {
+        "x": 24,
+        "y": 80,
+        "width": 342,
+        "height": 241.4,
+        "documentY": 869
+      },
+      "replicaArt": {
+        "x": 24,
+        "y": 80,
+        "width": 342,
+        "height": 241.4,
+        "documentY": 869
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0.0,
+        "documentY": 0
+      }
+    },
+    {
+      "name": "390x844-chart",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "referenceArt": {
+        "x": 24,
+        "y": 79.5,
+        "width": 322.6,
+        "height": 234.5,
+        "documentY": 1753.5
+      },
+      "replicaArt": {
+        "x": 24,
+        "y": 79.8,
+        "width": 322.6,
+        "height": 234.5,
+        "documentY": 1509.8
+      },
+      "delta": {
+        "x": 0,
+        "width": 0.0,
+        "height": 0.0,
+        "documentY": -243.7
+      }
+    },
+    {
+      "name": "390x844-lattice",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "referenceArt": {
+        "x": 24,
+        "y": 79.9,
+        "width": 342,
+        "height": 342,
+        "documentY": 2867.9
+      },
+      "replicaArt": {
+        "x": 24,
+        "y": 80.3,
+        "width": 342,
+        "height": 342,
+        "documentY": 2353.3
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0,
+        "documentY": -514.6
+      }
+    },
+    {
+      "name": "390x844-team",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "referenceArt": {
+        "x": 81,
+        "y": 79.8,
+        "width": 228,
+        "height": 228,
+        "documentY": 3972.8
+      },
+      "replicaArt": {
+        "x": 81,
+        "y": 87.2,
+        "width": 228,
+        "height": 228,
+        "documentY": 3470.2
+      },
+      "delta": {
+        "x": 0,
+        "width": 0,
+        "height": 0,
+        "documentY": -502.6
+      }
+    }
+  ]
+}

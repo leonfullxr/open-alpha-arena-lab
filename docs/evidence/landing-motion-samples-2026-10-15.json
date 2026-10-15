@@ -1,0 +1,887 @@
+{
+  "url": "http://localhost:4173/",
+  "generatedAt": "2026-10-15T17:48:35.845Z",
+  "note": "Canvas illustration layers sampled inside actual animation callbacks, with idle timer samples after settlement. Text and DOM scaffolding are excluded; use the full-page capture tool for those. Actual elapsed times are recorded. Canvas copies add instrumentation overhead; this is not a calibrated frame-rate measurement. Scroll pauses after each trigger.",
+  "frames": [
+    {
+      "destination": "grid",
+      "nominalMs": 0,
+      "elapsedMs": 0.8999999910593033,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "0",
+        "targetStage": "1",
+        "transitionProgress": "0",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-0000.png"
+    },
+    {
+      "destination": "grid",
+      "nominalMs": 100,
+      "elapsedMs": 140.70000000298023,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "0",
+        "targetStage": "1",
+        "transitionProgress": "0.05639999999999964",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-0100.png"
+    },
+    {
+      "destination": "grid",
+      "nominalMs": 200,
+      "elapsedMs": 232.70000000298023,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "0",
+        "targetStage": "1",
+        "transitionProgress": "0.22310000000000035",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-0200.png"
+    },
+    {
+      "destination": "grid",
+      "nominalMs": 300,
+      "elapsedMs": 347.70000000298023,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "0",
+        "targetStage": "1",
+        "transitionProgress": "0.22310000000000035",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-0300.png"
+    },
+    {
+      "destination": "grid",
+      "nominalMs": 450,
+      "elapsedMs": 453.79999999701977,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "0",
+        "targetStage": "1",
+        "transitionProgress": "0.4396999999999998",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-0450.png"
+    },
+    {
+      "destination": "grid",
+      "nominalMs": 600,
+      "elapsedMs": 619.5999999940395,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "0",
+        "targetStage": "1",
+        "transitionProgress": "0.6063999999999996",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-0600.png"
+    },
+    {
+      "destination": "grid",
+      "nominalMs": 900,
+      "elapsedMs": 913.7000000029802,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "0",
+        "targetStage": "1",
+        "transitionProgress": "0.9063999999999997",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-0900.png"
+    },
+    {
+      "destination": "grid",
+      "nominalMs": 1200,
+      "elapsedMs": 1207.0999999940395,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "1",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-1200.png"
+    },
+    {
+      "destination": "grid",
+      "nominalMs": 1800,
+      "elapsedMs": 1807,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "1",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-1800.png"
+    },
+    {
+      "destination": "grid",
+      "nominalMs": 2400,
+      "elapsedMs": 2400.0999999940395,
+      "scrollY": 204,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "1",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "grid-2400.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 0,
+      "elapsedMs": 0.8999999910593033,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "2",
+        "transitionProgress": "0",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-0000.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 100,
+      "elapsedMs": 114,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "2",
+        "transitionProgress": "0.1133000000029806",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-0100.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 200,
+      "elapsedMs": 214,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "2",
+        "transitionProgress": "0.2133000000029806",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-0200.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 300,
+      "elapsedMs": 314,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "2",
+        "transitionProgress": "0.3133000000029806",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-0300.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 450,
+      "elapsedMs": 464,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "2",
+        "transitionProgress": "0.4633000000029806",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-0450.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 600,
+      "elapsedMs": 613.7999999970198,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "2",
+        "transitionProgress": "0.6133000000029806",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-0600.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 900,
+      "elapsedMs": 913.8999999910593,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "1",
+        "targetStage": "2",
+        "transitionProgress": "0.9133000000029806",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-0900.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 1200,
+      "elapsedMs": 1213.8999999910593,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "2",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-1200.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 1800,
+      "elapsedMs": 1814.5,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "2",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-1800.png"
+    },
+    {
+      "destination": "chart",
+      "nominalMs": 2400,
+      "elapsedMs": 2400.0999999940395,
+      "scrollY": 608,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "2",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "0.900179",
+        "0.709603",
+        "0.295436",
+        "0.0221837",
+        "0",
+        "0"
+      ],
+      "screenshot": "chart-2400.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 0,
+      "elapsedMs": 9.299999997019768,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "3",
+        "transitionProgress": "0",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "0.997551"
+      ],
+      "screenshot": "lattice-0000.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 100,
+      "elapsedMs": 111.40000000596046,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "3",
+        "transitionProgress": "0.11099999999337645",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "lattice-0100.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 200,
+      "elapsedMs": 214.59999999403954,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "3",
+        "transitionProgress": "0.2222222222155991",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "lattice-0200.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 300,
+      "elapsedMs": 312.59999999403954,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "3",
+        "transitionProgress": "0.33322222221559866",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "lattice-0300.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 450,
+      "elapsedMs": 462.70000000298023,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "3",
+        "transitionProgress": "0.49988888888226535",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "lattice-0450.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 600,
+      "elapsedMs": 613.4000000059605,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "3",
+        "transitionProgress": "0.666555555548932",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "lattice-0600.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 900,
+      "elapsedMs": 915.2999999970198,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "2",
+        "targetStage": "3",
+        "transitionProgress": "0.9998888888822653",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "lattice-0900.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 1200,
+      "elapsedMs": 1200.0999999940395,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "3",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "lattice-1200.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 1800,
+      "elapsedMs": 1800.0999999940395,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "3",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "lattice-1800.png"
+    },
+    {
+      "destination": "lattice",
+      "nominalMs": 2400,
+      "elapsedMs": 2400.0999999940395,
+      "scrollY": 1243,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "3",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "lattice-2400.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 0,
+      "elapsedMs": 31.600000008940697,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "4",
+        "transitionProgress": "0",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-0000.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 100,
+      "elapsedMs": 112.90000000596046,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "4",
+        "transitionProgress": "0.05883333333002156",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-0100.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 200,
+      "elapsedMs": 217.90000000596046,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "4",
+        "transitionProgress": "0.11438888888557712",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-0200.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 300,
+      "elapsedMs": 303.20000000298023,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "4",
+        "transitionProgress": "0.16072222221891125",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-0300.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 450,
+      "elapsedMs": 460.90000000596046,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "4",
+        "transitionProgress": "0.25327777777446603",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-0450.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 600,
+      "elapsedMs": 609.7999999970198,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "4",
+        "transitionProgress": "0.3366666666633551",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-0600.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 900,
+      "elapsedMs": 910.4000000059605,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "4",
+        "transitionProgress": "0.503277777774466",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-0900.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 1200,
+      "elapsedMs": 1210.7999999970198,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "4",
+        "transitionProgress": "0.6699444444411327",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-1200.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 1800,
+      "elapsedMs": 1806.5,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "3",
+        "targetStage": "4",
+        "transitionProgress": "1",
+        "direction": "forward"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-1800.png"
+    },
+    {
+      "destination": "logo",
+      "nominalMs": 2400,
+      "elapsedMs": 2400,
+      "scrollY": 2115,
+      "scene": {
+        "renderer": "webgl2+canvas2d",
+        "activeStage": "4",
+        "targetStage": "4",
+        "transitionProgress": "1",
+        "direction": "idle"
+      },
+      "annotationOpacities": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "screenshot": "logo-2400.png"
+    }
+  ]
+}

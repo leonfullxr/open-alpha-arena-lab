@@ -1,0 +1,1499 @@
+{
+  "native": [
+    {
+      "name": "top mountain is painted",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 0,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "0",
+            "targetStage": "0",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 0,
+          "landed": false
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": true,
+            "ink": 225220,
+            "strong": 224685
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "grid handoff empties visible hero canvas",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 230,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "1",
+            "targetStage": "1",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 0,
+          "landed": false
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": true,
+            "ink": 28805,
+            "strong": 26191
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "settled grid is painted",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 230,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "1",
+            "targetStage": "1",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 0,
+          "landed": false
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": true,
+            "ink": 28805,
+            "strong": 26191
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "chart lands and separates",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 700,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "2",
+            "targetStage": "2",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": true,
+            "ink": 28805,
+            "strong": 26191
+          },
+          {
+            "stage": 2,
+            "visible": true,
+            "ink": 117989,
+            "strong": 115026
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "chart retains outline while fill leaves",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 1300,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "3",
+            "targetStage": "3",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": true,
+            "ink": 4176,
+            "strong": 2600
+          },
+          {
+            "stage": 3,
+            "visible": true,
+            "ink": 108519,
+            "strong": 73089
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ],
+        "filled": 117989
+      }
+    },
+    {
+      "name": "lattice paints at its anchor",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 1300,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "3",
+            "targetStage": "3",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": true,
+            "ink": 4176,
+            "strong": 2600
+          },
+          {
+            "stage": 3,
+            "visible": true,
+            "ink": 108519,
+            "strong": 73089
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "logo handoff hides lattice but retains mark",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 2200,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "4",
+            "targetStage": "4",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": true,
+            "ink": 29484,
+            "strong": 29022
+          }
+        ]
+      }
+    },
+    {
+      "name": "legend survives artwork departure",
+      "pass": true,
+      "details": {
+        "opacity": "1",
+        "display": "flex",
+        "count": 6
+      }
+    },
+    {
+      "name": "reverse hysteresis retains logo",
+      "pass": true,
+      "details": {
+        "y": 1998,
+        "diag": {
+          "renderer": "webgl2+canvas2d",
+          "activeStage": "4",
+          "targetStage": "4",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 1,
+        "landed": true
+      }
+    },
+    {
+      "name": "reverse restores lattice",
+      "pass": true,
+      "details": {
+        "y": 1890,
+        "diag": {
+          "renderer": "webgl2+canvas2d",
+          "activeStage": "3",
+          "targetStage": "3",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 1,
+        "landed": true
+      }
+    },
+    {
+      "name": "reverse restores grid",
+      "pass": true,
+      "details": {
+        "y": 370,
+        "diag": {
+          "renderer": "webgl2+canvas2d",
+          "activeStage": "1",
+          "targetStage": "1",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "Home position restores mountain",
+      "pass": true,
+      "details": {
+        "y": 0,
+        "diag": {
+          "renderer": "webgl2+canvas2d",
+          "activeStage": "0",
+          "targetStage": "0",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "End jump has coherent destination promptly",
+      "pass": true,
+      "details": {
+        "y": 2503,
+        "diag": {
+          "renderer": "webgl2+canvas2d",
+          "activeStage": "4",
+          "targetStage": "4",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "End jump settles with visible mark",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 2503,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "4",
+            "targetStage": "4",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 0,
+          "landed": false
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": true,
+            "ink": 29484,
+            "strong": 29022
+          }
+        ]
+      }
+    },
+    {
+      "name": "bottom resize retains final mark",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 2387,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "4",
+            "targetStage": "4",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1440,
+          "viewport": 1440,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": true,
+            "ink": 34128,
+            "strong": 33568
+          }
+        ]
+      }
+    },
+    {
+      "name": "Home key restores top",
+      "pass": true,
+      "details": {
+        "y": 0,
+        "diag": {
+          "renderer": "webgl2+canvas2d",
+          "activeStage": "0",
+          "targetStage": "0",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1440,
+        "viewport": 1440,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "mobile has no horizontal overflow",
+      "pass": true,
+      "details": {
+        "y": 0,
+        "diag": {
+          "renderer": "webgl2+canvas2d",
+          "activeStage": "0",
+          "targetStage": "0",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 390,
+        "viewport": 390,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "mobile bottom has mark",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 3222,
+          "diag": {
+            "renderer": "webgl2+canvas2d",
+            "activeStage": "4",
+            "targetStage": "4",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 390,
+          "viewport": 390,
+          "split": 0,
+          "landed": false
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": true,
+            "ink": 10849,
+            "strong": 9908
+          }
+        ]
+      }
+    },
+    {
+      "name": "reload/restored position is coherent",
+      "pass": true,
+      "details": {
+        "y": 0,
+        "diag": {
+          "renderer": "webgl2+canvas2d",
+          "activeStage": "0",
+          "targetStage": "0",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 390,
+        "viewport": 390,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "browser console has no errors",
+      "pass": true,
+      "details": "console:\n## Console messages\n<no console messages found>\nhelp[2]:\n  Run `chrome-devtools-axi console-get <id>` to see a specific message\n  Run `chrome-devtools-axi console --type error` to filter by type\n"
+    }
+  ],
+  "forcedCanvas": [
+    {
+      "name": "top mountain is painted",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 0,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "0",
+            "targetStage": "0",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 0,
+          "landed": false
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": true,
+            "ink": 225126,
+            "strong": 224559
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "grid handoff empties visible hero canvas",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 230,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "1",
+            "targetStage": "1",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 0,
+          "landed": false
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": true,
+            "ink": 5555,
+            "strong": 43
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "settled grid is painted",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 230,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "1",
+            "targetStage": "1",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 0,
+          "landed": false
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": true,
+            "ink": 5555,
+            "strong": 43
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "chart lands and separates",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 700,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "2",
+            "targetStage": "2",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": true,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": true,
+            "ink": 117989,
+            "strong": 115026
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "chart retains outline while fill leaves",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 1300,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "3",
+            "targetStage": "3",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": true,
+            "ink": 4176,
+            "strong": 2600
+          },
+          {
+            "stage": 3,
+            "visible": true,
+            "ink": 108519,
+            "strong": 73089
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ],
+        "filled": 117989
+      }
+    },
+    {
+      "name": "lattice paints at its anchor",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 1300,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "3",
+            "targetStage": "3",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": true,
+            "ink": 4176,
+            "strong": 2600
+          },
+          {
+            "stage": 3,
+            "visible": true,
+            "ink": 108519,
+            "strong": 73089
+          },
+          {
+            "stage": 4,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "logo handoff hides lattice but retains mark",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 2200,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "4",
+            "targetStage": "4",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": true,
+            "ink": 29484,
+            "strong": 29022
+          }
+        ]
+      }
+    },
+    {
+      "name": "legend survives artwork departure",
+      "pass": true,
+      "details": {
+        "opacity": "1",
+        "display": "flex",
+        "count": 6
+      }
+    },
+    {
+      "name": "reverse hysteresis retains logo",
+      "pass": true,
+      "details": {
+        "y": 1998,
+        "diag": {
+          "renderer": "canvas2d-fallback",
+          "activeStage": "4",
+          "targetStage": "4",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 1,
+        "landed": true
+      }
+    },
+    {
+      "name": "reverse restores lattice",
+      "pass": true,
+      "details": {
+        "y": 1890,
+        "diag": {
+          "renderer": "canvas2d-fallback",
+          "activeStage": "3",
+          "targetStage": "3",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 1,
+        "landed": true
+      }
+    },
+    {
+      "name": "reverse restores grid",
+      "pass": true,
+      "details": {
+        "y": 370,
+        "diag": {
+          "renderer": "canvas2d-fallback",
+          "activeStage": "1",
+          "targetStage": "1",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "Home position restores mountain",
+      "pass": true,
+      "details": {
+        "y": 0,
+        "diag": {
+          "renderer": "canvas2d-fallback",
+          "activeStage": "0",
+          "targetStage": "0",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "End jump has coherent destination promptly",
+      "pass": true,
+      "details": {
+        "y": 2503,
+        "diag": {
+          "renderer": "canvas2d-fallback",
+          "activeStage": "4",
+          "targetStage": "4",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1363,
+        "viewport": 1363,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "End jump settles with visible mark",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 2503,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "4",
+            "targetStage": "4",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1363,
+          "viewport": 1363,
+          "split": 0,
+          "landed": false
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": true,
+            "ink": 29484,
+            "strong": 29022
+          }
+        ]
+      }
+    },
+    {
+      "name": "bottom resize retains final mark",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 2387,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "4",
+            "targetStage": "4",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 1440,
+          "viewport": 1440,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": true,
+            "ink": 34128,
+            "strong": 33568
+          }
+        ]
+      }
+    },
+    {
+      "name": "Home key restores top",
+      "pass": true,
+      "details": {
+        "y": 0,
+        "diag": {
+          "renderer": "canvas2d-fallback",
+          "activeStage": "0",
+          "targetStage": "0",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 1440,
+        "viewport": 1440,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "mobile has no horizontal overflow",
+      "pass": true,
+      "details": {
+        "y": 0,
+        "diag": {
+          "renderer": "canvas2d-fallback",
+          "activeStage": "0",
+          "targetStage": "0",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 390,
+        "viewport": 390,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "mobile bottom has mark",
+      "pass": true,
+      "details": {
+        "s": {
+          "y": 3222,
+          "diag": {
+            "renderer": "canvas2d-fallback",
+            "activeStage": "4",
+            "targetStage": "4",
+            "transitionProgress": "1",
+            "direction": "idle"
+          },
+          "width": 390,
+          "viewport": 390,
+          "split": 1,
+          "landed": true
+        },
+        "a": [
+          {
+            "stage": 0,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 1,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 2,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 3,
+            "visible": false,
+            "ink": 0,
+            "strong": 0
+          },
+          {
+            "stage": 4,
+            "visible": true,
+            "ink": 10849,
+            "strong": 9908
+          }
+        ]
+      }
+    },
+    {
+      "name": "reload/restored position is coherent",
+      "pass": true,
+      "details": {
+        "y": 0,
+        "diag": {
+          "renderer": "canvas2d-fallback",
+          "activeStage": "0",
+          "targetStage": "0",
+          "transitionProgress": "1",
+          "direction": "idle"
+        },
+        "width": 390,
+        "viewport": 390,
+        "split": 0,
+        "landed": false
+      }
+    },
+    {
+      "name": "browser console has no errors",
+      "pass": true,
+      "details": "console:\n## Console messages\n<no console messages found>\nhelp[2]:\n  Run `chrome-devtools-axi console-get <id>` to see a specific message\n  Run `chrome-devtools-axi console --type error` to filter by type\n"
+    }
+  ],
+  "finalShell": [
+    {
+      "viewport": [
+        1363,
+        936
+      ],
+      "pass": true,
+      "state": {
+        "width": 1363,
+        "overflow": false,
+        "ratio": 1,
+        "key": {
+          "height": 1,
+          "position": "absolute",
+          "font": "17px",
+          "items": [
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "1"
+          ]
+        },
+        "renderer": "webgl2+canvas2d",
+        "split": "1"
+      }
+    },
+    {
+      "viewport": [
+        1024,
+        768
+      ],
+      "pass": true,
+      "state": {
+        "width": 1024,
+        "overflow": false,
+        "ratio": 0.9431818181818182,
+        "key": {
+          "height": 127.125,
+          "position": "static",
+          "font": "12px",
+          "items": [
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "1"
+          ]
+        },
+        "renderer": "webgl2+canvas2d",
+        "split": "1"
+      }
+    },
+    {
+      "viewport": [
+        768,
+        1024
+      ],
+      "pass": true,
+      "state": {
+        "width": 768,
+        "overflow": false,
+        "ratio": 0.9433139534883721,
+        "key": {
+          "height": 127.125,
+          "position": "static",
+          "font": "12px",
+          "items": [
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "1"
+          ]
+        },
+        "renderer": "webgl2+canvas2d",
+        "split": "1"
+      }
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "pass": true,
+      "state": {
+        "width": 390,
+        "overflow": false,
+        "ratio": 0.9444444444444444,
+        "key": {
+          "height": 143.3125,
+          "position": "static",
+          "font": "12px",
+          "items": [
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "1"
+          ]
+        },
+        "renderer": "webgl2+canvas2d",
+        "split": "1"
+      }
+    },
+    {
+      "name": "all-Canvas-unavailable",
+      "pass": true,
+      "state": {
+        "renderer": "svg-static",
+        "svgs": [
+          "block",
+          "block",
+          "block",
+          "block",
+          "block"
+        ],
+        "key": [
+          "1",
+          "1",
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        "landed": true,
+        "split": "1",
+        "h1": 1
+      }
+    }
+  ]
+}
