@@ -418,15 +418,18 @@ def _candle_row(
 ) -> CandleBar:
     if row.get("s") != symbol or row.get("i") != interval:
         raise MarketDataError("market_candle_symbol_mismatch")
-    return CandleBar(
-        symbol=symbol,
-        interval=interval,
-        open_at=_utc_from_millis(row.get("t")),
-        close_at=_utc_from_millis(row.get("T")),
-        source_received_at=source_received_at,
-        open=_decimal(row.get("o"), "open", positive=True),
-        high=_decimal(row.get("h"), "high", positive=True),
-        low=_decimal(row.get("l"), "low", positive=True),
-        close=_decimal(row.get("c"), "close", positive=True),
-        volume=_decimal(row.get("v"), "volume"),
-    )
+    try:
+        return CandleBar(
+            symbol=symbol,
+            interval=interval,
+            open_at=_utc_from_millis(row.get("t")),
+            close_at=_utc_from_millis(row.get("T")),
+            source_received_at=source_received_at,
+            open=_decimal(row.get("o"), "open", positive=True),
+            high=_decimal(row.get("h"), "high", positive=True),
+            low=_decimal(row.get("l"), "low", positive=True),
+            close=_decimal(row.get("c"), "close", positive=True),
+            volume=_decimal(row.get("v"), "volume"),
+        )
+    except ValueError:
+        raise MarketDataError("invalid_market_candle") from None

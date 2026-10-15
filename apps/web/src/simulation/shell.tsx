@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getCompetitions, getStatus, getTicker } from './api';
+import { getCompetition, getCompetitions, getStatus, getTicker } from './api';
 
 const symbols = ['BTC', 'ETH', 'SOL', 'BNB', 'DOGE', 'XRP'];
 
@@ -9,11 +9,17 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
   const location = useLocation();
   const competitions = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions, refetchInterval: 15_000 });
   const pathCompetition = location.pathname.split('/')[2];
-  const scopedCompetition = competitions.data?.find((competition) => competition.id === pathCompetition);
+  const scoped = useQuery({
+    queryKey: ['competition', pathCompetition ?? ''],
+    queryFn: () => getCompetition(pathCompetition ?? ''),
+    enabled: Boolean(pathCompetition),
+    refetchInterval: (query) => ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? 5_000 : false,
+  });
+  const scopedCompetition = scoped.data;
   const refreshMarket = scopedCompetition?.state === 'RUNNING' || scopedCompetition?.state === 'PAUSED';
   const status = useQuery({ queryKey: ['status'], queryFn: getStatus, refetchInterval: refreshMarket ? 5_000 : false });
   const ticker = useQuery({ queryKey: ['ticker', scopedCompetition?.id], queryFn: () => getTicker(scopedCompetition?.id), refetchInterval: refreshMarket ? 5_000 : false });
-  const selected = competitions.data?.find((competition) => competition.id === pathCompetition) ?? competitions.data?.[0];
+  const selected = scopedCompetition ?? competitions.data?.[0];
   const competitionPath = selected ? `/simulation/${encodeURIComponent(selected.id)}` : '/simulation';
   const stale = ticker.data?.some((quote) => quote.stale) ?? false;
   const tickerLabel = status.isError || ticker.isError ? 'API UNAVAILABLE' : refreshMarket ? stale ? `${scopedCompetition?.source_label ?? 'MARKET DATA'} · STALE DATA` : `${scopedCompetition?.source_label ?? 'MARKET DATA'} · ${scopedCompetition?.state} · MARKET REFRESH` : scopedCompetition ? `${scopedCompetition.source_label} · ${scopedCompetition.state}` : status.data?.demo_label ?? status.data?.state ?? 'CONNECTING';

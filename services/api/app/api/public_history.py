@@ -156,6 +156,14 @@ def decisions(
         elif job.terminal_result:
             validation_status = "TERMINAL"
 
+        provider_status_code = result.public_metadata.get("status_code") if result else None
+        if (
+            isinstance(provider_status_code, bool)
+            or not isinstance(provider_status_code, int)
+            or not 100 <= provider_status_code <= 599
+        ):
+            provider_status_code = None
+
         # Older fixture rows predate the strict proposal batch format. Preserve only
         # the visible deterministic fields while the fixture is reseeded.
         if not proposals and validation_status == "INVALID" and agent.provider == "MockLLMAdapter":
@@ -210,6 +218,7 @@ def decisions(
                 provider=agent.provider,
                 model=agent.model,
                 error_code=(result.error_code if result else job.error_code),
+                provider_status_code=provider_status_code,
                 latency_ms=result.latency_ms if result else None,
                 estimated_cost_usd=(
                     str(result.estimated_cost_usd)

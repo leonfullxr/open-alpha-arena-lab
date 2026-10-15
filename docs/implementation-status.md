@@ -1,51 +1,55 @@
 # Implementation status
 
-Updated 2026-10-15. Work is active. Production has not been deployed and no live-model success is claimed.
+Updated 2026-10-15. The platform runs locally. Production has not been deployed, and successful genuine-model decisions or fills remain unverified.
 
 Public repository: https://github.com/leonfullxr/open-alpha-arena-lab
 
 | Milestone | State | Evidence and remaining work |
 | --- | --- | --- |
-| M0 repository and foundations | Integration review | Independent MIT repository, authentication, API, migrations, containers and CI exist; final publication gate pending |
-| M1a landing | Accepted checkpoint | Five viewport captures, forward/reverse transfers, resize, Home, reduced motion and canvas failure checked. See [landing validation](landing-validation.md); final split-route regression remains |
-| M1b simulation | Final regression | Typed dashboard, leaderboard, model evidence, filters, pagination and separate admin entry are built. Funding and pause/resume updates await final browser checks |
-| M2 live market data | Collected and reviewed | Primary ran the collector against Hyperliquid: trusted six-symbol snapshot and roughly 25,900 backfilled candles, with twelve completed bars and indicators per symbol. Final runtime regression remains |
-| M3 paper engine | Integration review | Decimal accounting, persistent risk, independent exits, historical funding and ledger reconciliation exist. PostgreSQL concurrency and final guard tests remain |
-| M4 model harness | Integration review | Exact sent request artifacts, two adapters, durable dispatch fences, deadlines and spend reservations exist. No inference has been sent; the genuine smoke is pending |
-| M5 live/admin product | Final integration | Public streaming, admin configuration and bounded exports exist. Genuine five-round/two-model acceptance remains pending |
-| M6 deployment hardening | Local recovery checked | A delegate ran isolated Compose startup, backup, restore and restart; primary verified the retained API image revision. Final-build recovery, PR/CI and production resource review remain |
+| M0 repository and foundations | Implemented; publication gate pending | Independent MIT repository, separate public/admin contracts, authentication, ten migrations, containers and CI |
+| M1a landing | Accepted | Five requested viewport captures, connected forward/reverse motion, resize, Home, reduced motion and canvas failure; simulation work began afterward |
+| M1b simulation | Locally verified | Typed dashboard, leaderboard, model evidence, ranges, toggles, tooltips, filters, pagination, funding history, rules and separate admin entry |
+| M2 live market data | Locally verified | Trusted real Hyperliquid quotes, metadata, completed candle backfill, fixed-window indicators, append-only restart and bounded gap recovery |
+| M3 paper engine | Locally verified | Decimal accounting, margin, fees, historical funding, independent exits, reconciliation, competing workers and crash rollback passed PostgreSQL checks |
+| M4 model harness | Mock/recovery verified | Shared frozen inputs, exact request artifacts, deadlines, dispatch fencing and budget reservations passed; genuine provider calls have returned HTTP 429 |
+| M5 live/admin product | Implemented; genuine acceptance pending | Public SSE, live ticker, admin controls and bounded exports work; no genuine model decision or executed fill is claimed |
+| M6 deployment hardening | Local recovery verified | Digest-pinned images, restore/restart, operator guide and guarded Worker dry run passed; final PR/CI and Cloudflare resource/build review remain |
 
-## Verification record
+## Verification
 
-The primary independently ran Worker TypeScript and its 10 behavioral tests successfully. The primary mutation sweep initially killed 10/13 changes; three missing JWT tests were exposed (issuer, audience, required claims). The implementer added signed-token negative cases; the final primary sweep killed all 13 mutations. JOSE owns required-claim validation; a redundant manual type check was removed. This is test evidence for the scoped Worker, not platform readiness.
+The complete backend suite after the independent-review corrections passed **128 tests** against a disposable PostgreSQL database migrated through all ten revisions. This includes a twenty-round/two-mock-agent competition, a subprocess restart after round ten, exact ledger replay, competing executors, stale fences and crash rollback. Ruff, strict mypy over 56 implementation files, generated contracts, web build/type checking, fifteen Worker tests and Wrangler dry run passed. Alembic found no schema drift. The later prompt-v2 PostgreSQL preflight regression and frontend builds also passed.
 
-The primary accepted the landing checkpoint after correcting scene transfers, annotation visibility, layout placement and resize state. Five requested viewport captures and animation measurements are recorded in [landing validation](landing-validation.md). Simulation frontend implementation began only after this gate.
+Primary mutation checks killed all 18 finance/authentication mutations, all 13 funding mutations, all 13 Worker mutations and all 10 final evidence/collector/export mutations. Initial survivors led to missing negative tests being added; the final per-guard results are in [validation results](validation-results.md). SQLite is useful for lightweight checks, but PostgreSQL is the accounting and concurrency acceptance database.
 
-No-mistakes is initialized and its daemon/agent health check passed. The pipeline has not started while source writers are active. An independent read-only Muse review in a detached worktree found no medium-or-higher infrastructure bug. It noted three low items: static-header coverage (now addressed with a Static Assets _headers file), per-request JWKS cache creation, and admin POST-body test coverage. Final review includes the requested thermo-nuclear maintainability checks.
+The landing gate passed before simulation implementation. [Landing validation](landing-validation.md) records all five viewport captures, motion checks and the measured loading budget. Final browser checks covered the v3 replay, fill/decision links, exact rules/request hashes, position lifecycle evidence, admin profile/prompt/draft creation and missing-credential rejection. Home and Methodology now cross the frontend entry boundary correctly; the landing makes no API calls. Desktop/mobile simulation and mobile admin captures are in [screenshots](screenshots/).
 
-The preliminary simulation passed primary browser checks for chart range state, series toggles, keyboard tooltips, 40-record pagination and exact artifact hashes; its final layout/contracts are being integrated. Primary review also found inconsistent admin baseline settings, incomplete failure evidence, a per-run budget reset at midnight, per-job quote selection and a subsecond provider timeout. Corrections are in progress and require final regression checks.
+The final Compose drill used API source `37e8504` and web source `95aef21`, with no provider credentials or runtime external calls. Startup, replay seeding, nested routes, sequenced SSE, exports and reconciliation passed. A guarded backup/restore and ordered service restart preserved the logical hash of all 33 public-schema tables. The primary independently restored the retained dump into another fresh database, matched hash `8d3f3b188587f7b2724990c35a10a6e953317f3f8b14b98258e91983b608e4c8`, verified image migration head `c4e8205a9411`, and reconciled two accounts across sixteen journals. The later shared ticker query passed browser pause/resume/finish checks. Expanded failure evidence also fits the 390 px viewport and displays the safe provider HTTP status.
 
-The remove-ai-marks service was unavailable on its default port; an existing service was then found on loopback port 8767. Its inspect/clean API processed nineteen original documentation and screenshot files: no AI provenance or invisible Unicode was reported; eight screenshots lost ICC profile metadata. It reported no residual metadata findings. No pixel watermark removal or statistical detection result is claimed. Deslop applies to prose; financial values, prompts and hashed evidence remain intact. An additional statistical prose rewrite is optional and cannot establish human authorship.
+Read-only Muse reviews covered infrastructure, landing, simulation, platform and funding checkpoints. Primary runtime checks found additional migration/collector gaps after those source reviews; they were fixed and tested. The final free reviewer was rate-limited, so the configured read-only Opus fallback reviewed the integration. It found an expired-inference-lease execution wedge, malformed-candle capture gap, inline reconciliation ordering bug and leftover SQLite tolerance. These were corrected with regressions; the final publication review remains. The requested maintainability review checks ownership, type boundaries, branching and file size; no handwritten implementation file exceeds 1,000 lines.
 
-## Checkpoints
+Both production npm audits and the installed Python dependency audit returned no known vulnerabilities on 2026-10-15. An earlier development-only pytest advisory was corrected by updating the constraint and lock to pytest 9.1.1. These checks do not establish that dependencies are vulnerability-free.
 
-- `08548ed`: independent repository, MIT, initial README and fixed architecture.
-- `1da8f54`: containers, guarded Cloudflare proxy, CI and source/license decisions.
-- `b8ee0f4`: signed Access JWT negative tests and guard verification.
-- `0e91c2c`: persistent accounting/API/auth foundation. Primary scoped PostgreSQL suite: 16 passed; migrations aligned.
-- `56f7bbf`: accepted landing checkpoint and captures, before simulation implementation. Independent read-only review found no medium-or-higher landing bug; three low follow-ups were recorded.
-- `0771c31`: accounting/operator policies and primary validation record.
-- `d5f50a4`: typed simulation and separate administration entry.
-- `2d47f4e`: bounded workers, live market contracts, competition controls and risk integration.
-- `3afbb05`: configurable loopback ports, complete API container inputs and stricter CI checks.
-- `760f18b`, `0aa4618`: primary corrections to the repository prompt path and BTC benchmark commission.
+The remove-ai-marks service processed nineteen original prose/screenshot artifacts and three final screenshots. No AI provenance or invisible Unicode was reported; eight earlier screenshots lost ICC profile metadata. No pixel watermark removal, statistical detection, human-authorship or undetectability result is claimed. Deslop applies to prose; hashes, financial facts, historical prompts and third-party licenses remain intact. An additional statistical prose rewrite is optional.
 
-Only the bootstrap main branch was published before the user requested no-mistakes. Further source publication uses the requested gate. No PR, merge, DNS, Tunnel or production deployment result is claimed.
+## Checkpoints and delivery
 
-## Acceptance still required
+- `08548ed`: independent repository, MIT license and initial architecture.
+- `1da8f54`, `b8ee0f4`: containers, guarded Cloudflare proxy, CI and signed Access checks.
+- `0e91c2c`: persistent accounting/API/auth foundation.
+- `56f7bbf`: accepted landing and captures, before simulation implementation.
+- `0771c31`: accounting/operator policies.
+- `d5f50a4`: typed simulation and separate admin entry.
+- `2d47f4e`: bounded workers, live contracts, controls and risk integration.
+- `3afbb05`, `760f18b`, `0aa4618`: configurable ports, container inputs, prompt path and benchmark corrections.
+- `2733cf0`: historical funding, reconciliation and shared evidence contract.
+- `3fbba44`: execution evidence, immutable quote pin, safe rules/exports and collector recovery.
+- `37e8504`: corrected new smoke prompt version and mobile admin layout.
+- `95aef21`: document navigation between frontend entries.
 
-At `0aa4618`, the primary ran the complete backend suite against a fresh PostgreSQL database: 76 passed. The primary then ran the funding/reconciliation checkpoint in an isolated checkout against a fresh migrated PostgreSQL database: 104 tests passed; Ruff, strict source mypy, web build/typecheck and fourteen Worker tests passed. Further execution-evidence corrections remain before final acceptance. Primary review caught a multi-agent creation rejection, protective-exit account projection loss, and a benchmark fee-key mismatch; fixes require final regression. The final primary finance/authentication mutation pass killed all eighteen changes. Funding tests initially missed five negative cases; after adding them, the primary killed all thirteen funding mutations. See the per-guard tables in [validation results](validation-results.md).
+Only bootstrap main was published before the user requested no-mistakes. The source is on `milestone/platform-integration`; delivery currently uses one integration branch with milestone checkpoint commits. Separate milestone PRs have not been opened. No PR, merge, DNS, Tunnel or production deployment result is claimed yet. Further source publication uses the requested no-mistakes gate.
 
-Final schema/secret/auth tests, migrations, concurrency, ledger replay, crash recovery, 20-round worker restart proof, browser regression, final-build backup/restore and PR/CI checks must run on the completed code. Both production npm dependency audits returned zero findings on 2026-10-15. These audits do not establish that all dependencies are vulnerability-free.
+## Remaining acceptance
 
-Real-model smoke is limited to five rounds, two explicitly selected models and a reserved configured spend cap. Genuine HOLD decisions are valid. Executed-fill acceptance remains pending until a real proposal produces a valid simulated fill. Provider failures and quota errors must remain visible rather than being replaced with fixtures.
+The genuine smoke completed five rounds with two fixed models, using the authorized existing credential only in process memory. All ten requests returned HTTP 429. The [safe finished-run archive](evidence/provider-smoke-2026-10-15.json) includes the exact request artifacts; [the smoke record](live-smoke.md) describes the outcome. Retained reservations total $0.518984 against a $2.50 cap; actual provider usage and billing were not reported. Provider failure evidence remains visible; fixtures do not replace it. HOLD would be a valid genuine decision, but successful model and executed-fill acceptance remain pending until the provider returns a valid proposal and the paper engine accepts it. There is no automatic paid fallback or repeat of an uncertain dispatch.
+
+Complete the final independent review and no-mistakes/PR/CI gates. Cloudflare DNS, Access, rate-limit resources, authenticated Tunnel and production deployment follow review of the concrete build. Account resources remain unverified. Physical-device, Safari and assistive-technology checks have not been performed.

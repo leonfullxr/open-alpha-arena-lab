@@ -470,6 +470,8 @@ export interface components {
             proposals: components["schemas"]["ProposalEvidenceDTO"][];
             /** Provider */
             provider: string;
+            /** Provider Status Code */
+            provider_status_code?: number | null;
             /** Quantity */
             quantity: string | null;
             /** Round */

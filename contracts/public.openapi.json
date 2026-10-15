@@ -483,6 +483,19 @@
             "title": "Provider",
             "type": "string"
           },
+          "provider_status_code": {
+            "anyOf": [
+              {
+                "maximum": 599.0,
+                "minimum": 100.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Status Code"
+          },
           "quantity": {
             "anyOf": [
               {

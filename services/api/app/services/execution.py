@@ -125,6 +125,7 @@ def execute_job(
                 job_id, context.account_row.id, context.job.terminal_result, 0, 0, 0, False
             )
 
+        ledger_clean = reconcile_ledger(db, competition_id=context.competition.id).balanced
         protective_count = _apply_protective_exits(db, context)
         try:
             batch = parse_proposal_output(context.output)
@@ -151,9 +152,6 @@ def execute_job(
                 False,
             )
 
-        ledger_clean = reconcile_ledger(
-            db, competition_id=context.competition.id
-        ).balanced
         accepted, rejected = _apply_proposals(
             db, context, batch, allow_new_entries=ledger_clean
         )
@@ -233,8 +231,6 @@ def _load_context(db: Session, job_id: str, fence: int, quote_set_id: str) -> _C
     now = _normalize_timestamp(now)
     if _normalize_timestamp(round_row.deadline_at) > now:
         raise ValueError("round execution deadline has not arrived")
-    if job.lease_expires_at is None or _normalize_timestamp(job.lease_expires_at) <= now:
-        raise ValueError("executor job lease expired")
     if round_row.execution_quote_set_id is None:
         candidate = db.get(QuoteSet, quote_set_id)
         if candidate is None:

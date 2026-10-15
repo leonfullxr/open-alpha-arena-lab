@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PublicModel(BaseModel):
@@ -168,6 +168,7 @@ class DecisionDTO(PublicModel):
     provider: str
     model: str
     error_code: str | None = None
+    provider_status_code: int | None = Field(default=None, ge=100, le=599)
     latency_ms: int | None = None
     estimated_cost_usd: str | None = None
     usage: dict[str, int]

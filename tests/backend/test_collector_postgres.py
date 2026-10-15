@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
+import httpx
 import pytest
 from app.db.models import (
     AgentRun,
@@ -22,7 +23,7 @@ from app.db.models import (
     RoundAgentJob,
     SpendReservation,
 )
-from app.market.hyperliquid import MarketDataError
+from app.market.hyperliquid import HyperliquidClient
 from app.market.persistence import CandlePersistenceError, persist_candles
 from app.market.types import (
     BASELINE_SYMBOLS,
@@ -239,17 +240,41 @@ def test_postgres_collector_is_append_only_idempotent_and_restart_safe(
 
         monkeypatch.setattr(worker, "BASELINE_SYMBOLS", ("ETH",))
         quote_time = datetime.now(UTC) - timedelta(seconds=5)
+        candle_time_ms = int(datetime.now(UTC).timestamp() * 1000)
+        malformed_candle = [
+            {
+                "s": "ETH",
+                "i": "3m",
+                "t": candle_time_ms,
+                "T": candle_time_ms + 179_999,
+                "o": "100",
+                "h": "99",
+                "l": "98",
+                "c": "100",
+                "v": "1",
+            }
+        ]
+        provider_requests: list[dict[str, object]] = []
+
+        def malformed_candle_response(request: httpx.Request) -> httpx.Response:
+            provider_requests.append(json.loads(request.content))
+            return httpx.Response(200, json=malformed_candle)
 
         class CandleFailureClient:
+            def __init__(self, provider: HyperliquidClient) -> None:
+                self.provider = provider
+
             def fetch_candles(
                 self,
-                _symbol: str,
+                symbol: str,
                 *,
                 start_at: datetime,
                 end_at: datetime,
                 interval: str = "3m",
             ) -> tuple[CandleBar, ...]:
-                raise MarketDataError("market_candle_gap")
+                return self.provider.fetch_candles(
+                    symbol, start_at=start_at, end_at=end_at, interval=interval
+                )
 
             def capture(self) -> MarketQuoteSet:
                 def quote_for(symbol: str) -> MarketQuote:
@@ -273,7 +298,14 @@ def test_postgres_collector_is_append_only_idempotent_and_restart_safe(
                     source="hyperliquid",
                 )
 
-        candle_failure_receipt, _ = capture_market_snapshot(CandleFailureClient(), factory)
+        with httpx.Client(transport=httpx.MockTransport(malformed_candle_response)) as http_client:
+            provider = HyperliquidClient(
+                symbols=("ETH",), client=http_client, clock=lambda: quote_time
+            )
+            candle_failure_receipt, _ = capture_market_snapshot(
+                CandleFailureClient(provider), factory
+            )
+        assert provider_requests and provider_requests[0]["type"] == "candleSnapshot"
         assert candle_failure_receipt.trusted
         with factory() as db:
             failed_snapshot = db.scalar(

@@ -62,11 +62,6 @@ def reconcile_ledger(db: Session, *, competition_id: str | None = None) -> Recon
         account_rows = db.execute(account_query).all()
         account_ids = [account.id for account, _ in account_rows]
         journal_sum = func.coalesce(func.sum(LedgerPosting.amount), ZERO)
-        journal_is_unbalanced = (
-            func.abs(journal_sum) > Decimal("0.000000001")
-            if db.get_bind().dialect.name == "sqlite"
-            else journal_sum != ZERO
-        )
         journal_mismatches = (
             db.execute(
                 select(
@@ -77,7 +72,7 @@ def reconcile_ledger(db: Session, *, competition_id: str | None = None) -> Recon
                 .outerjoin(LedgerPosting, LedgerPosting.journal_id == LedgerJournal.id)
                 .where(LedgerJournal.account_id.in_(account_ids))
                 .group_by(LedgerJournal.id, LedgerJournal.account_id, LedgerJournal.event_key)
-                .having(journal_is_unbalanced)
+                .having(journal_sum != ZERO)
                 .order_by(LedgerJournal.account_id, LedgerJournal.id)
             ).all()
             if account_ids

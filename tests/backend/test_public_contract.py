@@ -12,6 +12,11 @@ def test_public_openapi_exposes_only_safe_typed_contracts() -> None:
     assert "/stream" not in paths
     decision = spec["components"]["schemas"]["DecisionDTO"]["properties"]
     assert "justification" in decision
+    status_code = decision["provider_status_code"]["anyOf"]
+    integer_schema = next(item for item in status_code if item.get("type") == "integer")
+    assert integer_schema["minimum"] == 100
+    assert integer_schema["maximum"] == 599
+    assert {item.get("type") for item in status_code} == {"integer", "null"}
     assert "reasoning" not in decision
     assert "private_reasoning" not in decision
     public_schema_text = str(spec).lower()
@@ -34,9 +39,9 @@ def test_history_routes_use_bounded_page_envelopes() -> None:
         assert schema["$ref"].startswith("#/components/schemas/PageDTO_")
     page = spec["components"]["schemas"]["PageDTO_EquityPoint_"]["properties"]
     assert set(page) == {"items", "limit", "offset", "total"}
-    chart = spec["paths"]["/competitions/{competition_id}/chart"]["get"]["responses"][
-        "200"
-    ]["content"]["application/json"]["schema"]
+    chart = spec["paths"]["/competitions/{competition_id}/chart"]["get"]["responses"]["200"][
+        "content"
+    ]["application/json"]["schema"]
     assert chart["$ref"] == "#/components/schemas/EquityChartDTO"
     events = spec["components"]["schemas"]["EventPageDTO"]["properties"]
     assert set(events) == {"items", "after", "next_after", "has_more"}
