@@ -5,7 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const usage = 'Usage: node scripts/capture-landing.mjs <http(s)-url> <output-directory>';
-const waitMs = 2400;
+const waitMs = 4200;
 const sections = [
   { name: 'hero', section: '.hero', art: '[data-stage="0"]', anchor: 'section' },
   { name: 'grid', section: '.why', art: '[data-stage="1"]', anchor: 'art', offset: 180 },

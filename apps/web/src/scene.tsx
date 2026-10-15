@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ART_HEIGHT, ART_WIDTH, CHART_BASE, CHART_TOP, FAMILY_COLORS, SLICE_COUNT, chartPointAt, mixColor, mountainSlices, selectedSlice, slices, spanBounds, type Slice } from './geometry';
+import { ART_HEIGHT, ART_WIDTH, CHART_BASE, CHART_TOP, FAMILY_COLORS, SLICE_COUNT, chartPointAt, mixColor, mountainSlices, mountainSourceSlices, selectedSlice, slices, spanBounds, type Slice } from './geometry';
 import { BrandMark, paintBrandMark } from './branding';
 
 type Stage = 0 | 1 | 2 | 3 | 4;
@@ -8,13 +8,15 @@ type Anchor = { stage: Stage; element: HTMLElement; canvas: HTMLCanvasElement; d
 type Box = { left: number; top: number; width: number; height: number };
 type Flight = { start: number; end: number; started: number; velocity: number };
 
-const forwardRatios = [0, 0.54, 0.62, 0.87, 0.4] as const;
+const forwardRatios = [0, 0.54, 0.62, 0.52, 0.4] as const;
 const reverseHysteresis = [0, 0.13, 0.13, 0.13, 0.13] as const;
 const latticeAngles = [-1.05, -2.1, .2, 2.2, 1.48] as const;
 const latticeReach = [480, 400, 340, 480, 400] as const;
 const latticeSpread = [175, 190, 150, 170, 190] as const;
 const gridWidth = 1183;
 const gridHeight = 835;
+let mountainArtwork: HTMLCanvasElement | null = null;
+let mountainTransferLayer: HTMLCanvasElement | null = null;
 
 function path(ctx: CanvasRenderingContext2D, points: Vec[], close = false): void {
   if (!points.length) return;
@@ -53,13 +55,13 @@ function gridSlicePolygon(id: number): Vec[] {
 
 const gridPolygons = Array.from({ length: SLICE_COUNT }, (_, id) => gridSlicePolygon(id));
 
-function paintSlice(ctx: CanvasRenderingContext2D, id: number, alpha: number, selected: boolean, selectedFill = 0.13): void {
+function paintSlice(ctx: CanvasRenderingContext2D, id: number, alpha: number, selected: boolean, selectedFill = 0.13, strokeScale = 1): void {
   const slice = slices[id]!;
   const emphasis = FAMILY_COLORS[4];
   ctx.fillStyle = selected ? mixColor(emphasis, selectedFill * alpha) : slice.color ? mixColor(slice.color, 0.14 * alpha) : `rgba(33,32,28,${(id === selectedSlice.id ? 0.045 : 0.035) * alpha})`;
   ctx.fill();
   ctx.strokeStyle = selected ? mixColor(emphasis, alpha) : slice.color ? mixColor(slice.color, 0.82 * alpha) : `rgba(249,249,248,${(0.075 + slice.depth * 0.045) * alpha})`;
-  ctx.lineWidth = selected ? 2 : 0.75;
+  ctx.lineWidth = (selected ? 2 : 0.75) * strokeScale;
   ctx.stroke();
 }
 
@@ -68,28 +70,34 @@ function drawSlice(ctx: CanvasRenderingContext2D, points: Vec[], id: number, alp
   paintSlice(ctx, id, alpha, selected, selectedFill);
 }
 
-function drawMountain(ctx: CanvasRenderingContext2D, box: Box, alpha = 1): void {
-  ctx.save();
-  scaledBox(ctx, box);
-  ctx.beginPath(); ctx.rect(0, 0, ART_WIDTH, ART_HEIGHT); ctx.clip();
-  ctx.globalAlpha = alpha;
+function getMountainArtwork(): HTMLCanvasElement {
+  if (mountainArtwork) return mountainArtwork;
+  const canvas = document.createElement('canvas');
+  canvas.width = ART_WIDTH; canvas.height = ART_HEIGHT;
+  const context = canvas.getContext('2d');
+  if (!context) return canvas;
+  context.beginPath(); context.rect(0, 0, ART_WIDTH, ART_HEIGHT); context.clip();
   for (const slice of mountainSlices) {
     const points = slicePolygon(slice);
-    path(ctx, points, true);
+    path(context, points, true);
     const shade = Math.round(52 + slice.depth * 6);
-    ctx.fillStyle = `rgb(${shade},${shade + 1},${shade - 3})`;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(249,249,248,.26)';
-    ctx.lineWidth = .5;
-    ctx.stroke();
-    if (slice.color) {
-      const band = slice.points.slice(12 + (slice.id % 5) * 5, 81 + (slice.id % 5) * 5);
-      path(ctx, band);
-      ctx.strokeStyle = mixColor(slice.color, 0.58);
-      ctx.lineWidth = slice.id === selectedSlice.id ? 4 : 3;
-      ctx.stroke();
-    }
+    context.fillStyle = slice.color ?? `rgb(${shade},${shade + 1},${shade - 3})`;
+    context.fill();
   }
+  for (const slice of mountainSlices) {
+    path(context, slice.points, false);
+    context.strokeStyle = 'rgba(190,193,185,.21)';
+    context.lineWidth = .6;
+    context.stroke();
+  }
+  mountainArtwork = canvas;
+  return canvas;
+}
+
+function drawMountain(ctx: CanvasRenderingContext2D, box: Box, alpha = 1): void {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(getMountainArtwork(), box.left, box.top, box.width, box.height);
   ctx.restore();
 }
 
@@ -158,8 +166,8 @@ function drawChart(ctx: CanvasRenderingContext2D, box: Box, fill = 1, separated 
   }
   ctx.restore();
   if (includeCubes && cubeOpacity > 0) {
-    for (const identity of latticeCubeIdentities) {
-      const cube = chartCubeFor(identity, box);
+    const cubes = latticeCubeIdentities.map((identity) => chartCubeFor(identity, box)).sort((a, b) => a.depth - b.depth);
+    for (const cube of cubes) {
       drawCube(ctx, cube.x, cube.y, cube.size, cube.color, .98 * cubeOpacity);
     }
   }
@@ -356,15 +364,26 @@ function interpolateTemplate(ctx: CanvasRenderingContext2D, source: Vec[], sourc
 
 function transferMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number): void {
   const amount = Math.min(1, Math.max(0, progress));
-  const gridFade = smoothstep(amount / .3);
-  drawMountain(ctx, source, 1 - gridFade);
+  const morphOpacity = smoothstep(amount / 0.14);
+  const gridStyle = smoothstep((amount - 0.55) / 0.45);
+  const transform = ctx.getTransform();
+  const dpr = transform.a || 1;
+  const viewportWidth = ctx.canvas.width / dpr;
+  const viewportHeight = ctx.canvas.height / dpr;
+  if (!mountainTransferLayer) mountainTransferLayer = document.createElement('canvas');
+  if (mountainTransferLayer.width !== ctx.canvas.width) mountainTransferLayer.width = ctx.canvas.width;
+  if (mountainTransferLayer.height !== ctx.canvas.height) mountainTransferLayer.height = ctx.canvas.height;
+  const layer = mountainTransferLayer.getContext('2d');
+  if (!layer) return;
+  layer.setTransform(transform);
+  layer.clearRect(0, 0, viewportWidth, viewportHeight);
   const targetScaleX = target.width / gridWidth;
   const targetScaleY = target.height / gridHeight;
   for (let id = 0; id < SLICE_COUNT; id += 1) {
-    const slice = slices[id]!;
+    const slice = mountainSourceSlices[id]!;
     const gridPolygon = gridPolygons[id]!;
     const scaleX = source.width / ART_WIDTH; const scaleY = source.height / ART_HEIGHT;
-    ctx.beginPath();
+    layer.beginPath();
     for (let pointIndex = 0; pointIndex < gridPolygon.length; pointIndex += 1) {
       let x1: number; let y1: number;
       if (pointIndex < 121) {
@@ -378,17 +397,54 @@ function transferMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target
       const x2 = target.left + gridPoint.x * targetScaleX;
       const y2 = target.top + gridPoint.y * targetScaleY;
       const x = x1 + (x2 - x1) * amount; const y = y1 + (y2 - y1) * amount;
-      if (pointIndex === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if (pointIndex === 0) layer.moveTo(x, y); else layer.lineTo(x, y);
     }
-    ctx.closePath();
+    layer.closePath();
     const selected = id === selectedSlice.id;
-    paintSlice(ctx, id, gridFade * (selected ? 1 : 0.65), selected);
+    const shade = Math.round(52 + slice.depth * 6);
+    const sourceOpacity = 1 - gridStyle;
+    layer.fillStyle = slice.color
+      ? mixColor(slice.color, 0.82 * sourceOpacity)
+      : `rgba(${shade},${shade + 1},${shade - 3},${sourceOpacity})`;
+    layer.fill();
+    layer.strokeStyle = `rgba(190,193,185,${0.21 * sourceOpacity})`;
+    layer.lineWidth = 0.6 * source.width / ART_WIDTH + (0.75 * target.width / gridWidth - 0.6 * source.width / ART_WIDTH) * gridStyle;
+    layer.stroke();
+    if (gridStyle > 0) paintSlice(layer, id, gridStyle * (selected ? 1 : 0.65), selected, 0.13, target.width / gridWidth);
   }
+  const contourOpacity = 0.21 * (1 - gridStyle);
+  if (contourOpacity > 0.001) {
+    for (const slice of mountainSlices) {
+      const targetSlice = Math.min(SLICE_COUNT - 1, Math.floor(slice.id));
+      const gridPolygon = gridPolygons[targetSlice]!;
+      layer.beginPath();
+      for (let pointIndex = 0; pointIndex < slice.points.length; pointIndex += 1) {
+        const point = slice.points[pointIndex]!;
+        const targetPoint = gridPolygon[pointIndex]!;
+        const x1 = source.left + point.x * source.width / ART_WIDTH;
+        const y1 = source.top + point.y * source.height / ART_HEIGHT;
+        const x2 = target.left + targetPoint.x * targetScaleX;
+        const y2 = target.top + targetPoint.y * targetScaleY;
+        const x = x1 + (x2 - x1) * amount;
+        const y = y1 + (y2 - y1) * amount;
+        if (pointIndex === 0) layer.moveTo(x, y); else layer.lineTo(x, y);
+      }
+      layer.closePath();
+      layer.strokeStyle = `rgba(190,193,185,${contourOpacity})`;
+      layer.lineWidth = 0.6 * source.width / ART_WIDTH + (0.75 * target.width / gridWidth - 0.6 * source.width / ART_WIDTH) * gridStyle;
+      layer.stroke();
+    }
+  }
+  drawMountain(ctx, source, 1 - morphOpacity);
+  ctx.save(); ctx.globalAlpha = morphOpacity;
+  ctx.drawImage(mountainTransferLayer, 0, 0, viewportWidth, viewportHeight);
+  ctx.restore();
 }
 
 function transferGridChart(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number): void {
+  const transferOpacity = 1 - smoothstep((progress - 0.8) / 0.2);
   for (let index = 0; index < 6; index += 1) {
-    interpolateTemplate(ctx, gridSpanTemplates[index]!, source, gridWidth, gridHeight, chartSpanTemplates[index]!, target, ART_WIDTH, ART_HEIGHT, progress, FAMILY_COLORS[index]!);
+    interpolateTemplate(ctx, gridSpanTemplates[index]!, source, gridWidth, gridHeight, chartSpanTemplates[index]!, target, ART_WIDTH, ART_HEIGHT, progress, FAMILY_COLORS[index]!, transferOpacity);
   }
 }
 
@@ -402,19 +458,20 @@ function smoothstep(value: number): number {
 }
 
 function transferChartLattice(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number, split: number): void {
-  const chartOpacity = 1 - smoothstep(progress / .44);
+  const chartOpacity = 1 - smoothstep((progress - 0.15) / 0.65);
   ctx.save(); ctx.globalAlpha = chartOpacity;
   drawChart(ctx, source, 1, split, 0, false);
   ctx.restore();
 
   const identities = latticeCubeIdentities;
   const destinations = latticeCubes(target);
-  const cubeOpacity = Math.max(split, smoothstep(progress / .16));
+  const cubeOpacity = Math.max(split, smoothstep(progress / 0.15));
   const moving = identities.map((identity, index) => {
     const destination = destinations[index]!;
     const origin = chartCubeFor(identity, source);
-    const delay = .16 * index / Math.max(1, identities.length - 1);
-    const travel = smoothstep(unitClamp((progress - .16 - delay) / (.84 - delay)));
+    const delay = 0.025 * index / Math.max(1, identities.length - 1);
+    const travelStart = 0.15 + delay;
+    const travel = smoothstep(unitClamp((progress - travelStart) / (1 - travelStart)));
     const dx = destination.x - origin.x; const dy = destination.y - origin.y;
     const distance = Math.max(1, Math.hypot(dx, dy));
     const side = index % 2 === 0 ? 1 : -1;
@@ -429,9 +486,9 @@ function transferChartLattice(ctx: CanvasRenderingContext2D, source: Box, target
       size: origin.size + (destination.size - origin.size) * travel,
     };
   });
-  const drawOrder = moving.map((point, index) => ({ point, index })).sort((a, b) => a.point.depth - b.point.depth);
+  const drawOrder = moving.map((point, index) => ({ point, index })).sort((a, b) => a.point.y - b.point.y);
   const center = { x: target.left + target.width / 2, y: target.top + target.height * .431 };
-  const connectionOpacity = smoothstep((progress - .64) / .36);
+  const connectionOpacity = smoothstep((progress - .62) / .38);
   for (const { point, index } of drawOrder) {
     const identity = identities[index]!;
     const previousIndex = identity.family === 5
@@ -443,7 +500,7 @@ function transferChartLattice(ctx: CanvasRenderingContext2D, source: Box, target
 }
 
 function transferLatticeMark(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number): void {
-  drawLattice(ctx, source, 1 - smoothstep(progress / .9));
+  drawLattice(ctx, source, 1 - smoothstep(progress / .98));
   const artwork = getLogoArtwork();
   const bounds = logoBox(target);
   const clusters = Array.from({ length: 6 }, (_, family) => cubeFor(family, 12, source));
@@ -484,17 +541,22 @@ function cubicBezierProgress(progress: number, x1: number, y1: number, x2: numbe
   return 3 * inverse * inverse * t * y1 + 3 * inverse * t * t * y2 + t * t * t;
 }
 
-function paintLocal(anchor: Anchor, ratio: number, options: { stagePosition: number; settledStage: Stage; split: number }): void {
+function paintLocal(anchor: Anchor, ratio: number, options: { stagePosition: number; split: number }): void {
   const canvas = anchor.canvas;
   const width = anchor.width; const height = anchor.height;
   const backingWidth = Math.max(1, Math.round(width * ratio));
   const backingHeight = Math.max(1, Math.round(height * ratio));
   const alpha = 1;
   const betweenGridAndChart = options.stagePosition > 1 && options.stagePosition < 2;
-  const chartFill = betweenGridAndChart ? options.stagePosition - 1 : options.settledStage === 2 ? 1 : 0;
-  const chartSeparation = options.settledStage === 2 ? options.split : options.settledStage > 2 ? 1 : 0;
-  const selectedHidden = options.settledStage >= 2 || betweenGridAndChart;
-  const key = [backingWidth, backingHeight, options.settledStage, anchor.stage === 2 ? `${chartFill.toFixed(3)}:${chartSeparation.toFixed(3)}` : '', anchor.stage === 1 && selectedHidden ? 'selected-hidden' : ''].join(':');
+  const chartFill = unitClamp(options.stagePosition - 1);
+  const chartSeparation = options.stagePosition >= 3 ? 1 : options.stagePosition >= 2 ? options.split : 0;
+  const selectedHidden = options.stagePosition >= 2 || betweenGridAndChart;
+  const ownsArtwork = anchor.stage === 0 ? options.stagePosition < 1
+    : anchor.stage === 1 ? options.stagePosition >= 1
+      : anchor.stage === 2 ? options.stagePosition >= 1 && options.stagePosition < 3
+        : anchor.stage === 3 ? options.stagePosition >= 3 && options.stagePosition < 4
+          : options.stagePosition >= 4;
+  const key = [backingWidth, backingHeight, ownsArtwork ? 'owned' : 'empty', anchor.stage === 2 ? `${chartFill.toFixed(3)}:${chartSeparation.toFixed(3)}` : '', anchor.stage === 1 && selectedHidden ? 'selected-hidden' : ''].join(':');
   if (canvas.width !== backingWidth) canvas.width = backingWidth;
   if (canvas.height !== backingHeight) canvas.height = backingHeight;
   if (anchor.drawnKey === key) return;
@@ -504,17 +566,18 @@ function paintLocal(anchor: Anchor, ratio: number, options: { stagePosition: num
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, height);
   const box = localBox(anchor);
   ctx.globalAlpha = alpha;
-  if (anchor.stage === 0 && options.settledStage === 0) drawMountain(ctx, box);
-  else if (anchor.stage === 1 && options.settledStage >= 1) drawGrid(ctx, box, selectedHidden);
-  else if (anchor.stage === 2 && options.settledStage >= 1) drawChart(ctx, box, chartFill, chartSeparation);
-  else if (anchor.stage === 3 && options.settledStage === 3) drawLattice(ctx, box, alpha);
-  else if (anchor.stage === 4 && options.settledStage >= 4) drawMark(ctx, box, alpha);
+  if (!ownsArtwork) return;
+  if (anchor.stage === 0) drawMountain(ctx, box);
+  else if (anchor.stage === 1) drawGrid(ctx, box, selectedHidden);
+  else if (anchor.stage === 2) drawChart(ctx, box, chartFill, chartSeparation);
+  else if (anchor.stage === 3) drawLattice(ctx, box, alpha);
+  else drawMark(ctx, box, alpha);
 }
 
 function sampleFlightState(flight: Flight | null, now: number, settled: number): { position: number; velocity: number } {
   if (!flight) return { position: settled, velocity: 0 };
   const elapsed = Math.max(0, (now - flight.started) / 1000);
-  const omega = 9;
+  const omega = 4;
   const displacement = flight.start - flight.end;
   const coefficient = flight.velocity + omega * displacement;
   const decay = Math.exp(-omega * elapsed);
@@ -581,35 +644,52 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
       const chart = byStage.get(2)?.element.closest('.chart-wrap');
       chart?.classList.toggle('is-chart-landed', landed);
     };
-    const resize = (): void => { measure(); flight = null; settledStage = 0; lastScrollY = window.scrollY; direction = 1; chartLandedAt = 0; updateChartClass(false); syncScroll(); };
+    const resize = (): void => {
+      const previousStage = settledStage;
+      const previousChartLandedAt = chartLandedAt;
+      measure();
+      lastScrollY = window.scrollY;
+      direction = 1;
+      settledStage = stageAtAbsoluteScroll(lastScrollY);
+      flight = null;
+      chartLandedAt = settledStage >= 2
+        ? previousStage >= 2 && previousChartLandedAt > 0 ? previousChartLandedAt : performance.now()
+        : 0;
+      updateChartClass(settledStage >= 2);
+      schedule();
+    };
     const paint = (now: number): void => {
       frame = 0;
       globalContext.clearRect(0, 0, viewportWidth, viewportHeight);
       const flightState = sampleFlightState(flight, now, settledStage);
       let position = flightState.position;
       if (flight && Math.abs(position - flight.end) < .001 && Math.abs(flightState.velocity) < .01) { position = flight.end; flight = null; }
-      const transitionStage = Math.floor(position);
-      const transitionProgress = position - transitionStage;
-      const activePair = transitionProgress > .001 && transitionStage < 4;
+      let transitionStage = Math.floor(position);
+      let transitionProgress = position - transitionStage;
+      if (flight && flight.end < flight.start && transitionProgress < .001 && transitionStage > 0) {
+        transitionStage -= 1;
+        transitionProgress = 1;
+      }
+      const activePair = flight ? transitionStage < 4 : transitionProgress > .001 && transitionStage < 4;
       const splitElapsed = chartLandedAt ? Math.max(0, now - chartLandedAt - 600) : 0;
       const split = media.matches ? 1 : cubicBezierProgress(Math.min(1, splitElapsed / 450), .33, 1, .68, 1);
       const chartOpacity = media.matches || document.documentElement.classList.contains('canvas-unavailable')
         ? 1
-        : position < 2 ? 1 : position < 3 ? 1 - smoothstep((position - 2) / .44) : 0;
+        : position < 2.15 ? 1 : position < 2.8 ? 1 - smoothstep((position - 2.15) / .65) : 0;
       const chartWrap = byStage.get(2)?.element.closest<HTMLElement>('.chart-wrap');
       chartWrap?.style.setProperty('--chart-transition-opacity', String(chartOpacity));
       const currentBoxes = boxes();
       for (const anchor of anchors) {
         const box = currentBoxes.get(anchor.stage)!;
         const onScreen = box.top < viewportHeight + 120 && box.top + box.height > -120;
-        let localVisible = onScreen && !(anchor.stage === 2 && settledStage >= 3 && !media.matches);
+        let localVisible = onScreen;
         if (activePair && transitionStage < 4) {
           const from = transitionStage as Stage; const to = (transitionStage + 1) as Stage;
           if ((from === 0 && to === 1) || (from === 2 && to === 3) || (from === 3 && to === 4)) localVisible = localVisible && anchor.stage !== from && anchor.stage !== to;
         }
         const visibility = localVisible ? 'visible' : 'hidden';
         if (anchor.canvas.style.visibility !== visibility) anchor.canvas.style.visibility = visibility;
-        if (localVisible) paintLocal(anchor, dpr, { stagePosition: media.matches ? anchor.stage : position, settledStage: media.matches ? anchor.stage : settledStage, split });
+        if (localVisible) paintLocal(anchor, dpr, { stagePosition: media.matches ? anchor.stage : position, split });
       }
       if (activePair) {
         const from = transitionStage as Stage; const to = (transitionStage + 1) as Stage;
@@ -631,6 +711,11 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
       }
       return target;
     };
+    const stageAtAbsoluteScroll = (scrollY: number): Stage => {
+      let stage = 0;
+      while (stage < 4 && scrollY >= thresholds[stage]!) stage += 1;
+      return stage as Stage;
+    };
     const syncScroll = (): void => {
       const scrollY = window.scrollY;
       if (scrollY !== lastScrollY) direction = Math.sign(scrollY - lastScrollY);
@@ -639,14 +724,9 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
       if (target !== settledStage) {
         const now = performance.now();
         const current = sampleFlightState(flight, now, settledStage);
-        const sourceStage = Math.max(0, Math.min(4, Math.floor(current.position))) as Stage;
-        const sourceAnchor = byStage.get(sourceStage);
-        const targetAnchor = byStage.get(target);
-        const sourceVisible = sourceAnchor !== undefined && sourceAnchor.documentTop - scrollY < viewportHeight && sourceAnchor.documentTop + sourceAnchor.height - scrollY > 0;
-        const targetVisible = targetAnchor !== undefined && targetAnchor.documentTop - scrollY < viewportHeight && targetAnchor.documentTop + targetAnchor.height - scrollY > 0;
         if (target < 2) { chartLandedAt = 0; updateChartClass(false); }
         settledStage = target;
-        if (media.matches || (Math.abs(target - current.position) > 1 && targetVisible && !sourceVisible)) {
+        if (media.matches) {
           flight = null;
           if (target >= 2) { if (!chartLandedAt) chartLandedAt = now; updateChartClass(true); }
         } else {
@@ -679,10 +759,9 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
 export function svgFallback(stage: Stage): React.JSX.Element {
   if (stage === 0) return <svg className="scene-fallback" viewBox={`0 0 ${ART_WIDTH} ${ART_HEIGHT}`} aria-hidden="true">{mountainSlices.map((slice) => {
     const polygon = slicePolygon(slice);
-    const band = slice.points.slice(12 + (slice.id % 5) * 5, 81 + (slice.id % 5) * 5);
+    const shade = Math.round(52 + slice.depth * 6);
     return <g key={slice.id}>
-      <path d={polygon.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' ') + 'Z'} fill={`rgb(${Math.round(52 + slice.depth * 6)},${Math.round(53 + slice.depth * 6)},${Math.round(49 + slice.depth * 6)})`} stroke="rgba(249,249,248,.26)" strokeWidth=".5" />
-      {slice.color ? <path d={band.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' ')} fill="none" stroke={mixColor(slice.color, .58)} strokeWidth={slice.id === selectedSlice.id ? 4 : 3} /> : null}
+      <path d={polygon.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' ') + 'Z'} fill={slice.color ?? `rgb(${shade},${shade + 1},${shade - 3})`} stroke="rgba(190,193,185,.21)" strokeWidth=".6" />
     </g>;
   })}</svg>;
   if (stage === 1) return <svg className="scene-fallback" viewBox="0 0 1183 835" aria-hidden="true">{slices.map((slice) => <polygon key={slice.id} points={gridPolygons[slice.id]!.map((point) => `${point.x},${point.y}`).join(' ')} fill={slice.id === selectedSlice.id ? mixColor(FAMILY_COLORS[4], .13) : 'rgba(33,32,28,.025)'} stroke={slice.id === selectedSlice.id ? FAMILY_COLORS[4] : 'rgba(33,32,28,.22)'} strokeWidth={slice.id === selectedSlice.id ? 2 : 1} />)}</svg>;

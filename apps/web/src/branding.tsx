@@ -10,8 +10,6 @@ export function paintBrandMark(context: CanvasRenderingContext2D): void {
   const frame = new Path2D(BRAND_FRAME_PATH);
   const letterO = new Path2D(BRAND_O_PATH);
   const letterA = new Path2D(BRAND_A_PATH);
-  context.fillStyle = '#f9f9f8';
-  context.fillRect(0, 0, 512, 512);
   for (const shape of [frame, letterO, letterA]) {
     context.save();
     context.clip(shape, 'evenodd');
@@ -36,7 +34,6 @@ export function BrandMark({ className, monochrome = false }: { className: string
         return <rect key={index} x={x * 13} y={y * 13} width="13" height="13" fill={FAMILY_COLORS[(x + y * 2) % FAMILY_COLORS.length]} />;
       })}
     </pattern></defs> : null}
-    {!monochrome ? <rect width="512" height="512" fill="#f9f9f8" /> : null}
     <path d={BRAND_FRAME_PATH} fill={fill} fillRule="evenodd" />
     <path d={BRAND_O_PATH} fill={fill} fillRule="nonzero" />
     <path d={BRAND_A_PATH} fill={fill} fillRule="nonzero" />
