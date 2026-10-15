@@ -47,6 +47,7 @@ The remove-ai-marks service processed nineteen original prose/screenshot artifac
 - `95aef21`: document navigation between frontend entries.
 - `0256f55`: reviewed execution recovery, malformed-candle handling, public HTTP status, safe genuine-run archive and final browser captures.
 - `9481931`, `45dabc0`: regression-test cleanup and a shared deterministic fixture deadline.
+- `bd786bb`, `a05e117`: no-mistakes review fixes. SSE admission slots are released by the response lifetime, a PostgreSQL tiny-imbalance regression is added, pre-v3 fixture outputs are withheld from public display, and the `market_summary` field is removed from the public contract.
 
 Only bootstrap main was published before the user requested no-mistakes. The source is on `milestone/platform-integration`; delivery currently uses one integration branch with milestone checkpoint commits. Separate milestone PRs have not been opened. No PR, merge, DNS, Tunnel or production deployment result is claimed yet. Further source publication uses the requested no-mistakes gate.
 
