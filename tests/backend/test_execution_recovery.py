@@ -29,6 +29,7 @@ from app.market.types import MarketQuote as Quote
 from app.services.execution import execute_job
 from app.services.reconciliation import reconcile_ledger
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, sessionmaker
 from test_execution import _setup
 from test_execution_evidence import _migrated_schema
@@ -424,8 +425,7 @@ def test_clean_inline_protection_reconciles_before_other_symbol_entry(
         admin_engine.dispose()
 
 
-def test_sqlite_reconciliation_reports_tiny_unbalanced_journal() -> None:
-    db, _, _, _, account_id = _setup()
+def _assert_tiny_unbalanced_journal_reported(db: Session, account_id: str) -> None:
     journal_id = str(uuid.uuid4())
     db.add(
         LedgerJournal(
@@ -443,7 +443,7 @@ def test_sqlite_reconciliation_reports_tiny_unbalanced_journal() -> None:
             amount=Decimal("0.0000000001"),
         )
     )
-    db.commit()
+    db.flush()
 
     report = reconcile_ledger(db, competition_id="competition-1")
 
@@ -451,4 +451,29 @@ def test_sqlite_reconciliation_reports_tiny_unbalanced_journal() -> None:
     assert any(
         mismatch.category == "journal:tiny-unbalanced-test" for mismatch in report.mismatches
     )
+
+
+def test_sqlite_reconciliation_reports_tiny_unbalanced_journal() -> None:
+    db, _, _, _, account_id = _setup()
+    _assert_tiny_unbalanced_journal_reported(db, account_id)
     db.close()
+
+
+@pytest.mark.skipif(_PG_URL is None, reason="TEST_DATABASE_URL is not configured")
+def test_postgres_reconciliation_reports_tiny_unbalanced_journal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    schema, admin_engine, engine = _migrated_schema(monkeypatch)
+    db: Session | None = None
+    try:
+        db, _, _, _, account_id = _setup(engine=engine)
+        _assert_tiny_unbalanced_journal_reported(db, account_id)
+        with pytest.raises(DBAPIError, match="unbalanced"):
+            db.commit()
+    finally:
+        if db is not None:
+            db.close()
+        engine.dispose()
+        with admin_engine.begin() as connection:
+            connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        admin_engine.dispose()
