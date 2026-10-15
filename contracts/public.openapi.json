@@ -435,17 +435,6 @@
             ],
             "title": "Latency Ms"
           },
-          "market_summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Market Summary"
-          },
           "model": {
             "title": "Model",
             "type": "string"
@@ -550,7 +539,6 @@
           "symbol",
           "quantity",
           "justification",
-          "market_summary",
           "proposals",
           "validation_status",
           "validation_errors",

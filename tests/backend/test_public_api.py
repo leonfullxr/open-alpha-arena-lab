@@ -184,6 +184,13 @@ def test_decision_history_projects_batches_errors_and_malformed_evidence_safely(
         )
         assert bad_competition is not None
         bad_competition.source_label = "DEMO REPLAY TEST"
+        bad_agent = db.scalar(
+            select(AgentRun)
+            .join(RoundAgentJob, RoundAgentJob.agent_run_id == AgentRun.id)
+            .where(RoundAgentJob.id == bad_job)
+        )
+        assert bad_agent is not None
+        bad_agent.provider = "MockLLMAdapter"
         db.commit()
         claim_bad = claim_next_job(db, worker_name="public-evidence-test")
         assert claim_bad is not None and claim_bad.job_id == bad_job
@@ -198,11 +205,16 @@ def test_decision_history_projects_batches_errors_and_malformed_evidence_safely(
             reservation_amount=Decimal("0.1"),
         )
         assert attempt_bad is not None
+        legacy_output = (
+            b'{"action":"OPEN_LONG","symbol":"BTC","quantity":"1",'
+            b'"justification":"SECRET_CANARY justification",'
+            b'"market_summary":"SECRET_CANARY summary"}'
+        )
         apply_invocation_result(
             db,
             bad_job,
             claim_bad.fence,
-            InvocationCompletion(b'{"private":"SECRET_CANARY"}'),
+            InvocationCompletion(legacy_output),
         )
         prepared.append((claim_bad.competition_id, bad_job, attempt_bad.attempt_id))
 
@@ -244,11 +256,14 @@ def test_decision_history_projects_batches_errors_and_malformed_evidence_safely(
             malformed = client.get(f"{root}/competitions/{bad_comp}/decisions").json()["items"][0]
             assert malformed["validation_status"] == "INVALID"
             assert malformed["validation_errors"] == ["INVALID_PROPOSAL_OUTPUT"]
+            assert malformed["proposals"] == [] and malformed["justification"] is None
+            assert malformed["output_sha256"] == hashlib.sha256(legacy_output).hexdigest()
             assert "SECRET_CANARY" not in str(malformed)
             artifact_url = f"{root}/decisions/{bad_attempt_id}/artifact"
             artifact = client.get(artifact_url).json()
             assert artifact["output_publicly_releasable"] is False
             assert artifact["output_bytes_base64"] == ""
+            assert artifact["output_sha256"] == hashlib.sha256(legacy_output).hexdigest()
             bad_export = client.get(f"{root}/competitions/{bad_comp}/export?limit=10")
             assert bad_export.status_code == 200
             assert bad_export.json()["exported_decisions"] == 1

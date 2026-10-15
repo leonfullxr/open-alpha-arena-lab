@@ -98,14 +98,12 @@ def decisions(
         proposals: list[ProposalEvidenceDTO] = []
         validation_status = "NOT_AVAILABLE"
         validation_errors: list[str] = []
-        output: dict[str, object] = {}
         if result is not None and result.error_code:
             validation_status = "PROVIDER_ERROR"
             validation_errors = [result.error_code]
         elif result is not None and result.output_bytes:
             try:
                 batch = parse_proposal_output(result.output_bytes)
-                output = json.loads(result.output_bytes)
                 validation_status = "VALID"
                 stored_proposals = list(
                     db.scalars(
@@ -147,7 +145,7 @@ def decisions(
                             risk_reasons=risk_row.reasons if risk_row else [],
                         )
                     )
-            except (ProposalOutputError, UnicodeDecodeError, json.JSONDecodeError):
+            except ProposalOutputError:
                 validation_status = "INVALID"
                 validation_errors = ["INVALID_PROPOSAL_OUTPUT"]
         elif job.error_code:
@@ -164,34 +162,6 @@ def decisions(
         ):
             provider_status_code = None
 
-        # Older fixture rows predate the strict proposal batch format. Preserve only
-        # the visible deterministic fields while the fixture is reseeded.
-        if not proposals and validation_status == "INVALID" and agent.provider == "MockLLMAdapter":
-            try:
-                legacy = json.loads(result.output_bytes) if result else {}
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                legacy = {}
-            if isinstance(legacy, dict) and all(
-                key in legacy for key in ("action", "symbol", "quantity", "justification")
-            ):
-                proposals.append(
-                    ProposalEvidenceDTO(
-                        action=str(legacy["action"]),
-                        symbol=str(legacy["symbol"]),
-                        quantity=str(legacy["quantity"]),
-                        leverage=None,
-                        stop_loss=None,
-                        take_profit=None,
-                        confidence=None,
-                        invalidation=None,
-                        justification=str(legacy["justification"]),
-                        risk_decision=None,
-                        risk_reasons=[],
-                    )
-                )
-                output = legacy
-                validation_status = "LEGACY_FIXTURE"
-                validation_errors = []
         items.append(
             DecisionDTO(
                 id=artifact.id if artifact else job.id,
@@ -202,11 +172,6 @@ def decisions(
                 symbol=proposals[0].symbol if proposals else None,
                 quantity=proposals[0].quantity if proposals else None,
                 justification=proposals[0].justification if proposals else None,
-                market_summary=(
-                    output.get("market_summary")
-                    if isinstance(output.get("market_summary"), str)
-                    else None
-                ),
                 proposals=proposals,
                 validation_status=validation_status,
                 validation_errors=validation_errors,
@@ -238,29 +203,13 @@ def artifact(decision_id: str, db: Annotated[Session, Depends(get_db)]) -> Artif
     result = db.scalar(select(InvocationResult).where(InvocationResult.attempt_id == decision_id))
     if item is None or result is None:
         raise HTTPException(status_code=404, detail="Decision artifact not found")
-    agent = db.scalar(
-        select(AgentRun)
-        .join(RoundAgentJob, RoundAgentJob.agent_run_id == AgentRun.id)
-        .where(RoundAgentJob.id == item.job_id)
-    )
     output_safe = False
     if result.error_code is None and result.output_bytes:
         try:
             parse_proposal_output(result.output_bytes)
             output_safe = True
         except ProposalOutputError:
-            try:
-                legacy = json.loads(result.output_bytes)
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                legacy = None
-            output_safe = bool(
-                agent is not None
-                and agent.provider == "MockLLMAdapter"
-                and isinstance(legacy, dict)
-                and set(legacy)
-                == {"action", "symbol", "quantity", "justification", "market_summary"}
-                and all(isinstance(legacy[key], str) for key in legacy)
-            )
+            pass
     public_output = result.output_bytes if output_safe else b""
     return ArtifactDTO(
         id=item.id,

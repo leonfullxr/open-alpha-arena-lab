@@ -458,8 +458,6 @@ export interface components {
             justification: string | null;
             /** Latency Ms */
             latency_ms?: number | null;
-            /** Market Summary */
-            market_summary: string | null;
             /** Model */
             model: string;
             /** Output Sha256 */

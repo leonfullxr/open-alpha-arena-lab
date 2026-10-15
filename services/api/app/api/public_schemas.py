@@ -158,7 +158,6 @@ class DecisionDTO(PublicModel):
     symbol: str | None
     quantity: str | None
     justification: str | None
-    market_summary: str | None
     proposals: list[ProposalEvidenceDTO]
     validation_status: str
     validation_errors: list[str]
