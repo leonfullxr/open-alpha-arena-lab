@@ -1,0 +1,29 @@
+{
+  "name": "open-alpha-arena-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "api:generate": "openapi-typescript contracts/public.openapi.json -o apps/web/src/api/public.generated.ts && openapi-typescript contracts/admin.openapi.json -o apps/web/src/admin/admin.generated.ts",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --pretty false",
+    "check": "npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.90.2",
+    "openapi-fetch": "0.14.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "7.18.4"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.10",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^4.7.0",
+    "openapi-typescript": "7.10.1",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  }
+}

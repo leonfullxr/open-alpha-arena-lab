@@ -192,10 +192,10 @@ function getLogoArtwork(): HTMLCanvasElement {
   const context = canvas.getContext('2d');
   if (!context) return canvas;
   context.fillStyle = '#f9f9f8'; context.fillRect(0, 0, 512, 512);
-  const weights = Array.from({ length: 36 }, (_, index) => .72 + ((index * 7) % 7) / 10);
+  const weights = Array.from({ length: 36 }, (_, index) => .72 + ((index * 5) % 7) / 10);
   const total = weights.reduce((sum, weight) => sum + weight, 0);
   let y = 0;
-  const colors = ['#46a758', '#e5484d', '#ffc53d', '#2e7db5', '#f26a2e', '#9b72cf'];
+  const colors = FAMILY_COLORS;
   for (let strip = 0; strip < 36; strip += 1) {
     const height = strip === 35 ? 512 - y : 512 * weights[strip]! / total;
     logoStrips.push({ top: y, height });
@@ -553,6 +553,7 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
     void document.fonts.ready.then(() => { if (disposed || !fontsReady) return; measure(); syncScroll(); schedule(); });
     return () => {
       disposed = true; fontsReady = false;
+      document.documentElement.classList.remove('canvas-unavailable');
       window.removeEventListener('resize', resize); window.removeEventListener('scroll', syncScroll);
       media.removeEventListener('change', onMotionChange); observer.disconnect();
       if (frame) cancelAnimationFrame(frame);

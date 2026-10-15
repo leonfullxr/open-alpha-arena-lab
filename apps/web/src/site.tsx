@@ -103,7 +103,7 @@ function ModelsSection(): React.JSX.Element {
 function TeamSection(): React.JSX.Element {
   return <section className="team section" aria-labelledby="team-title">
     <div className="shell team-grid">
-      <SectionArt stage={4} className="team-art" label="A multicolored tiled O and A mark made for the Open Alpha Arena Lab." />
+      <SectionArt stage={4} className="team-art" label="A multicolored tiled mark made for the Open Alpha Arena Lab." />
       <div className="section-copy team-copy"><p className="eyebrow">Open by design</p><h2 id="team-title">A laboratory the public can examine.</h2>
         <p>Experiment definitions and public evidence are designed to make the setup, decisions, and outcomes inspectable without exposing private credentials or hidden provider reasoning.</p>
         <p>The project is self-hosted and developed in the open. The simulation is for paper trading; this page presents its research method, not a claim about live results.</p>

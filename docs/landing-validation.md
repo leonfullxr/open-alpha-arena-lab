@@ -22,7 +22,7 @@ A separate Chromium process with reduced motion forced on retained all five stat
 
 During a desktop forward/reverse scroll sample, animation instrumentation recorded 307 callbacks, a maximum of one pending callback, 0.9 ms p95 callback time and 2.8 ms maximum callback time. There were no callbacks during a 400 ms settled interval. These are headless Chromium callback timings, not a measured frame-rate guarantee for physical devices.
 
-The initial production landing build was approximately 80 KiB compressed JavaScript and CSS, excluding the 121,024-byte self-hosted Newsreader font. The final split-bundle budget and route cleanup must be checked again after simulation integration.
+After simulation integration, a production-preview browser trace loaded five JavaScript/CSS resources totaling 82,281 gzip bytes (about 80.4 KiB), below the 250 KiB limit. Fonts and artwork are excluded. The trace contained no API calls, chart modules or admin modules. Navigation to the simulation removed all landing canvases, reset scroll to zero and left no canvas-failure class. The landing remained readable with the API unavailable. The self-hosted Newsreader font is 121,024 bytes.
 
 ## Limits
 
