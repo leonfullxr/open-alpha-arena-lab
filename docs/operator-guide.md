@@ -64,7 +64,7 @@ Stop writers for a recovery operation, restore, check Alembic revision and readi
 
 The frontend target is `arena.leonfuller.com`; the fixed Tunnel origin is `arena-origin.leonfuller.com`. Configure service-authenticated Tunnel transport separately from visitor Access identity. Both Worker and API verify admin identity. Protect admin HTML, its assets and admin API paths. Keep Tailscale available for server recovery.
 
-The Worker has no production route or public preview endpoint enabled. Before release, review the concrete build, account-owned rate-limit namespace, Access issuer/audience/subject policy, private origin secrets and Tunnel health. API requests fail closed while required bindings are absent. Connect previews only to fixture or staging data.
+The default API Worker has no production route. The separate frontend-only Workers.dev landing environment and its deployment boundary are documented in the [Worker guide](../deploy/worker/README.md). API requests fail closed while required bindings are absent.
 
 For the Debian API, set `AUTH_MODE=access`, `ALLOWED_ORIGINS=["https://arena.leonfuller.com"]`, the Access issuer/audience/JWKS URL, `ADMIN_SUBJECTS`, and a private `ORIGIN_TRANSPORT_TOKEN`. Configure the Worker with the matching identity policy and its private Tunnel service credentials. Local login is unavailable in Access mode. Keep the origin token separate from visitor identity.
 

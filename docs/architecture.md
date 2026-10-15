@@ -16,7 +16,7 @@ Public API `/api/v1/public/*` is read-only, bounded and separately documented. A
 
 Production path: browser -> Worker with Static Assets -> service-authenticated Cloudflare Tunnel -> Debian API. Fixed origin `https://arena-origin.leonfuller.com`; frontend target `arena.leonfuller.com`. Worker allowlists paths/methods, strips visitor internal headers, streams SSE, and validates admin Access JWT independently of backend RBAC. The origin transport token does not grant visitor admin rights. Local Argon2id sessions and production Access modes are mutually exclusive. Default offline demo makes no external requests.
 
-Account/DNS/Tunnel/Access resources and production deployment remain unverified until a concrete build is reviewed. Tailscale remains the server recovery channel. No alternate public production entry points or production-connected previews.
+Backend production deployment and account/DNS/Tunnel/Access resources remain unverified. The frontend-only Workers.dev landing environment is documented in the [Worker guide](../deploy/worker/README.md). Tailscale remains the server recovery channel.
 
 ## Transaction and identity refinements
 
