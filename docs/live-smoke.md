@@ -1,4 +1,4 @@
-# Genuine provider smoke — 2026-10-15
+# Genuine provider smoke, 2026-10-15
 
 The bounded live paper run finished five rounds with two models: `opencode_go/mimo-v2.6-flash` and `opencode_go/glm-5.3-flash`. All ten requests returned HTTP 429. Successful genuine decisions and executed-fill acceptance remain pending.
 

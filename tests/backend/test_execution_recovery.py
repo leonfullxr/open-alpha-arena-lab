@@ -226,9 +226,9 @@ def test_expired_inference_leases_recover_twelve_responded_jobs_after_restart(
                 id=second_round_id,
                 competition_id=second_competition_id,
                 round_index=1,
-                logical_at=now - timedelta(seconds=121),
+                logical_at=first_round.logical_at,
                 snapshot_id=first_round.snapshot_id,
-                deadline_at=now - timedelta(seconds=1),
+                deadline_at=first_round.deadline_at,
             )
         )
         db.flush()
