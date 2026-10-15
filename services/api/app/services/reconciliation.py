@@ -39,9 +39,7 @@ class ReconciliationReport:
         return not self.mismatches
 
 
-def reconcile_ledger(
-    db: Session, *, competition_id: str | None = None
-) -> ReconciliationReport:
+def reconcile_ledger(db: Session, *, competition_id: str | None = None) -> ReconciliationReport:
     """Read a locked financial snapshot and compare account projections to the ledger."""
     with _consistent_snapshot(db):
         competition_query = select(Competition).order_by(Competition.id).with_for_update()
@@ -63,48 +61,75 @@ def reconcile_ledger(
             account_query = account_query.where(AgentRun.competition_id == competition_id)
         account_rows = db.execute(account_query).all()
         account_ids = [account.id for account, _ in account_rows]
-        journal_sums = (
+        journal_sum = func.coalesce(func.sum(LedgerPosting.amount), ZERO)
+        journal_is_unbalanced = (
+            func.abs(journal_sum) > Decimal("0.000000001")
+            if db.get_bind().dialect.name == "sqlite"
+            else journal_sum != ZERO
+        )
+        journal_mismatches = (
             db.execute(
                 select(
                     LedgerJournal.account_id,
                     LedgerJournal.event_key,
-                    func.coalesce(func.sum(LedgerPosting.amount), ZERO),
+                    journal_sum,
                 )
                 .outerjoin(LedgerPosting, LedgerPosting.journal_id == LedgerJournal.id)
                 .where(LedgerJournal.account_id.in_(account_ids))
                 .group_by(LedgerJournal.id, LedgerJournal.account_id, LedgerJournal.event_key)
+                .having(journal_is_unbalanced)
                 .order_by(LedgerJournal.account_id, LedgerJournal.id)
             ).all()
             if account_ids
             else []
         )
-        bucket_sums = {
-            (account_id, bucket): amount
-            for account_id, bucket, amount in db.execute(
-                select(
-                    LedgerJournal.account_id,
-                    LedgerPosting.bucket,
-                    func.coalesce(func.sum(LedgerPosting.amount), ZERO),
+        journals_checked = (
+            (
+                db.scalar(
+                    select(func.count())
+                    .select_from(LedgerJournal)
+                    .where(LedgerJournal.account_id.in_(account_ids))
                 )
-                .join(LedgerPosting, LedgerPosting.journal_id == LedgerJournal.id)
-                .where(LedgerJournal.account_id.in_(account_ids))
-                .group_by(LedgerJournal.account_id, LedgerPosting.bucket)
-            ).all()
-        } if account_ids else {}
-        open_margin_by_account = {
-            account_id: amount
-            for account_id, amount in db.execute(
-                select(
-                    Position.account_id,
-                    func.coalesce(func.sum(Position.reserved_margin), ZERO),
-                )
-                .where(Position.account_id.in_(account_ids), Position.state == "OPEN")
-                .group_by(Position.account_id)
-            ).all()
-        } if account_ids else {}
+                or 0
+            )
+            if account_ids
+            else 0
+        )
+        bucket_sums = (
+            {
+                (account_id, bucket): amount
+                for account_id, bucket, amount in db.execute(
+                    select(
+                        LedgerJournal.account_id,
+                        LedgerPosting.bucket,
+                        func.coalesce(func.sum(LedgerPosting.amount), ZERO),
+                    )
+                    .join(LedgerPosting, LedgerPosting.journal_id == LedgerJournal.id)
+                    .where(LedgerJournal.account_id.in_(account_ids))
+                    .group_by(LedgerJournal.account_id, LedgerPosting.bucket)
+                ).all()
+            }
+            if account_ids
+            else {}
+        )
+        open_margin_by_account = (
+            {
+                account_id: amount
+                for account_id, amount in db.execute(
+                    select(
+                        Position.account_id,
+                        func.coalesce(func.sum(Position.reserved_margin), ZERO),
+                    )
+                    .where(Position.account_id.in_(account_ids), Position.state == "OPEN")
+                    .group_by(Position.account_id)
+                ).all()
+            }
+            if account_ids
+            else {}
+        )
 
         mismatches: list[ReconciliationMismatch] = []
-        for account_id, event_key, amount in journal_sums:
+        for account_id, event_key, amount in journal_mismatches:
             actual = money(amount)
             if actual != ZERO:
                 mismatches.append(
@@ -146,12 +171,15 @@ def reconcile_ledger(
             }
             for category, expected in expected_values.items():
                 actual = actual_values[category]
-                if expected != actual:
+                with localcontext() as context:
+                    context.prec = 60
+                    mismatch = expected != actual
+                if mismatch:
                     mismatches.append(_mismatch(account.id, category, expected, actual))
         return ReconciliationReport(
             competition_id=competition_id,
             accounts_checked=len(account_rows),
-            journals_checked=len(journal_sums),
+            journals_checked=journals_checked,
             mismatches=tuple(mismatches),
         )
 

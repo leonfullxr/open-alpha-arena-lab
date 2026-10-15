@@ -106,9 +106,7 @@ def run_live_smoke(
         first_snapshot = _store_current_quotes(session_factory, client)
         competition_id = _create_competition(session_factory, config, first_snapshot)
         try:
-            _preflight_smoke_inputs(
-                session_factory, competition_id, first_snapshot, config, rounds
-            )
+            _preflight_smoke_inputs(session_factory, competition_id, first_snapshot, config, rounds)
             results = _run_rounds(
                 session_factory,
                 client,
@@ -265,6 +263,7 @@ def _create_competition(
                         status="ACTIVE",
                     )
                 )
+                db.flush()
                 db.add(
                     Account(
                         id=str(uuid.uuid4()),
@@ -357,9 +356,7 @@ def _validate_candle_warmup(payload: dict[str, Any], rules: dict[str, Any]) -> N
         or not isinstance(windows, list)
     ):
         raise SmokeRunError("SMOKE_EVIDENCE_SCHEMA_UNSUPPORTED")
-    by_symbol = {
-        row.get("symbol"): row for row in windows if isinstance(row, dict)
-    }
+    by_symbol = {row.get("symbol"): row for row in windows if isinstance(row, dict)}
     if set(by_symbol) != set(BASELINE_SYMBOLS):
         raise SmokeRunError("SMOKE_CANDLE_WARMUP_UNAVAILABLE")
     for symbol in BASELINE_SYMBOLS:
@@ -511,8 +508,8 @@ def _round_result(
     return SmokeRoundResult(
         round_index=round_index,
         logical_at=_utc(round_row.logical_at).isoformat(),
-        snapshot_id=prompt_snapshot.snapshot_id,
-        shared_execution_quote_set_id=execution_snapshot.quote_set_id,
+        snapshot_id=round_row.snapshot_id,
+        shared_execution_quote_set_id=round_row.execution_quote_set_id,
         jobs=tuple(jobs),
     )
 

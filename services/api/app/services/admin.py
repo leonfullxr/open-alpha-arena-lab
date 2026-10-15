@@ -141,7 +141,7 @@ def create_competition(db: Session, payload: dict[str, object]) -> Competition:
         rules_sha256=sha256_hex(rules_bytes),
         initial_balance=balance,
         state="DRAFT",
-        source_label="LIVE · awaiting start",
+        source_label="PAPER · NOT STARTED",
         kill_switch=False,
         event_seq=0,
     )

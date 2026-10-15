@@ -714,6 +714,40 @@
         "title": "EventPageDTO",
         "type": "object"
       },
+      "ExecutionQuoteDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "ask": {
+            "title": "Ask",
+            "type": "string"
+          },
+          "bid": {
+            "title": "Bid",
+            "type": "string"
+          },
+          "mark": {
+            "title": "Mark",
+            "type": "string"
+          },
+          "source_at": {
+            "title": "Source At",
+            "type": "string"
+          },
+          "source_at_basis": {
+            "title": "Source At Basis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bid",
+          "ask",
+          "mark",
+          "source_at",
+          "source_at_basis"
+        ],
+        "title": "ExecutionQuoteDTO",
+        "type": "object"
+      },
       "ExportDTO": {
         "additionalProperties": false,
         "properties": {
@@ -746,6 +780,14 @@
             "title": "Exported Funding Payments",
             "type": "integer"
           },
+          "exported_positions": {
+            "title": "Exported Positions",
+            "type": "integer"
+          },
+          "exported_trades": {
+            "title": "Exported Trades",
+            "type": "integer"
+          },
           "funding": {
             "items": {
               "$ref": "#/components/schemas/FundingPaymentDTO"
@@ -760,21 +802,103 @@
             "title": "Leaderboard",
             "type": "array"
           },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/PositionDTO"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/RulesArtifactDTO"
+          },
+          "total_decisions": {
+            "title": "Total Decisions",
+            "type": "integer"
+          },
+          "total_equity_points": {
+            "title": "Total Equity Points",
+            "type": "integer"
+          },
+          "total_funding_payments": {
+            "title": "Total Funding Payments",
+            "type": "integer"
+          },
+          "total_leaderboard": {
+            "title": "Total Leaderboard",
+            "type": "integer"
+          },
+          "total_positions": {
+            "title": "Total Positions",
+            "type": "integer"
+          },
+          "total_trades": {
+            "title": "Total Trades",
+            "type": "integer"
+          },
+          "trades": {
+            "items": {
+              "$ref": "#/components/schemas/TradeDTO"
+            },
+            "title": "Trades",
+            "type": "array"
+          },
           "truncated": {
             "title": "Truncated",
+            "type": "boolean"
+          },
+          "truncated_decisions": {
+            "title": "Truncated Decisions",
+            "type": "boolean"
+          },
+          "truncated_equity": {
+            "title": "Truncated Equity",
+            "type": "boolean"
+          },
+          "truncated_funding": {
+            "title": "Truncated Funding",
+            "type": "boolean"
+          },
+          "truncated_leaderboard": {
+            "title": "Truncated Leaderboard",
+            "type": "boolean"
+          },
+          "truncated_positions": {
+            "title": "Truncated Positions",
+            "type": "boolean"
+          },
+          "truncated_trades": {
+            "title": "Truncated Trades",
             "type": "boolean"
           }
         },
         "required": [
           "competition",
           "leaderboard",
+          "rules",
           "equity",
           "decisions",
           "funding",
+          "trades",
+          "positions",
           "truncated",
           "exported_decisions",
           "exported_equity_points",
-          "exported_funding_payments"
+          "exported_funding_payments",
+          "exported_trades",
+          "exported_positions",
+          "total_leaderboard",
+          "total_equity_points",
+          "total_decisions",
+          "total_funding_payments",
+          "total_trades",
+          "total_positions",
+          "truncated_leaderboard",
+          "truncated_equity",
+          "truncated_decisions",
+          "truncated_funding",
+          "truncated_trades",
+          "truncated_positions"
         ],
         "title": "ExportDTO",
         "type": "object"
@@ -1303,6 +1427,25 @@
             "title": "Average Entry",
             "type": "string"
           },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "opened_at": {
+            "title": "Opened At",
+            "type": "string"
+          },
           "quantity": {
             "title": "Quantity",
             "type": "string"
@@ -1347,6 +1490,7 @@
           }
         },
         "required": [
+          "id",
           "agent_id",
           "agent_name",
           "symbol",
@@ -1356,7 +1500,9 @@
           "reserved_margin",
           "stop_loss",
           "take_profit",
-          "state"
+          "state",
+          "opened_at",
+          "closed_at"
         ],
         "title": "PositionDTO",
         "type": "object"
@@ -1576,6 +1722,249 @@
         "title": "PublicEventPayload",
         "type": "object"
       },
+      "PublicRulesDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_pyramiding": {
+            "title": "Allow Pyramiding",
+            "type": "boolean"
+          },
+          "commission_rate": {
+            "title": "Commission Rate",
+            "type": "string"
+          },
+          "fixture_funding_rate_per_hour": {
+            "title": "Fixture Funding Rate Per Hour",
+            "type": "string"
+          },
+          "fixture_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Source"
+          },
+          "funding_history_max_offset_seconds": {
+            "title": "Funding History Max Offset Seconds",
+            "type": "integer"
+          },
+          "funding_interval_hours": {
+            "title": "Funding Interval Hours",
+            "type": "integer"
+          },
+          "funding_mode": {
+            "title": "Funding Mode",
+            "type": "string"
+          },
+          "funding_price_basis": {
+            "title": "Funding Price Basis",
+            "type": "string"
+          },
+          "funding_rate_basis": {
+            "title": "Funding Rate Basis",
+            "type": "string"
+          },
+          "indicator_policy": {
+            "const": "trailing_500_v1",
+            "title": "Indicator Policy",
+            "type": "string"
+          },
+          "indicator_warmup_bars": {
+            "const": 500,
+            "title": "Indicator Warmup Bars",
+            "type": "integer"
+          },
+          "inference_budget_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inference Budget Usd"
+          },
+          "initial_balance": {
+            "title": "Initial Balance",
+            "type": "string"
+          },
+          "leverage_max": {
+            "title": "Leverage Max",
+            "type": "string"
+          },
+          "liquidation_fee_rate": {
+            "title": "Liquidation Fee Rate",
+            "type": "string"
+          },
+          "maintenance_margin_rate": {
+            "title": "Maintenance Margin Rate",
+            "type": "string"
+          },
+          "market_window_candles": {
+            "title": "Market Window Candles",
+            "type": "integer"
+          },
+          "max_daily_loss": {
+            "title": "Max Daily Loss",
+            "type": "string"
+          },
+          "max_drawdown_fraction": {
+            "title": "Max Drawdown Fraction",
+            "type": "string"
+          },
+          "max_gross_exposure": {
+            "title": "Max Gross Exposure",
+            "type": "string"
+          },
+          "max_notional": {
+            "title": "Max Notional",
+            "type": "string"
+          },
+          "max_positions": {
+            "title": "Max Positions",
+            "type": "integer"
+          },
+          "min_notional": {
+            "title": "Min Notional",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "proposal_schema_version": {
+            "title": "Proposal Schema Version",
+            "type": "integer"
+          },
+          "public_evidence_schema_version": {
+            "title": "Public Evidence Schema Version",
+            "type": "integer"
+          },
+          "quantity_precision": {
+            "title": "Quantity Precision",
+            "type": "integer"
+          },
+          "quote_max_age_seconds": {
+            "title": "Quote Max Age Seconds",
+            "type": "string"
+          },
+          "quote_set_max_skew_seconds": {
+            "title": "Quote Set Max Skew Seconds",
+            "type": "string"
+          },
+          "response_deadline_seconds": {
+            "title": "Response Deadline Seconds",
+            "type": "integer"
+          },
+          "risk_policy_version": {
+            "title": "Risk Policy Version",
+            "type": "string"
+          },
+          "round_seconds": {
+            "title": "Round Seconds",
+            "type": "integer"
+          },
+          "slippage_bps": {
+            "title": "Slippage Bps",
+            "type": "string"
+          },
+          "snapshot_schema_version": {
+            "title": "Snapshot Schema Version",
+            "type": "integer"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Symbols",
+            "type": "array"
+          }
+        },
+        "required": [
+          "profile",
+          "symbols",
+          "initial_balance",
+          "round_seconds",
+          "response_deadline_seconds",
+          "quote_max_age_seconds",
+          "quote_set_max_skew_seconds",
+          "leverage_max",
+          "commission_rate",
+          "slippage_bps",
+          "maintenance_margin_rate",
+          "max_daily_loss",
+          "max_drawdown_fraction",
+          "liquidation_fee_rate",
+          "quantity_precision",
+          "min_notional",
+          "max_notional",
+          "max_gross_exposure",
+          "max_positions",
+          "allow_pyramiding",
+          "funding_mode",
+          "funding_interval_hours",
+          "funding_history_max_offset_seconds",
+          "funding_rate_basis",
+          "funding_price_basis",
+          "fixture_funding_rate_per_hour",
+          "risk_policy_version",
+          "snapshot_schema_version",
+          "proposal_schema_version",
+          "public_evidence_schema_version",
+          "market_window_candles",
+          "indicator_policy",
+          "indicator_warmup_bars",
+          "inference_budget_usd",
+          "fixture_source"
+        ],
+        "title": "PublicRulesDTO",
+        "type": "object"
+      },
+      "RulesArtifactDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bytes Base64"
+          },
+          "bytes_withheld": {
+            "title": "Bytes Withheld",
+            "type": "boolean"
+          },
+          "public": {
+            "$ref": "#/components/schemas/PublicRulesDTO"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "withheld_fields": {
+            "title": "Withheld Fields",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sha256",
+          "bytes_base64",
+          "bytes_withheld",
+          "public",
+          "withheld_fields"
+        ],
+        "title": "RulesArtifactDTO",
+        "type": "object"
+      },
       "StatusDTO": {
         "additionalProperties": false,
         "properties": {
@@ -1670,21 +2059,116 @@
             "title": "Agent Name",
             "type": "string"
           },
+          "decision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Id"
+          },
+          "event_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Sequence"
+          },
+          "executed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Executed At"
+          },
+          "execution_quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionQuoteDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "fee": {
             "title": "Fee",
             "type": "string"
           },
+          "fill_id": {
+            "title": "Fill Id",
+            "type": "string"
+          },
+          "fill_ordinal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fill Ordinal"
+          },
           "order_id": {
             "title": "Order Id",
+            "type": "string"
+          },
+          "order_kind": {
+            "title": "Order Kind",
             "type": "string"
           },
           "price": {
             "title": "Price",
             "type": "string"
           },
+          "proposal_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Sequence"
+          },
           "quantity": {
             "title": "Quantity",
             "type": "string"
+          },
+          "quote_set_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Set Id"
+          },
+          "round": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Round"
           },
           "side": {
             "title": "Side",
@@ -1700,6 +2184,7 @@
           }
         },
         "required": [
+          "fill_id",
           "agent_id",
           "agent_name",
           "symbol",
@@ -1708,7 +2193,16 @@
           "price",
           "fee",
           "order_id",
-          "status"
+          "status",
+          "order_kind",
+          "decision_id",
+          "proposal_sequence",
+          "round",
+          "executed_at",
+          "event_sequence",
+          "fill_ordinal",
+          "quote_set_id",
+          "execution_quote"
         ],
         "title": "TradeDTO",
         "type": "object"
@@ -2427,6 +2921,45 @@
           }
         },
         "summary": "Positions"
+      }
+    },
+    "/competitions/{competition_id}/rules": {
+      "get": {
+        "operationId": "competition_rules_competitions__competition_id__rules_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "competition_id",
+            "required": true,
+            "schema": {
+              "title": "Competition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulesArtifactDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Competition Rules"
       }
     },
     "/competitions/{competition_id}/stream": {

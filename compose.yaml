@@ -2,7 +2,7 @@ name: open-alpha-arena-lab
 
 services:
   db:
-    image: postgres:16.4-bookworm
+    image: postgres:16-bookworm@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?copy .env.example to .env}
       POSTGRES_USER: ${POSTGRES_USER:?copy .env.example to .env}

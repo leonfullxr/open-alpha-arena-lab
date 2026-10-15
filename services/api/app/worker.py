@@ -35,7 +35,7 @@ from app.db.models import (
     Position as PositionRow,
 )
 from app.db.session import SessionLocal
-from app.llm.inputs import build_agent_request_bytes, build_user_input
+from app.llm.inputs import InputEvidenceError, build_agent_request_bytes, build_user_input
 from app.llm.providers import (
     OPENAI_CHAT_URL,
     OPENAI_RESPONSES_URL,
@@ -47,14 +47,18 @@ from app.llm.providers import (
 )
 from app.market.funding import capture_due_oracle, poll_due_rates, settle_ready_boundaries
 from app.market.hyperliquid import HyperliquidClient, MarketDataError
+from app.market.indicators import INDICATOR_WARMUP_BARS
 from app.market.persistence import (
+    BAR_DURATION,
+    MAX_CANDLE_BATCH,
+    CandlePersistenceError,
     SnapshotReceipt,
+    latest_candle_open_at,
     load_candle_features,
-    load_candles,
     persist_candles,
     persist_quote_set,
 )
-from app.market.types import BASELINE_SYMBOLS, CandleBar, MarketQuoteSet
+from app.market.types import BASELINE_SYMBOLS, CandleBar, CandleFeatures, MarketQuoteSet
 from app.services.execution import (
     ExecutionReceipt,
     execute_job,
@@ -81,7 +85,7 @@ _ADAPTER_ENDPOINTS = {
 _POLL_SECONDS = 1
 _MAX_REQUEST_BYTES = 250_000
 _CLAIM_LEASE_SECONDS = 130
-_MAX_PARALLEL_DISPATCH = 4
+_MAX_PARALLEL_DISPATCH = 6
 _WORKER_INSTANCE = os.environ.get("WORKER_INSTANCE_ID") or str(uuid.uuid4())
 
 
@@ -173,6 +177,9 @@ def _collect_once(
     except MarketDataError as exc:
         LOGGER.warning("market collection failed code=%s", exc.code)
         return WorkerReport("collector", "ERROR", detail=exc.code)
+    except CandlePersistenceError as exc:
+        LOGGER.warning("market candle collection failed code=%s", exc.code)
+        return WorkerReport("collector", "ERROR", detail=exc.code)
     except Exception as exc:
         LOGGER.error("market collection failed error_class=%s", type(exc).__name__)
         return WorkerReport("collector", "ERROR", detail="MARKET_COLLECTION_FAILED")
@@ -189,28 +196,37 @@ def _collect_candles(
     latest_closed_open = latest_complete - timedelta(minutes=3)
     for symbol in BASELINE_SYMBOLS:
         with session_factory() as db:
-            existing = load_candles(db, symbol)
-        if existing:
-            if existing[-1].open_at >= latest_closed_open:
+            latest_open = latest_candle_open_at(db, symbol)
+        if latest_open is not None:
+            if latest_open >= latest_closed_open:
                 continue
-            start_at = max(
-                existing[-1].open_at - timedelta(minutes=3), latest_complete - timedelta(days=9)
-            )
+            start_at = latest_open + timedelta(minutes=3)
         else:
-            start_at = latest_complete - timedelta(days=9)
+            required_bars = INDICATOR_WARMUP_BARS + 12 - 1
+            start_at = latest_closed_open - timedelta(minutes=3 * (required_bars - 1))
         if start_at >= latest_complete:
             continue
-        fetched = client.fetch_candles(
+        end_at = min(
+            latest_complete,
+            start_at + BAR_DURATION * MAX_CANDLE_BATCH,
+        )
+        last_requested_open = end_at - BAR_DURATION
+        received = client.fetch_candles(
             symbol,
             start_at=start_at,
-            end_at=latest_complete,
+            end_at=end_at,
             interval="3m",
         )
-        by_open = {bar.open_at: bar for bar in (*existing, *fetched)}
-        merged = tuple(by_open[key] for key in sorted(by_open))
-        if merged:
-            with session_factory() as db:
-                changes += persist_candles(db, merged)
+        fetched = tuple(bar for bar in received if start_at <= bar.open_at < end_at)
+        if (
+            not fetched
+            or len(fetched) > MAX_CANDLE_BATCH
+            or fetched[0].open_at != start_at
+            or fetched[-1].open_at != last_requested_open
+        ):
+            raise CandlePersistenceError("market_candle_gap")
+        with session_factory() as db:
+            changes += persist_candles(db, fetched)
     return changes
 
 
@@ -218,20 +234,53 @@ def capture_market_snapshot(
     client: MarketCollectorClient,
     session_factory: sessionmaker[Session],
 ) -> tuple[SnapshotReceipt, int]:
-    """Backfill before quote capture, then freeze completed candle features with quotes."""
-    candle_changes = _collect_candles(client, session_factory, datetime.now(UTC))
+    """Capture quotes even when candle evidence is unavailable for inference."""
+    candle_changes = 0
+    candle_error: str | None = None
+    try:
+        candle_changes = _collect_candles(client, session_factory, datetime.now(UTC))
+    except CandlePersistenceError as exc:
+        candle_error = exc.code
+        LOGGER.warning("market candles unavailable code=%s", candle_error)
+    except MarketDataError:
+        candle_error = "market_candle_fetch_unavailable"
+        LOGGER.warning("market candles unavailable code=%s", candle_error)
     captured = client.capture()
-    with session_factory() as db:
-        features = load_candle_features(
-            db,
-            BASELINE_SYMBOLS,
-            as_of=captured.captured_at,
-            per_symbol_limit=12,
-        )
-    canonical_set = replace(captured, candle_features=features)
+    features: tuple[CandleFeatures, ...] = ()
+    if candle_error is None:
+        with session_factory() as db:
+            features = load_candle_features(
+                db,
+                BASELINE_SYMBOLS,
+                as_of=captured.captured_at,
+                per_symbol_limit=12,
+            )
+        if captured.source == "hyperliquid":
+            latest_closed_open = _latest_closed_candle_open(captured.captured_at)
+            latest_by_symbol = {
+                symbol: max(
+                    (item.candle.open_at for item in features if item.candle.symbol == symbol),
+                    default=None,
+                )
+                for symbol in BASELINE_SYMBOLS
+            }
+            if any(opened_at != latest_closed_open for opened_at in latest_by_symbol.values()):
+                candle_error = "market_candle_gap"
+                features = ()
+    canonical_set = replace(
+        captured,
+        candle_features=features,
+        candle_error=candle_error,
+    )
     with session_factory() as db:
         receipt = persist_quote_set(db, canonical_set)
     return receipt, candle_changes
+
+
+def _latest_closed_candle_open(captured_at: datetime) -> datetime:
+    latest_complete = captured_at.replace(second=0, microsecond=0)
+    latest_complete -= timedelta(minutes=latest_complete.minute % 3)
+    return latest_complete - BAR_DURATION
 
 
 def _schedule_once(session_factory: sessionmaker[Session], env: Mapping[str, str]) -> WorkerReport:
@@ -371,7 +420,12 @@ def _claim_one(session_factory: sessionmaker[Session]) -> ClaimedJob | None:
 def _dispatch_claim(
     session_factory: sessionmaker[Session], claim: ClaimedJob, env: Mapping[str, str]
 ) -> InvocationCompletion | None:
-    dispatch = _load_dispatch_input(session_factory, claim, env)
+    try:
+        dispatch = _load_dispatch_input(session_factory, claim, env)
+    except InputEvidenceError:
+        _terminalize_claim(session_factory, claim, "MARKET_INPUT_UNAVAILABLE")
+        LOGGER.warning("provider dispatch skipped reason=market_input_unavailable")
+        return None
     if dispatch is None:
         _terminalize_claim(session_factory, claim, "NOT_DISPATCHED")
         LOGGER.warning("provider dispatch skipped reason=ledger_reconciliation_failed")
@@ -440,8 +494,14 @@ def _dispatch_claim(
     session_id = hashlib.sha256(
         f"arena-conversation:{claim.competition_id}:{claim.agent_run_id}".encode()
     ).hexdigest()[:32]
+    remaining_seconds = _remaining_round_seconds(session_factory, claim.round_id)
+    if remaining_seconds <= 0:
+        return InvocationCompletion(output_bytes=b"", error_code="PROVIDER_TIMEOUT")
     with OpenAICompatibleProvider(
-        config, api_key=dispatch.api_key, session_id=session_id
+        config,
+        api_key=dispatch.api_key,
+        timeout_seconds=min(120.0, remaining_seconds),
+        session_id=session_id,
     ) as provider:
         try:
             result = provider.invoke(request_bytes=request_body)
@@ -517,6 +577,15 @@ def _load_dispatch_input(
                 positions=positions,
             ),
         )
+
+
+def _remaining_round_seconds(session_factory: sessionmaker[Session], round_id: str) -> float:
+    with session_factory() as db:
+        deadline = db.scalar(select(DecisionRound.deadline_at).where(DecisionRound.id == round_id))
+        now = _db_now(db)
+    if deadline is None:
+        return 0.0
+    return (_normalize_timestamp(deadline) - now).total_seconds()
 
 
 def _prepare_dispatch(

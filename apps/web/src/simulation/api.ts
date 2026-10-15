@@ -11,6 +11,7 @@ export type Position = PublicSchema['PositionDTO'];
 export type FundingPayment = PublicSchema['FundingPaymentDTO'];
 export type FundingEvidence = PublicSchema['FundingEvidenceArtifactDTO'];
 export type FundingPage = PublicSchema['PageDTO_FundingPaymentDTO_'];
+export type RulesArtifact = PublicSchema['RulesArtifactDTO'];
 export type Decision = PublicSchema['DecisionDTO'];
 export type Artifact = PublicSchema['ArtifactDTO'];
 export type EventPage = PublicSchema['EventPageDTO'];
@@ -100,6 +101,12 @@ export function getFundingHistory(id: string, query: HistoryQuery): Promise<Fund
 export async function getFundingEvidence(id: string): Promise<FundingEvidence> {
   return requireData(await client.GET('/funding/evidence/{evidence_id}', {
     params: { path: { evidence_id: id } },
+  }));
+}
+
+export async function getCompetitionRules(id: string): Promise<RulesArtifact> {
+  return requireData(await client.GET('/competitions/{competition_id}/rules', {
+    params: { path: { competition_id: id } },
   }));
 }
 

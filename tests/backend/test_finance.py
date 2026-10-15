@@ -405,11 +405,16 @@ def test_frozen_rules_apply_entry_limits_and_risk_halt_keeps_closes_available() 
         "proposal_schema_version": 1,
         "public_evidence_schema_version": 1,
         "market_window_candles": 12,
+        "indicator_policy": "trailing_500_v1",
+        "indicator_warmup_bars": 500,
     }
     rules = rules_from_config(cfg)
     future_schema = dict(cfg, proposal_schema_version=2)
     with pytest.raises(FinanceError, match="schema"):
         rules_from_config(future_schema)
+    future_indicator = dict(cfg, indicator_policy="trailing_100_v1")
+    with pytest.raises(FinanceError, match="schema"):
+        rules_from_config(future_indicator)
     quote = Quote("BTC", D("99"), D("100"), D("100"))
     with pytest.raises(FinanceError, match="leverage"):
         apply_action(

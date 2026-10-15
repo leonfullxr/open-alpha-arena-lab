@@ -444,20 +444,6 @@ def _apply_proposals(
                 policy_version=f"{context.competition.profile}:frozen-v1",
             )
         )
-        if accepted_now and engine_result is not None:
-            _persist_engine_result(
-                db,
-                engine_result,
-                account_id=context.account_row.id,
-                proposal_id=proposal_id,
-                idempotency_key=key,
-                kind="MARKET",
-            )
-            context.account = engine_result.account
-            _sync_positions(db, context, proposal.symbol)
-            accepted += 1
-        else:
-            rejected += 1
         _append_event(
             db,
             context.competition,
@@ -473,6 +459,23 @@ def _apply_proposals(
             },
             at=context.now,
         )
+        if accepted_now and engine_result is not None:
+            _persist_engine_result(
+                db,
+                engine_result,
+                account_id=context.account_row.id,
+                proposal_id=proposal_id,
+                idempotency_key=key,
+                kind="MARKET",
+                executed_at=context.now,
+                quote_set_id=context.quote_set_id,
+                event_sequence=context.competition.event_seq,
+            )
+            context.account = engine_result.account
+            _sync_positions(db, context, proposal.symbol)
+            accepted += 1
+        else:
+            rejected += 1
     return accepted, rejected
 
 
@@ -484,22 +487,26 @@ def _persist_engine_result(
     proposal_id: str | None,
     idempotency_key: str,
     kind: str,
-) -> None:
+    executed_at: datetime,
+    quote_set_id: str,
+    event_sequence: int,
+) -> Order | None:
     if not result.fills:
-        return
+        return None
     order_id = str(uuid.uuid4())
-    db.add(
-        Order(
-            id=order_id,
-            account_id=account_id,
-            proposal_id=proposal_id,
-            idempotency_key=idempotency_key,
-            kind=kind,
-            status="FILLED",
-        )
+    order = Order(
+        id=order_id,
+        account_id=account_id,
+        proposal_id=proposal_id,
+        idempotency_key=idempotency_key,
+        kind=kind,
+        status="FILLED",
+        quote_set_id=quote_set_id,
+        event_sequence=event_sequence,
     )
+    db.add(order)
     db.flush()
-    for fill in result.fills:
+    for ordinal, fill in enumerate(result.fills):
         db.add(
             FillRow(
                 id=str(uuid.uuid4()),
@@ -509,6 +516,8 @@ def _persist_engine_result(
                 quantity=fill.quantity,
                 price=fill.price,
                 fee=fill.fee,
+                executed_at=executed_at,
+                ordinal=ordinal,
             )
         )
     journal_id = str(uuid.uuid4())
@@ -525,6 +534,7 @@ def _persist_engine_result(
             for posting in result.postings
         ]
     )
+    return order
 
 
 def _sync_positions(db: Session, context: _Context, changed_symbol: str) -> None:

@@ -22,6 +22,7 @@ from app.db.models import (
     DomainEvent,
     FundingBoundaryTask,
     FundingPayment,
+    FundingRateEvidence,
     LedgerJournal,
     LedgerPosting,
     MarketQuote,
@@ -71,6 +72,8 @@ def _fixture(
     started_at: datetime | None = None,
     with_oracle: bool = True,
     close_btc_after: bool = True,
+    oracle_context_at: datetime | None = None,
+    snapshot_source_label: str = "hyperliquid",
 ) -> tuple[str, str, str, str]:
     suffix = uuid.uuid4().hex
     competition_id, agent_id, prompt_id = _id(), _id(), _id()
@@ -133,11 +136,12 @@ def _fixture(
         )
     )
     if with_oracle:
+        context_at = oracle_context_at or boundary - timedelta(seconds=5)
         db.add(
             QuoteSet(
                 id=quote_set_id,
                 source="hyperliquid",
-                captured_at=boundary - timedelta(seconds=5),
+                captured_at=context_at,
                 complete=True,
                 max_age_ms=5_000,
                 skew_ms=0,
@@ -158,8 +162,8 @@ def _fixture(
                 id=snapshot_id,
                 canonical_bytes=raw_snapshot,
                 sha256=hashlib.sha256(raw_snapshot).hexdigest(),
-                source_label="hyperliquid",
-                captured_at=boundary - timedelta(seconds=5),
+                source_label=snapshot_source_label,
+                captured_at=context_at,
                 quote_set_id=quote_set_id,
             )
         )
@@ -174,9 +178,9 @@ def _fixture(
                     funding_rate=None,
                     open_interest=None,
                     oracle_px=price,
-                    source_at=boundary - timedelta(seconds=5),
-                    received_at=boundary - timedelta(seconds=5),
-                    context_received_at=boundary - timedelta(seconds=5),
+                    source_at=context_at,
+                    received_at=context_at,
+                    context_received_at=context_at,
                     source_at_basis="fixture",
                 )
                 for symbol, price in (("BTC", Decimal("100")), ("ETH", Decimal("50")))
@@ -451,6 +455,50 @@ def test_settlement_expires_missing_rates_from_database_clock() -> None:
         admin_engine.dispose()
 
 
+@pytest.mark.parametrize(
+    ("context_delta", "source_label"),
+    [
+        (timedelta(seconds=1), "hyperliquid"),
+        (timedelta(seconds=-11), "hyperliquid"),
+        (timedelta(seconds=-5), "fixture-replay-v3"),
+    ],
+    ids=("future-context", "stale-context", "wrong-snapshot-source"),
+)
+def test_oracle_capture_rejects_untrusted_first_snapshot(
+    context_delta: timedelta, source_label: str
+) -> None:
+    assert PG_URL is not None
+    engine = create_engine(PG_URL, pool_pre_ping=True)
+    boundary = _future_boundary()
+    context_at = boundary + context_delta
+    with Session(engine) as db:
+        competition_id, _, quote_set_id, snapshot_id = _fixture(
+            db,
+            boundary=boundary,
+            oracle_context_at=context_at,
+            snapshot_source_label=source_label,
+        )
+        db.commit()
+    try:
+        with Session(engine) as db:
+            receipt = persist_oracle_capture(
+                db,
+                boundary_at=boundary,
+                quote_set_id=quote_set_id,
+                snapshot_id=snapshot_id,
+                context_received_at=context_at,
+            )
+            assert receipt.status == "UNAVAILABLE"
+            assert receipt.quote_set_id is None
+            assert receipt.snapshot_id is None
+            task = db.get(FundingBoundaryTask, boundary)
+            assert task is not None
+            assert task.oracle_quote_set_id is None
+            assert task.oracle_snapshot_id is None
+    finally:
+        engine.dispose()
+
+
 def test_history_rate_accepts_millisecond_offset_through_five_seconds() -> None:
     assert PG_URL is not None
     engine = create_engine(PG_URL, pool_pre_ping=True)
@@ -504,7 +552,127 @@ def test_history_rate_accepts_millisecond_offset_through_five_seconds() -> None:
                 history_event_at=outside,
                 raw_record_bytes=outside_raw,
             )
+        fresh_boundary = _future_boundary()
+        _fixture(db, boundary=fresh_boundary)
+        fresh_task = db.get(FundingBoundaryTask, fresh_boundary)
+        assert fresh_task is not None
+        fresh_task.status = "PENDING"
+        fresh_task.next_poll_at = fresh_boundary + timedelta(seconds=1)
+        event_at = fresh_boundary + timedelta(seconds=5, milliseconds=1)
+        outside_first_raw = json.dumps(
+            {
+                "coin": "BTC",
+                "fundingRate": "0.0000026465",
+                "time": int(fresh_boundary.timestamp()) * 1000 + 5001,
+            }
+        ).encode()
+        with pytest.raises(ValueError, match="within five seconds"):
+            persist_rate_evidence(
+                db,
+                boundary_at=fresh_boundary,
+                symbol="BTC",
+                rate=Decimal("0.0000026465"),
+                history_event_at=event_at,
+                raw_record_bytes=outside_first_raw,
+            )
+        assert db.scalar(
+            select(func.count()).select_from(FundingRateEvidence).where(
+                FundingRateEvidence.boundary_at == fresh_boundary
+            )
+        ) == 0
     engine.dispose()
+
+
+def test_first_rate_record_must_match_the_supplied_rate() -> None:
+    assert PG_URL is not None
+    engine = create_engine(PG_URL, pool_pre_ping=True)
+    boundary = _future_boundary()
+    raw = json.dumps(
+        {
+            "coin": "BTC",
+            "fundingRate": "0.02",
+            "time": int(boundary.timestamp()) * 1000,
+        }
+    ).encode()
+    try:
+        with Session(engine) as db:
+            _fixture(db, boundary=boundary)
+            task = db.get(FundingBoundaryTask, boundary)
+            assert task is not None
+            task.status = "PENDING"
+            task.next_poll_at = boundary + timedelta(seconds=1)
+            db.commit()
+        with Session(engine) as db:
+            with pytest.raises(ValueError, match="does not match the supplied rate"):
+                persist_rate_evidence(
+                    db,
+                    boundary_at=boundary,
+                    symbol="BTC",
+                    rate=Decimal("0.01"),
+                    history_event_at=boundary,
+                    raw_record_bytes=raw,
+                )
+        with Session(engine) as db:
+            assert db.scalar(
+                select(func.count()).select_from(FundingRateEvidence).where(
+                    FundingRateEvidence.boundary_at == boundary
+                )
+            ) == 0
+    finally:
+        engine.dispose()
+
+
+def test_first_rate_record_after_database_deadline_is_rejected() -> None:
+    assert PG_URL is not None
+    schema = f"funding_deadline_{uuid.uuid4().hex}"
+    admin_engine = create_engine(PG_URL, pool_pre_ping=True)
+    with admin_engine.begin() as connection:
+        connection.execute(text(f'CREATE SCHEMA "{schema}"'))
+    engine = create_engine(
+        PG_URL,
+        pool_pre_ping=True,
+        connect_args={"options": f"-csearch_path={schema}"},
+    )
+    Base.metadata.create_all(engine)
+    boundary = datetime.now(UTC).replace(minute=0, second=0, microsecond=0) - timedelta(
+        hours=2
+    )
+    raw = json.dumps(
+        {
+            "coin": "BTC",
+            "fundingRate": "0.01",
+            "time": int(boundary.timestamp()) * 1000,
+        }
+    ).encode()
+    try:
+        with Session(engine) as db:
+            _fixture(db, boundary=boundary)
+            task = db.get(FundingBoundaryTask, boundary)
+            assert task is not None
+            task.status = "PENDING"
+            task.next_poll_at = boundary + timedelta(seconds=1)
+            db.commit()
+        with Session(engine) as db:
+            with pytest.raises(ValueError, match="after the boundary deadline"):
+                persist_rate_evidence(
+                    db,
+                    boundary_at=boundary,
+                    symbol="BTC",
+                    rate=Decimal("0.01"),
+                    history_event_at=boundary,
+                    raw_record_bytes=raw,
+                )
+        with Session(engine) as db:
+            assert db.scalar(
+                select(func.count()).select_from(FundingRateEvidence).where(
+                    FundingRateEvidence.boundary_at == boundary
+                )
+            ) == 0
+    finally:
+        engine.dispose()
+        with admin_engine.begin() as connection:
+            connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        admin_engine.dispose()
 
 
 def test_settlement_waits_for_oracle_capture_transaction() -> None:

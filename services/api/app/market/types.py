@@ -8,6 +8,14 @@ from app.engine.finance import Quote
 
 BASELINE_SYMBOLS = ("BTC", "ETH", "SOL", "BNB", "DOGE", "XRP")
 ZERO = Decimal("0")
+MARKET_CANDLE_ERROR_CODES = frozenset(
+    {
+        "market_candle_gap",
+        "market_candle_incomplete",
+        "market_candle_contradiction",
+        "market_candle_fetch_unavailable",
+    }
+)
 
 
 def _aware_utc(value: datetime, field: str) -> None:
@@ -87,6 +95,7 @@ class MarketQuoteSet:
     required_symbols: tuple[str, ...] = BASELINE_SYMBOLS
     source: str = "hyperliquid"
     candle_features: tuple[CandleFeatures, ...] = ()
+    candle_error: str | None = None
 
     def __post_init__(self) -> None:
         _aware_utc(self.captured_at, "captured_at")
@@ -98,6 +107,8 @@ class MarketQuoteSet:
         instrument_symbols = [item.symbol for item in self.instruments]
         if len(set(instrument_symbols)) != len(instrument_symbols):
             raise ValueError("instrument symbols must be unique")
+        if self.candle_error is not None and self.candle_error not in MARKET_CANDLE_ERROR_CODES:
+            raise ValueError("candle error code is not allowlisted")
 
     def health(
         self,

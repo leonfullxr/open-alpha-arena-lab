@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   new RegExp(`^${PUBLIC_ROOT}/competitions$`),
   new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}$`),
   new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}/(?:equity|chart|leaderboard|metrics|events|decisions|positions|trades|export|stream)$`),
+  new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}/rules$`),
   new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}/funding$`),
   new RegExp(`^${PUBLIC_ROOT}/funding/evidence/${ID}$`),
   new RegExp(`^${PUBLIC_ROOT}/models/${ID}$`),

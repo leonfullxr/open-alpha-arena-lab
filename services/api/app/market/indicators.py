@@ -3,10 +3,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from decimal import Decimal, localcontext
 
+from app.engine.finance import money
 from app.market.types import CandleBar, CandleFeatures
 
 ZERO = Decimal(0)
 ONE = Decimal(1)
+INDICATOR_POLICY = "trailing_500_v1"
+INDICATOR_WARMUP_BARS = 500
 
 
 def _ema(values: Sequence[Decimal], period: int) -> list[Decimal | None]:
@@ -101,3 +104,33 @@ def calculate_features(candles: Sequence[CandleBar]) -> tuple[CandleFeatures, ..
         )
         for index, bar in enumerate(bars)
     )
+
+
+def calculate_trailing_features(
+    candles: Sequence[CandleBar],
+) -> tuple[CandleFeatures, ...]:
+    """Persist features from a reproducible fixed trailing window, quantized to DB precision."""
+    bars = tuple(candles)
+    results: list[CandleFeatures] = []
+    for index, bar in enumerate(bars):
+        results.append(calculate_trailing_feature(bars[:index], bar))
+    return tuple(results)
+
+
+def calculate_trailing_feature(history: Sequence[CandleBar], candle: CandleBar) -> CandleFeatures:
+    window = (*history[-(INDICATOR_WARMUP_BARS - 1) :], candle)
+    if len(window) < INDICATOR_WARMUP_BARS:
+        return CandleFeatures(candle, None, None, None, None, None)
+    calculated = calculate_features(window)[-1]
+    return CandleFeatures(
+        candle,
+        _stored_decimal(calculated.ema20),
+        _stored_decimal(calculated.rsi7),
+        _stored_decimal(calculated.macd),
+        _stored_decimal(calculated.macd_signal),
+        _stored_decimal(calculated.macd_histogram),
+    )
+
+
+def _stored_decimal(value: Decimal | None) -> Decimal | None:
+    return money(value) if value is not None else None

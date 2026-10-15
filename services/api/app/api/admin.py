@@ -319,6 +319,7 @@ def change_competition_state(
     now = datetime.now(UTC)
     if action == "start":
         competition.started_at = now
+        competition.source_label = "LIVE DATA · PAPER"
     if action == "finish":
         competition.ended_at = now
     db.commit()

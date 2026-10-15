@@ -6,6 +6,8 @@ FastAPI and PostgreSQL run on Debian with independent collector, scheduler and e
 
 Baseline `alpha_2025_baseline` uses BTC, ETH, SOL, BNB, DOGE and XRP; virtual initial capital $10,000 per account; 180-second rounds; T+120 response deadline; one canonical snapshot and a shared execution quote set. Execution quote age <=10 seconds and cross-symbol skew <=5 seconds. Incomplete quote sets block new baseline entries. Protective exits operate independently on trusted fresh prices. Multi-symbol proposals execute in frozen manifest order after account revalidation. Rules, prompts, provider model settings, universe and evidence schema freeze at start.
 
+Market features follow the frozen `trailing_500_v1` policy: each fully warmed bar uses exactly 500 trailing completed bars. Receive timestamps and prior candle facts are immutable; batch and incremental ingestion produce the same quantized features. Cold backfill contains 511 bars so the published twelve-bar window is warmed.
+
 `research_extended` has separate rankings for changed tools, strategies, assets, memory, collaboration or execution policies. Private weights are compatible with common baseline inputs/rules. Confidential strategies are deferred.
 
 Inference dispatch is not exactly-once: uncertain dispatches are audited and never automatically repeated. Fills, balanced ledger postings, positions, durable events and outcomes commit atomically. Public evidence uses explicit safe schemas, not generic ORM serialization. Exact prompt bytes and SHA-256 hashes are retained; private credentials, headers, personal information and hidden provider reasoning never enter public artifacts.

@@ -8,6 +8,8 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
+from app.core.canonical import canonical_json_bytes
+from app.core.rules import canonical_profile
 from app.db.models import (
     Account,
     AgentRun,
@@ -62,7 +64,9 @@ def _pending_job(db: Session, deadline_seconds: int = 120) -> str:
     competition_id, prompt_id, agent_id = _id(), _id(), _id()
     account_id, quote_set_id, snapshot_id = _id(), _id(), _id()
     round_id, job_id = _id(), _id()
-    frozen_rules = b'{"inference_budget_usd":"2"}'
+    rules = canonical_profile("alpha_2025_baseline")
+    rules["inference_budget_usd"] = "2"
+    frozen_rules = canonical_json_bytes(rules)
     db.add(
         Competition(
             id=competition_id,

@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from app.core.canonical import canonical_json_bytes, sha256_hex
@@ -29,11 +32,12 @@ from app.db.models import (
     RoundAgentJob,
     WorkerHeartbeat,
 )
-from app.llm.inputs import build_agent_request_bytes, build_user_input
+from app.llm.inputs import InputEvidenceError, build_agent_request_bytes, build_user_input
 from app.llm.providers import OPENAI_CHAT_URL, ProviderConfig
 from app.llm.schema import ProposalOutputError, parse_proposal_output
 from app.llm.smoke import SmokeRunError, _load_config, _validate_candle_warmup
 from app.market.hyperliquid import HyperliquidClient
+from app.market.indicators import INDICATOR_POLICY, INDICATOR_WARMUP_BARS
 from app.market.persistence import persist_quote_set
 from app.market.types import (
     BASELINE_SYMBOLS,
@@ -42,16 +46,18 @@ from app.market.types import (
     MarketQuote,
     MarketQuoteSet,
 )
+from app.services.invocation import ClaimedJob, InvocationCompletion
 from app.worker import (
     _create_due_rounds,
     _provider_config,
+    _schedule_once,
     _worst_case_reservation,
     build_agent_input,
     capture_market_snapshot,
     run_once,
 )
 from sqlalchemy import create_engine, func, select, text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 
@@ -94,6 +100,51 @@ def test_demo_worker_modes_never_construct_external_clients() -> None:
     assert scheduler.state == executor.state == "DISABLED"
 
 
+def test_scheduler_dispatches_all_six_baseline_agents_concurrently(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory = _factory()
+    now = datetime.now(UTC)
+    claims = iter(
+        ClaimedJob(
+            job_id=f"job-{index}",
+            competition_id="competition",
+            round_id="round",
+            agent_run_id=f"agent-{index}",
+            snapshot_id="snapshot",
+            fence=1,
+            lease_expires_at=now + timedelta(seconds=130),
+        )
+        for index in range(len(BASELINE_SYMBOLS))
+    )
+    all_started = Barrier(len(BASELINE_SYMBOLS))
+    started: list[str] = []
+
+    def dispatch(
+        _factory: sessionmaker[Session],
+        claim: ClaimedJob,
+        _env: dict[str, str],
+    ) -> InvocationCompletion:
+        started.append(claim.agent_run_id)
+        all_started.wait(timeout=3)
+        return InvocationCompletion(output_bytes=b"{}")
+
+    monkeypatch.setattr("app.worker._mock_competitions_only", lambda _factory: True)
+    monkeypatch.setattr("app.worker._create_due_rounds", lambda _factory: 0)
+    monkeypatch.setattr("app.worker._claim_one", lambda _factory: next(claims, None))
+    monkeypatch.setattr("app.worker._dispatch_claim", dispatch)
+    monkeypatch.setattr("app.worker.apply_invocation_result", lambda *_args: None)
+
+    report = _schedule_once(
+        factory,
+        {"APP_MODE": "demo", "ENABLE_MOCK_INFERENCE": "true"},
+    )
+
+    assert report.state == "READY"
+    assert report.handled == len(BASELINE_SYMBOLS)
+    assert len(started) == len(BASELINE_SYMBOLS)
+
+
 def test_emitted_agent_input_contains_frozen_rules_and_parseable_public_schema() -> None:
     now = datetime.now(UTC).replace(microsecond=0)
     frozen_rules = canonical_profile("alpha_2025_baseline") | {"source": "test"}
@@ -110,7 +161,14 @@ def test_emitted_agent_input_contains_frozen_rules_and_parseable_public_schema()
         event_seq=0,
     )
     snapshot_bytes = canonical_json_bytes(
-        {"schema_version": 1, "quotes": {"BTC": {"mark": "100"}}, "candles": []}
+        {
+            "schema_version": 1,
+            "source": "mock-worker",
+            "quotes": {"BTC": {"mark": "100"}},
+            "candles": [],
+            "indicator_policy": INDICATOR_POLICY,
+            "indicator_warmup_bars": INDICATOR_WARMUP_BARS,
+        }
     )
     snapshot = MarketSnapshot(
         id="input-snapshot",
@@ -178,10 +236,56 @@ def test_shared_input_rejects_snapshot_schema_mismatch() -> None:
             logical_at=datetime.now(UTC),
             frozen_rules=canonical_profile("alpha_2025_baseline"),
             frozen_rules_sha256="frozen-rules-hash",
-            snapshot={"schema_version": 2, "quotes": {}, "candles": []},
+            snapshot={
+                "schema_version": 2,
+                "quotes": {},
+                "candles": [],
+                "indicator_policy": INDICATOR_POLICY,
+                "indicator_warmup_bars": INDICATOR_WARMUP_BARS,
+            },
             snapshot_sha256="snapshot-hash",
             own_account={"cash": "10000"},
         )
+
+
+def test_shared_input_rejects_indicator_metadata_outside_frozen_rules() -> None:
+    frozen_rules = canonical_profile("alpha_2025_baseline")
+    with pytest.raises(ValueError, match="indicator policy"):
+        build_user_input(
+            logical_at=datetime.now(UTC),
+            frozen_rules=frozen_rules,
+            frozen_rules_sha256="frozen-rules-hash",
+            snapshot={
+                "schema_version": 1,
+                "quotes": {},
+                "candles": [],
+                "indicator_policy": INDICATOR_POLICY,
+                "indicator_warmup_bars": INDICATOR_WARMUP_BARS - 1,
+            },
+            snapshot_sha256="snapshot-hash",
+            own_account={"cash": "10000"},
+        )
+
+
+def test_live_hyperliquid_input_requires_warmed_candles() -> None:
+    with pytest.raises(InputEvidenceError) as error:
+        build_user_input(
+            logical_at=datetime.now(UTC),
+            frozen_rules=canonical_profile("alpha_2025_baseline"),
+            frozen_rules_sha256="frozen-rules-hash",
+            snapshot={
+                "schema_version": 1,
+                "source": "hyperliquid",
+                "quotes": {},
+                "candles": [],
+                "indicator_policy": INDICATOR_POLICY,
+                "indicator_warmup_bars": INDICATOR_WARMUP_BARS,
+                "candle_error": "market_candle_gap",
+            },
+            snapshot_sha256="snapshot-hash",
+            own_account={"cash": "10000"},
+        )
+    assert error.value.code == "MARKET_INPUT_UNAVAILABLE"
 
 
 def test_live_capture_backfills_before_quote_and_freezes_bounded_candle_window() -> None:
@@ -199,10 +303,17 @@ def test_live_capture_backfills_before_quote_and_freezes_bounded_candle_window()
         ) -> tuple[CandleBar, ...]:
             call_order.append(f"candles:{symbol}")
             assert interval == "3m" and start_at < end_at
-            first_open = end_at - timedelta(minutes=3 * 40)
+            latest_complete = end_at.replace(second=0, microsecond=0)
+            latest_complete -= timedelta(minutes=latest_complete.minute % 3)
+            latest_closed_open = latest_complete - timedelta(minutes=3)
+            first_open = latest_closed_open - timedelta(
+                minutes=3 * (INDICATOR_WARMUP_BARS + 12 - 2)
+            )
             bars = []
-            for index in range(40):
+            for index in range(INDICATOR_WARMUP_BARS + 12 - 1):
                 opened = first_open + timedelta(minutes=3 * index)
+                if not start_at <= opened <= latest_closed_open:
+                    continue
                 price = Decimal("100") + Decimal(index)
                 bars.append(
                     CandleBar(
@@ -240,10 +351,11 @@ def test_live_capture_backfills_before_quote_and_freezes_bounded_candle_window()
                     for symbol in BASELINE_SYMBOLS
                 ),
                 tuple(InstrumentSpec(symbol, 4, 20) for symbol in BASELINE_SYMBOLS),
+                source="mock-worker",
             )
 
     receipt, changes = capture_market_snapshot(CandleClient(), factory)
-    assert changes == 240
+    assert changes == len(BASELINE_SYMBOLS) * (INDICATOR_WARMUP_BARS + 12 - 1)
     assert call_order[-1] == "quotes"
     assert call_order[:-1] == [f"candles:{symbol}" for symbol in BASELINE_SYMBOLS]
     second_receipt, second_changes = capture_market_snapshot(CandleClient(), factory)
@@ -261,7 +373,9 @@ def test_live_capture_backfills_before_quote_and_freezes_bounded_candle_window()
         assert all(len(window["bars"]) == 12 for window in windows)
         assert all(window["bars"][-1]["ema20"] is not None for window in windows)
         assert all(window["bars"][-1]["macd_signal"] is not None for window in windows)
-        assert db.scalar(select(func.count()).select_from(Candle)) == 240
+        assert db.scalar(select(func.count()).select_from(Candle)) == len(BASELINE_SYMBOLS) * (
+            INDICATOR_WARMUP_BARS + 12 - 1
+        )
 
 
 def test_round_scheduler_creates_one_snapshot_and_manifest_ordered_jobs_once() -> None:
@@ -284,6 +398,7 @@ def test_round_scheduler_creates_one_snapshot_and_manifest_ordered_jobs_once() -
             for symbol in BASELINE_SYMBOLS
         ),
         tuple(InstrumentSpec(symbol, 4, 20) for symbol in BASELINE_SYMBOLS),
+        source="mock-worker",
     )
     rules = canonical_profile("alpha_2025_baseline")
     with factory() as db:
@@ -367,6 +482,7 @@ def test_dirty_ledger_prevents_provider_dispatch_and_records_no_attempt(tmp_path
             for symbol in BASELINE_SYMBOLS
         ),
         tuple(InstrumentSpec(symbol, 4, 20) for symbol in BASELINE_SYMBOLS),
+        source="mock-worker",
     )
     rules = canonical_profile("alpha_2025_baseline") | {
         "source": "DEMO REPLAY",
@@ -508,7 +624,12 @@ def test_live_smoke_config_is_fixed_to_two_approved_go_models(tmp_path: Path) ->
 
 
 def _run_twenty_round_worker_lifecycle(
-    tmp_path: Path, engine_builder: Callable[[str], Engine]
+    tmp_path: Path,
+    engine_builder: Callable[[str], Engine],
+    *,
+    after_restart: Callable[[], None] | None = None,
+    clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    set_clock: Callable[[datetime], None] | None = None,
 ) -> None:
     database_path = tmp_path / "worker-restart.sqlite"
 
@@ -519,7 +640,7 @@ def _run_twenty_round_worker_lifecycle(
 
     factory, engine = open_factory()
     environment = {"APP_MODE": "demo", "ENABLE_MOCK_INFERENCE": "true"}
-    now = datetime.now(UTC).replace(microsecond=0)
+    now = clock().replace(microsecond=0)
     logical = now - timedelta(seconds=2)
     first_snapshot_time = logical - timedelta(seconds=1)
     first_set = MarketQuoteSet(
@@ -539,6 +660,7 @@ def _run_twenty_round_worker_lifecycle(
             for symbol in BASELINE_SYMBOLS
         ),
         tuple(InstrumentSpec(symbol, 4, 20) for symbol in BASELINE_SYMBOLS),
+        source="mock-worker",
     )
     rules = canonical_profile("alpha_2025_baseline") | {
         "source": "DEMO REPLAY",
@@ -605,7 +727,7 @@ def _run_twenty_round_worker_lifecycle(
         db.commit()
 
     for round_index in range(1, 21):
-        now = datetime.now(UTC).replace(microsecond=0)
+        now = clock().replace(microsecond=0)
         logical = now - timedelta(seconds=2)
         source_at = logical - timedelta(seconds=1)
         round_quotes = MarketQuoteSet(
@@ -625,6 +747,7 @@ def _run_twenty_round_worker_lifecycle(
                 for symbol in BASELINE_SYMBOLS
             ),
             tuple(InstrumentSpec(symbol, 4, 20) for symbol in BASELINE_SYMBOLS),
+            source="mock-worker",
         )
         with factory() as db:
             persist_quote_set(db, round_quotes)
@@ -650,10 +773,17 @@ def _run_twenty_round_worker_lifecycle(
                 select(DecisionRound).where(DecisionRound.round_index == round_index)
             )
             assert round_row is not None
-            round_row.deadline_at = datetime.now(UTC).replace(microsecond=0) - timedelta(seconds=2)
-            db.commit()
+            deadline_at = round_row.deadline_at
+            if set_clock is None:
+                round_row.deadline_at = datetime.now(UTC).replace(microsecond=0) - timedelta(
+                    seconds=2
+                )
+                db.commit()
 
-        execution_at = datetime.now(UTC).replace(microsecond=0)
+        if set_clock is not None:
+            set_clock(deadline_at + timedelta(seconds=1))
+
+        execution_at = clock().replace(microsecond=0)
         execution_set = MarketQuoteSet(
             execution_at,
             tuple(
@@ -671,6 +801,7 @@ def _run_twenty_round_worker_lifecycle(
                 for symbol in BASELINE_SYMBOLS
             ),
             tuple(InstrumentSpec(symbol, 4, 20) for symbol in BASELINE_SYMBOLS),
+            source="mock-worker",
         )
         with factory() as db:
             persist_quote_set(db, execution_set)
@@ -704,6 +835,10 @@ def _run_twenty_round_worker_lifecycle(
         if round_index == 10:
             engine.dispose()
             factory, engine = open_factory()
+            if after_restart is not None:
+                after_restart()
+        if set_clock is not None and round_index < 20:
+            set_clock(now + timedelta(seconds=180))
 
     with factory() as db:
         rounds = db.scalars(
@@ -763,17 +898,97 @@ def test_postgres_workers_complete_twenty_rounds_after_process_restart(
     with admin.begin() as connection:
         connection.execute(text(f'CREATE SCHEMA "{schema}"'))
 
-    def build_schema_engine(_ignored: str) -> Engine:
-        engine = create_engine(
-            _WORKER_PG_URL,
-            pool_pre_ping=True,
-            connect_args={"options": f"-csearch_path={schema}"},
+    isolated_url = make_url(_WORKER_PG_URL).set(
+        drivername="postgresql+psycopg",
+        query={"options": f"-csearch_path={schema},pg_catalog"},
+    )
+    migration_env = os.environ.copy()
+    migration_env["DATABASE_URL"] = isolated_url.render_as_string(hide_password=False)
+    migration_env["PYTHONPATH"] = os.pathsep.join(
+        filter(None, ("services/api", migration_env.get("PYTHONPATH")))
+    )
+    migration = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "alembic",
+            "-c",
+            "services/api/alembic.ini",
+            "upgrade",
+            "head",
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        env=migration_env,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    assert migration.returncode == 0, "isolated Alembic upgrade failed"
+
+    clock_start = datetime.now(UTC).replace(microsecond=0)
+    with admin.begin() as connection:
+        connection.execute(
+            text(f'CREATE TABLE "{schema}".test_clock (clock_at timestamptz NOT NULL)')
         )
+        connection.execute(
+            text(f'INSERT INTO "{schema}".test_clock(clock_at) VALUES (:clock_at)'),
+            {"clock_at": clock_start},
+        )
+        connection.execute(
+            text(
+                f'''CREATE FUNCTION "{schema}".now() RETURNS timestamptz
+                    LANGUAGE sql STABLE AS
+                    'SELECT clock_at FROM "{schema}".test_clock LIMIT 1' '''
+            )
+        )
+
+    def current_test_clock() -> datetime:
+        with admin.connect() as connection:
+            value = connection.scalar(text(f'SELECT clock_at FROM "{schema}".test_clock'))
+        if not isinstance(value, datetime):
+            raise AssertionError("isolated test clock is missing")
+        return value
+
+    def set_test_clock(value: datetime) -> None:
+        with admin.begin() as connection:
+            connection.execute(
+                text(f'UPDATE "{schema}".test_clock SET clock_at = :clock_at'),
+                {"clock_at": value},
+            )
+
+    def subprocess_restart_check() -> None:
+        restart = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import os\n"
+                "from sqlalchemy import create_engine, text\n"
+                "engine = create_engine(os.environ['DATABASE_URL'])\n"
+                "with engine.connect() as connection:\n"
+                "    print(connection.scalar(text('select count(*) from decision_rounds')))\n",
+            ],
+            cwd=Path(__file__).resolve().parents[2],
+            env=migration_env,
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+        assert restart.returncode == 0, "isolated PostgreSQL restart check failed"
+        assert restart.stdout.strip() == "10"
+
+    def build_schema_engine(_ignored: str) -> Engine:
+        engine = create_engine(isolated_url, pool_pre_ping=True)
         engines.append(engine)
         return engine
 
     try:
-        _run_twenty_round_worker_lifecycle(tmp_path, build_schema_engine)
+        _run_twenty_round_worker_lifecycle(
+            tmp_path,
+            build_schema_engine,
+            after_restart=subprocess_restart_check,
+            clock=current_test_clock,
+            set_clock=set_test_clock,
+        )
     finally:
         for engine in engines:
             engine.dispose()

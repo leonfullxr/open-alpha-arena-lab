@@ -309,9 +309,12 @@ class Order(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"), nullable=False)
     proposal_id: Mapped[str | None] = mapped_column(ForeignKey("trade_proposals.id"))
+    quote_set_id: Mapped[str | None] = mapped_column(ForeignKey("quote_sets.id"))
     idempotency_key: Mapped[str] = mapped_column(String(180), nullable=False, unique=True)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False)
+    event_sequence: Mapped[int | None] = mapped_column(BigInteger)
+    __table_args__ = (Index("ix_orders_event_sequence", "event_sequence"),)
 
 
 class Fill(Base):
@@ -323,6 +326,8 @@ class Fill(Base):
     quantity: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     price: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     fee: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ordinal: Mapped[int | None] = mapped_column(Integer)
 
 
 class Position(Base):

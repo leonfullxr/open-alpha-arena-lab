@@ -1,23 +1,29 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getArtifact, getDecisionHistory, getFundingEvidence, getFundingHistory, getPositionHistory, getTradeHistory, type Agent, type Decision, type FundingEvidence, type FundingPayment, type Position, type Trade } from './api';
+import { Link } from 'react-router-dom';
+import { getArtifact, getCompetitionRules, getDecisionHistory, getFundingEvidence, getFundingHistory, getPositionHistory, getTradeHistory, type Agent, type Decision, type FundingEvidence, type FundingPayment, type Position, type RulesArtifact, type Trade } from './api';
 import { decimal, money, timestamp } from './ui';
 
 export type ActivityTab = 'Live Trades' | 'Model Chat' | 'Positions' | 'README.TXT';
 const PAGE_SIZE = 20;
 
-export function ActivityPanel({ tab, competitionId, agentId, agents = [] }: {
+export function ActivityPanel({ tab, competitionId, agentId, agents = [], highlightDecisionId, decisionRound }: {
   tab: ActivityTab;
   competitionId: string;
   agentId?: string;
   agents?: Agent[];
+  highlightDecisionId?: string;
+  decisionRound?: number;
 }): React.JSX.Element {
   const [symbolDraft, setSymbolDraft] = useState('');
   const [symbol, setSymbol] = useState('');
   const [agentDraft, setAgentDraft] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('');
   const [page, setPage] = useState(0);
-  useEffect(() => { setPage(0); }, [symbol, selectedAgent, tab, competitionId, agentId]);
+  useEffect(() => {
+    const targetPage = decisionRound && highlightDecisionId ? Math.floor((decisionRound - 1) / PAGE_SIZE) : 0;
+    setPage(targetPage);
+  }, [symbol, selectedAgent, tab, competitionId, agentId, highlightDecisionId, decisionRound]);
   const effectiveAgent = agentId ?? selectedAgent;
   const query = { limit: PAGE_SIZE, offset: page * PAGE_SIZE, ...(effectiveAgent ? { agent_id: effectiveAgent } : {}), ...(symbol ? { symbol } : {}) };
   const trades = useQuery({ queryKey: ['competition', competitionId, 'trades', query], queryFn: () => getTradeHistory(competitionId, query), enabled: Boolean(competitionId) && tab === 'Live Trades' });
@@ -29,6 +35,10 @@ export function ActivityPanel({ tab, competitionId, agentId, agents = [] }: {
   useEffect(() => {
     if (active?.data) setPage((current) => Math.min(current, Math.max(0, pageCount - 1)));
   }, [active?.data, pageCount]);
+  useEffect(() => {
+    if (tab !== 'Model Chat' || !highlightDecisionId || !decisions.data?.items.some((item) => item.id === highlightDecisionId)) return;
+    document.getElementById(`decision-${highlightDecisionId}`)?.scrollIntoView({ block: 'center' });
+  }, [tab, highlightDecisionId, decisions.data]);
 
   function applyFilter(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -41,9 +51,9 @@ export function ActivityPanel({ tab, competitionId, agentId, agents = [] }: {
       <label htmlFor="activity-symbol">Symbol</label><input id="activity-symbol" value={symbolDraft} onChange={(event) => setSymbolDraft(event.target.value)} placeholder="All" maxLength={24} />
       <button type="submit">Apply</button>
     </form>}</div>
-    {tab === 'README.TXT' ? <Readme /> : active?.isLoading ? <div className="query-state" role="status">Loading records…</div> : active?.error ? <div className="query-error" role="alert">{active.error.message} <button onClick={() => void active.refetch()}>Retry</button></div> : <>
-      {tab === 'Live Trades' && <TradesTable rows={trades.data?.items ?? []} />}
-      {tab === 'Model Chat' && <DecisionsList rows={decisions.data?.items ?? []} />}
+      {tab === 'README.TXT' ? <Readme competitionId={competitionId} /> : active?.isLoading ? <div className="query-state" role="status">Loading records…</div> : active?.error ? <div className="query-error" role="alert">{active.error.message} <button onClick={() => void active.refetch()}>Retry</button></div> : <>
+      {tab === 'Live Trades' && <TradesTable rows={trades.data?.items ?? []} competitionId={competitionId} />}
+      {tab === 'Model Chat' && <DecisionsList rows={decisions.data?.items ?? []} highlightDecisionId={highlightDecisionId} />}
       {tab === 'Positions' && <><PositionsTable rows={positions.data?.items ?? []} /><FundingSection competitionId={competitionId} agentId={effectiveAgent} symbol={symbol} /></>}
       {active?.isFetching && <p className="complete-history-note" role="status">Updating this page…</p>}
       {pageCount > 1 && <div className="history-pagination"><span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}</span><div><button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button><button disabled={page + 1 >= pageCount} onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}>Next</button></div></div>}
@@ -52,14 +62,39 @@ export function ActivityPanel({ tab, competitionId, agentId, agents = [] }: {
   </section>;
 }
 
-function TradesTable({ rows }: { rows: Trade[] }): React.JSX.Element {
+function TradesTable({ rows, competitionId }: { rows: Trade[]; competitionId: string }): React.JSX.Element {
   if (!rows.length) return <div className="query-state">No trade fills match this filter.</div>;
-  return <div className="table-scroll"><table><thead><tr><th>Model</th><th>Symbol</th><th>Side</th><th>Quantity</th><th>Fill price</th><th>Fee</th><th>Order status</th></tr></thead><tbody>{rows.map((row, index) => <tr key={`${row.order_id}-${index}`}><td>{row.agent_name}</td><td>{row.symbol}</td><td>{row.side}</td><td>{decimal(row.quantity, 6)}</td><td>{money(row.price)}</td><td>{money(row.fee)}</td><td>{row.status}</td></tr>)}</tbody></table></div>;
+  return <div className="table-scroll"><table><thead><tr><th>Model</th><th>Symbol</th><th>Side</th><th>Quantity</th><th>Fill price</th><th>Fee</th><th>Order status</th><th>Evidence</th></tr></thead><tbody>{rows.map((row) => <TradeRecord key={row.fill_id} row={row} competitionId={competitionId} />)}</tbody></table></div>;
+}
+
+function TradeRecord({ row, competitionId }: { row: Trade; competitionId: string }): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  return <>
+    <tr><td>{row.agent_name}</td><td>{row.symbol}</td><td>{row.side}</td><td>{decimal(row.quantity, 6)}</td><td>{money(row.price)}</td><td>{money(row.fee)}</td><td>{row.status}</td><td><button className="small-button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>{open ? 'Hide' : 'Inspect'}</button></td></tr>
+    {open && <tr className="trade-detail-row"><td colSpan={8}><TradeEvidence row={row} competitionId={competitionId} /></td></tr>}
+  </>;
+}
+
+function TradeEvidence({ row, competitionId }: { row: Trade; competitionId: string }): React.JSX.Element {
+  const quote = row.execution_quote;
+  return <div className="trade-evidence-detail">
+    <dl className="decision-evidence">
+      <div><dt>Fill ID</dt><dd>{row.fill_id}</dd></div>
+      <div><dt>Order</dt><dd>{row.order_id} · {row.order_kind} · {row.status}</dd></div>
+      <div><dt>Executed · pricing clock</dt><dd>{row.executed_at ? timestamp(row.executed_at) : 'Not recorded on this legacy fill'}</dd></div>
+      <div><dt>Sequence · fill ordinal</dt><dd>{row.event_sequence === null ? 'Unordered legacy fill' : `${row.event_sequence} · ${row.fill_ordinal ?? 'ordinal not recorded'}`}</dd></div>
+      <div><dt>Round · proposal sequence</dt><dd>{row.round ?? 'Not linked'} · {row.proposal_sequence ?? 'Not linked'}</dd></div>
+      <div><dt>Quote set</dt><dd>{row.quote_set_id ?? 'Not recorded'}</dd></div>
+      <div><dt>Execution quote</dt><dd>{quote ? `Bid ${money(quote.bid)} · Ask ${money(quote.ask)} · Mark ${money(quote.mark)}` : 'No recorded quote for this fill'}</dd></div>
+      <div><dt>Quote source</dt><dd>{quote ? `${timestamp(quote.source_at)} · ${quote.source_at_basis}` : 'Not recorded'}</dd></div>
+    </dl>
+    {row.decision_id ? <p className="trade-decision-link"><Link to={`/simulation/${encodeURIComponent(competitionId)}/models/${encodeURIComponent(row.agent_id)}?decision=${encodeURIComponent(row.decision_id)}&round=${row.round ?? ''}`}>Open linked model decision</Link><a href={`/api/v1/public/decisions/${encodeURIComponent(row.decision_id)}/artifact`} target="_blank" rel="noreferrer">Open exact decision artifact</a><code>{row.decision_id}</code></p> : <p className="availability-note">No decision link was recorded for this legacy order.</p>}
+  </div>;
 }
 
 function PositionsTable({ rows }: { rows: Position[] }): React.JSX.Element {
   if (!rows.length) return <div className="query-state">No positions match this filter.</div>;
-  return <div className="table-scroll"><table><thead><tr><th>Model</th><th>Symbol</th><th>Side</th><th>Quantity</th><th>Average entry</th><th>Reserved margin</th><th>Stop / take profit</th><th>State</th></tr></thead><tbody>{rows.map((row, index) => <tr key={`${row.agent_id}-${row.symbol}-${index}`}><td>{row.agent_name}</td><td>{row.symbol}</td><td>{row.side}</td><td>{decimal(row.quantity, 6)}</td><td>{money(row.average_entry)}</td><td>{money(row.reserved_margin)}</td><td>{row.stop_loss ? money(row.stop_loss) : '—'} / {row.take_profit ? money(row.take_profit) : '—'}</td><td>{row.state}</td></tr>)}</tbody></table></div>;
+  return <div className="table-scroll"><table><thead><tr><th>Model</th><th>Symbol</th><th>Side</th><th>Quantity</th><th>Average entry</th><th>Reserved margin</th><th>Stop / take profit</th><th>State</th><th>Lifecycle</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td>{row.agent_name}</td><td>{row.symbol}</td><td>{row.side}</td><td>{decimal(row.quantity, 6)}</td><td>{money(row.average_entry)}</td><td>{money(row.reserved_margin)}</td><td>{row.stop_loss ? money(row.stop_loss) : '—'} / {row.take_profit ? money(row.take_profit) : '—'}</td><td>{row.state}</td><td><details className="position-lifecycle"><summary>Times and ID</summary><code>{row.id}</code><small>Opened {timestamp(row.opened_at)}</small><small>Closed {row.closed_at ? timestamp(row.closed_at) : 'Still open'}</small></details></td></tr>)}</tbody></table></div>;
 }
 
 function FundingSection({ competitionId, agentId, symbol }: { competitionId: string; agentId?: string; symbol: string }): React.JSX.Element {
@@ -147,18 +182,18 @@ function FundingEvidenceRecord({ evidence }: { evidence: FundingEvidence }): Rea
   </div>;
 }
 
-function DecisionsList({ rows }: { rows: Decision[] }): React.JSX.Element {
+function DecisionsList({ rows, highlightDecisionId }: { rows: Decision[]; highlightDecisionId?: string }): React.JSX.Element {
   if (!rows.length) return <div className="query-state">No model decisions match this filter.</div>;
-  return <div className="decision-list">{rows.map((decision) => <DecisionRecord key={decision.id} decision={decision} />)}</div>;
+  return <div className="decision-list">{rows.map((decision) => <DecisionRecord key={decision.id} decision={decision} highlighted={decision.id === highlightDecisionId} />)}</div>;
 }
 
-function DecisionRecord({ decision }: { decision: Decision }): React.JSX.Element {
+function DecisionRecord({ decision, highlighted }: { decision: Decision; highlighted: boolean }): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const artifact = useQuery({ queryKey: ['artifact', decision.id], queryFn: () => getArtifact(decision.id), enabled: open });
   const promptArtifact = artifact.data ? decodeBase64Safely(artifact.data.prompt_bytes_base64) : null;
   const outputArtifact = artifact.data?.output_publicly_releasable ? decodeBase64Safely(artifact.data.output_bytes_base64) : null;
   const usage = Object.entries(decision.usage).map(([name, value]) => `${name}: ${value}`).join(' · ') || 'Not reported';
-  return <article className="decision-record">
+  return <article id={`decision-${decision.id}`} className={`decision-record${highlighted ? ' decision-record--linked' : ''}`}>
     <button className="decision-toggle" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
       <span><b>{decision.agent_name}</b><small>{decision.provider} · {decision.model} · round {decision.round}</small></span>
       <span className="decision-action">{decision.action ?? 'No action'} {decision.symbol ?? ''} {decision.quantity ?? ''}</span>
@@ -209,7 +244,8 @@ function shortHash(value: string | null): string {
   return value ? `${value.slice(0, 12)}…` : 'Not stored';
 }
 
-function Readme(): React.JSX.Element {
+function Readme({ competitionId }: { competitionId: string }): React.JSX.Element {
+  const rules = useQuery({ queryKey: ['competition', competitionId, 'rules'], queryFn: () => getCompetitionRules(competitionId), enabled: Boolean(competitionId) });
   return <div className="readme-content">
     <h3>Reading this competition</h3>
     <p>Records are served by the public API. Finished paper runs use saved market and account records; their source label identifies the run. They are not a live trading session.</p>
@@ -217,9 +253,73 @@ function Readme(): React.JSX.Element {
     <p><code>alpha_2025_baseline</code> uses a shared market snapshot, prompt, rules, six-symbol universe, and execution quote set. Each account starts with $10,000 virtual capital and the baseline uses 180-second rounds. <code>research_extended</code> ranks changed methods separately.</p>
     <h3>Equity and benchmark</h3>
     <p>Account equity comes from recorded samples. The benchmark summary uses the API's BTC start and end quotes, fee rate, and slippage assumption; the API does not expose an intraperiod BTC series for charting. Account fees come directly from the API.</p>
+    <h3>Fills and execution evidence</h3>
+    <p>Fill details link to the recorded decision and show order kind, round and proposal sequence, fill ordinal, execution quote set, and quote values when stored. “Executed” is the pricing clock; event sequence and fill ordinal provide order. Null fields mean that older records did not store that evidence.</p>
     <h3>Metrics and invocation evidence</h3>
     <p>Win rate, profit factor, drawdown, Sharpe, leverage, margin, usage, cost, latency, and execution result are shown only when the metrics and decision records provide them. The public decision explanation is not hidden provider reasoning.</p>
     <h3>Artifacts</h3>
     <p>Prompt downloads preserve exact bytes. Provider output is downloadable only when the API marks it publicly releasable; withheld output retains its SHA-256 for audit.</p>
+    <h3>Frozen competition rules</h3>
+    <p>The rules record describes the limits, execution assumptions, funding policy, and evidence schema applied to this competition. The SHA-256 is checked against the exact stored bytes. Unrecorded rule fields stay identified as withheld by the API.</p>
+    {rules.isLoading ? <div className="query-state" role="status">Loading frozen rules…</div>
+      : rules.error ? <div className="query-error" role="alert">{rules.error.message} <button onClick={() => void rules.refetch()}>Retry rules</button></div>
+        : rules.data ? <RulesEvidence artifact={rules.data} /> : null}
   </div>;
+}
+
+function RulesEvidence({ artifact }: { artifact: RulesArtifact }): React.JSX.Element {
+  const decoded = useMemo(() => artifact.bytes_base64 ? decodeBase64Safely(artifact.bytes_base64) : { bytes: null, error: null }, [artifact.bytes_base64]);
+  const [actualHash, setActualHash] = useState<string | null>(null);
+  useEffect(() => {
+    let current = true;
+    setActualHash(null);
+    if (decoded.bytes) {
+      void crypto.subtle.digest('SHA-256', decoded.bytes).then((digest) => {
+        const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+        if (current) setActualHash(hex);
+      }).catch(() => { if (current) setActualHash('unavailable'); });
+    }
+    return () => { current = false; };
+  }, [decoded.bytes]);
+  const hashMatches = actualHash === artifact.sha256;
+
+  function download(): void {
+    if (!decoded.bytes || !hashMatches || artifact.bytes_withheld) return;
+    const blob = new Blob([decoded.bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `competition-rules-${artifact.sha256}.json`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  }
+
+  const policy = artifact.public;
+  const facts: Array<[string, string]> = [
+    ['Profile', policy.profile],
+    ['Symbols', policy.symbols.join(', ')],
+    ['Starting virtual capital', money(policy.initial_balance)],
+    ['Round / response deadline', `${policy.round_seconds}s / ${policy.response_deadline_seconds}s`],
+    ['Quote age / set skew limits', `${policy.quote_max_age_seconds}s / ${policy.quote_set_max_skew_seconds}s`],
+    ['Maximum leverage', `${policy.leverage_max}×`],
+    ['Commission / slippage', `${decimal(Number(policy.commission_rate) * 100, 3)}% / ${policy.slippage_bps} bps`],
+    ['Daily loss / drawdown limits', `${money(policy.max_daily_loss)} / ${decimal(Number(policy.max_drawdown_fraction) * 100, 2)}%`],
+    ['Maintenance margin / liquidation fee', `${decimal(Number(policy.maintenance_margin_rate) * 100, 2)}% / ${decimal(Number(policy.liquidation_fee_rate) * 100, 2)}%`],
+    ['Funding method', `${policy.funding_mode} · ${policy.funding_rate_basis} · ${policy.funding_price_basis}`],
+    ['Risk policy', policy.risk_policy_version],
+    ['Evidence schemas', `snapshot ${policy.snapshot_schema_version} · proposal ${policy.proposal_schema_version} · public ${policy.public_evidence_schema_version} · ${policy.market_window_candles} candles`],
+  ];
+  if (policy.inference_budget_usd !== null) facts.push(['Inference budget', money(policy.inference_budget_usd)]);
+  if (policy.fixture_source) facts.push(['Fixture source', policy.fixture_source]);
+
+  return <section className="rules-evidence" aria-label="Public rules evidence">
+    <div className="rules-evidence-heading"><strong>SHA-256</strong><code>{artifact.sha256}</code></div>
+    {actualHash !== null && <p className={hashMatches ? 'evidence-hash-ok' : 'query-error'} role={hashMatches ? 'status' : 'alert'}>{hashMatches ? 'Exact stored rules bytes verified.' : actualHash === 'unavailable' ? 'Rules hash verification is unavailable.' : 'Stored rules bytes do not match the reported SHA-256.'}</p>}
+    <dl>{facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+    {artifact.withheld_fields && <p className="availability-note">The API omitted fields outside the safe public projection.</p>}
+    {artifact.bytes_withheld ? <p className="availability-note">Exact rules bytes are withheld because the stored record contains fields the public contract does not recognize.</p>
+      : decoded.error ? <p className="query-error" role="alert">Exact rules bytes could not be decoded: {decoded.error}</p>
+        : decoded.bytes ? <button className="small-button" onClick={download} disabled={!hashMatches}>Download exact frozen rules bytes</button>
+          : <p className="availability-note">The API did not return exact frozen rule bytes.</p>}
+  </section>;
 }

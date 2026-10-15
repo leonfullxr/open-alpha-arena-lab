@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import io
 import json
+import os
 import uuid
+from contextlib import redirect_stdout
 
 from alembic import command
 from alembic.config import Config
@@ -28,6 +31,11 @@ def main() -> None:
     run.add_argument("--rounds", type=int, default=20)
     reconcile = sub.add_parser("reconcile", help="compare account projections with the ledger")
     reconcile.add_argument("--competition-id")
+    live_smoke = sub.add_parser(
+        "live-smoke", help="run a bounded, explicitly requested two-model live paper smoke"
+    )
+    live_smoke.add_argument("--config", required=True)
+    live_smoke.add_argument("--rounds", type=int, default=1)
     args = parser.parse_args()
     if args.command == "migrate":
         command.upgrade(Config("services/api/alembic.ini"), "head")
@@ -91,6 +99,25 @@ def main() -> None:
             )
             if not report.balanced:
                 raise SystemExit(1)
+    elif args.command == "live-smoke":
+        # Keep live dependencies out of every ordinary CLI command and default startup path.
+        from app.llm.smoke import SmokeRunError, run_live_smoke
+
+        try:
+            with redirect_stdout(io.StringIO()):
+                smoke_report = run_live_smoke(
+                    args.config,
+                    args.rounds,
+                    environment=dict(os.environ),
+                )
+                output = json.dumps(smoke_report.as_dict(), sort_keys=True)
+        except SmokeRunError as exc:
+            print(json.dumps({"error_code": exc.code}, sort_keys=True))
+            raise SystemExit(2) from None
+        except Exception:
+            print(json.dumps({"error_code": "SMOKE_INTERNAL_ERROR"}, sort_keys=True))
+            raise SystemExit(1) from None
+        print(output)
 
 
 if __name__ == "__main__":

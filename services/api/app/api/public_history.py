@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import and_, case, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.public_schemas import (
     ArtifactDTO,
     DecisionDTO,
+    ExecutionQuoteDTO,
     ModelDTO,
     PageDTO,
     PositionDTO,
@@ -25,6 +26,7 @@ from app.db.models import (
     Fill,
     InvocationAttempt,
     InvocationResult,
+    MarketQuote,
     Order,
     Position,
     PromptVersion,
@@ -90,9 +92,7 @@ def decisions(
         )
     count_query = select(func.count()).select_from(query.subquery())
     total = db.scalar(count_query) or 0
-    rows = db.execute(
-        query.offset(offset).limit(limit)
-    ).all()
+    rows = db.execute(query.offset(offset).limit(limit)).all()
     items: list[DecisionDTO] = []
     for artifact, result, job, round_row, agent in rows:
         proposals: list[ProposalEvidenceDTO] = []
@@ -138,9 +138,7 @@ def decisions(
                                 format(proposal.stop_loss, "f") if proposal.stop_loss else None
                             ),
                             take_profit=(
-                                format(proposal.take_profit, "f")
-                                if proposal.take_profit
-                                else None
+                                format(proposal.take_profit, "f") if proposal.take_profit else None
                             ),
                             confidence=format(proposal.confidence, "f"),
                             invalidation=proposal.invalidation,
@@ -290,10 +288,13 @@ def positions(
     if symbol:
         query = query.where(Position.symbol == symbol)
     rows = db.execute(
-        query.order_by(AgentRun.manifest_order, Position.symbol).offset(offset).limit(limit)
+        query.order_by(AgentRun.manifest_order, Position.symbol, Position.opened_at, Position.id)
+        .offset(offset)
+        .limit(limit)
     ).all()
     items = [
         PositionDTO(
+            id=p.id,
             agent_id=a.id,
             agent_name=a.name,
             symbol=p.symbol,
@@ -304,6 +305,8 @@ def positions(
             stop_loss=str(p.stop_loss) if p.stop_loss is not None else None,
             take_profit=str(p.take_profit) if p.take_profit is not None else None,
             state=p.state,
+            opened_at=p.opened_at.isoformat(),
+            closed_at=p.closed_at.isoformat() if p.closed_at else None,
         )
         for p, a in rows
     ]
@@ -335,32 +338,108 @@ def trades(
 ) -> PageDTO[TradeDTO]:
     bounded_page(limit, offset)
     _competition(db, competition_id)
+    market_quote_set = case(
+        (Order.kind == "MARKET", DecisionRound.execution_quote_set_id),
+        else_=Order.quote_set_id,
+    )
     query = (
-        select(Fill, Order, Account, AgentRun)
+        select(
+            Fill,
+            Order,
+            AgentRun,
+            TradeProposal.sequence,
+            func.coalesce(InvocationAttempt.id, RoundAgentJob.id),
+            DecisionRound.round_index,
+            MarketQuote,
+            market_quote_set.label("effective_quote_set_id"),
+        )
         .join(Order, Order.id == Fill.order_id)
         .join(Account, Account.id == Order.account_id)
         .join(AgentRun, AgentRun.id == Account.agent_run_id)
+        .outerjoin(TradeProposal, TradeProposal.id == Order.proposal_id)
+        .outerjoin(RoundAgentJob, RoundAgentJob.id == TradeProposal.job_id)
+        .outerjoin(InvocationAttempt, InvocationAttempt.job_id == RoundAgentJob.id)
+        .outerjoin(DecisionRound, DecisionRound.id == RoundAgentJob.round_id)
+        .outerjoin(
+            MarketQuote,
+            and_(
+                MarketQuote.quote_set_id == market_quote_set,
+                MarketQuote.symbol == Fill.symbol,
+            ),
+        )
         .where(AgentRun.competition_id == competition_id)
     )
     if agent_id:
         query = query.where(AgentRun.id == agent_id)
     if symbol:
         query = query.where(Fill.symbol == symbol)
-    rows = db.execute(query.order_by(Fill.id).offset(offset).limit(limit)).all()
-    items = [
-        TradeDTO(
-            agent_id=a.id,
-            agent_name=a.name,
-            symbol=f.symbol,
-            side=f.side,
-            quantity=str(f.quantity),
-            price=str(f.price),
-            fee=str(f.fee),
-            order_id=o.id,
-            status=o.status,
+    rows = cast(
+        list[
+            tuple[
+                Fill,
+                Order,
+                AgentRun,
+                int | None,
+                str | None,
+                int | None,
+                MarketQuote | None,
+                str | None,
+            ]
+        ],
+        db.execute(
+            query.order_by(
+                Order.event_sequence.asc().nulls_first(),
+                Fill.ordinal.asc().nulls_first(),
+                Fill.id,
+            )
+            .offset(offset)
+            .limit(limit)
+        ).all(),
+    )
+    items: list[TradeDTO] = []
+    for (
+        fill,
+        order,
+        agent,
+        proposal_sequence,
+        decision_id,
+        round_index,
+        quote,
+        effective_quote_set_id,
+    ) in rows:
+        items.append(
+            TradeDTO(
+                fill_id=fill.id,
+                agent_id=agent.id,
+                agent_name=agent.name,
+                symbol=fill.symbol,
+                side=fill.side,
+                quantity=str(fill.quantity),
+                price=str(fill.price),
+                fee=str(fill.fee),
+                order_id=order.id,
+                status=order.status,
+                order_kind=order.kind,
+                decision_id=decision_id,
+                proposal_sequence=proposal_sequence,
+                round=round_index,
+                executed_at=fill.executed_at.isoformat() if fill.executed_at else None,
+                event_sequence=order.event_sequence,
+                fill_ordinal=fill.ordinal,
+                quote_set_id=effective_quote_set_id,
+                execution_quote=(
+                    ExecutionQuoteDTO(
+                        bid=str(quote.bid),
+                        ask=str(quote.ask),
+                        mark=str(quote.mark),
+                        source_at=quote.source_at.isoformat(),
+                        source_at_basis=quote.source_at_basis,
+                    )
+                    if quote is not None
+                    else None
+                ),
+            )
         )
-        for f, o, _, a in rows
-    ]
     count_query = (
         select(func.count())
         .select_from(Fill)
@@ -421,5 +500,3 @@ def model_details(agent_id: str, db: Annotated[Session, Depends(get_db)]) -> Mod
         prompt_sha256=prompt.sha256 if prompt else "",
         public_settings=public_settings,
     )
-
-

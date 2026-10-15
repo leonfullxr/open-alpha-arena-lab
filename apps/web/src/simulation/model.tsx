@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ActivityPanel } from './activity';
 import { getCompetitions, getEquityChart, getModel, type EquityRange } from './api';
@@ -9,6 +9,10 @@ import { money, PageHeading, QueryState, StatusBadge } from './ui';
 
 export default function ModelPage(): React.JSX.Element {
   const { competitionId = '', agentId = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  const highlightDecisionId = searchParams.get('decision') ?? undefined;
+  const requestedRound = Number(searchParams.get('round'));
+  const decisionRound = Number.isSafeInteger(requestedRound) && requestedRound > 0 ? requestedRound : undefined;
   const [chartRange, setChartRange] = useState<EquityRange>('ALL');
   const modelQuery = useQuery({ queryKey: ['model', agentId], queryFn: () => getModel(agentId), enabled: Boolean(agentId) });
   const competitionsQuery = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions });
@@ -42,7 +46,7 @@ export default function ModelPage(): React.JSX.Element {
           </QueryState>
           <section className="model-record-section"><h2>Fills</h2><ActivityPanel competitionId={competition.id} agentId={model.id} tab="Live Trades" /></section>
           <section className="model-record-section"><h2>Positions, open and closed</h2><ActivityPanel competitionId={competition.id} agentId={model.id} tab="Positions" /></section>
-          <section className="model-record-section"><h2>Decisions and artifacts</h2><ActivityPanel competitionId={competition.id} agentId={model.id} tab="Model Chat" /></section>
+          <section className="model-record-section"><h2>Decisions and artifacts</h2><ActivityPanel competitionId={competition.id} agentId={model.id} tab="Model Chat" highlightDecisionId={highlightDecisionId} decisionRound={decisionRound} /></section>
           <p className="model-return">Starting equity {money(competition.initial_balance)} · model status {model.status}</p>
         </>}
       </>}

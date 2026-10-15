@@ -7,7 +7,14 @@ from datetime import UTC, datetime
 from app.core.canonical import canonical_json_bytes
 from app.llm.providers import ProviderConfig, build_request_bytes
 from app.llm.schema import ProposalBatch
+from app.market.indicators import INDICATOR_POLICY, INDICATOR_WARMUP_BARS
 from app.market.types import BASELINE_SYMBOLS
+
+
+class InputEvidenceError(ValueError):
+    """A stable failure raised when a live model input lacks trusted market evidence."""
+
+    code = "MARKET_INPUT_UNAVAILABLE"
 
 
 def build_user_input(
@@ -29,9 +36,7 @@ def build_user_input(
         {
             "input_schema_version": 1,
             "proposal_schema_version": frozen_rules["proposal_schema_version"],
-            "public_evidence_schema_version": frozen_rules[
-                "public_evidence_schema_version"
-            ],
+            "public_evidence_schema_version": frozen_rules["public_evidence_schema_version"],
             "market_window_candles": frozen_rules["market_window_candles"],
             "proposal_schema_json": json.dumps(
                 ProposalBatch.model_json_schema(), sort_keys=True, separators=(",", ":")
@@ -75,11 +80,25 @@ def _validate_evidence_contract(
     window = frozen_rules.get("market_window_candles")
     if isinstance(window, bool) or not isinstance(window, int) or not 1 <= window <= 40:
         raise ValueError("frozen market evidence window is invalid")
+    if (
+        frozen_rules.get("indicator_policy") != INDICATOR_POLICY
+        or frozen_rules.get("indicator_warmup_bars") != INDICATOR_WARMUP_BARS
+        or snapshot.get("indicator_policy") != frozen_rules.get("indicator_policy")
+        or snapshot.get("indicator_warmup_bars") != frozen_rules.get("indicator_warmup_bars")
+    ):
+        raise ValueError("snapshot indicator policy does not match frozen rules")
     if snapshot.get("schema_version") != frozen_rules["snapshot_schema_version"]:
         raise ValueError("snapshot evidence schema does not match frozen rules")
     candles = snapshot.get("candles")
     if not isinstance(candles, list):
         raise ValueError("snapshot candle evidence is invalid")
+    source = snapshot.get("source")
+    if source == "hyperliquid":
+        _require_live_candle_evidence(frozen_rules, snapshot, candles)
+    elif source not in {"mock-worker", "DEMO REPLAY", "fixture-replay-v3"}:
+        raise InputEvidenceError("live market input source is not approved")
+    elif snapshot.get("candle_error") is not None:
+        raise InputEvidenceError("fixture market input contains a candle failure")
     symbols: set[str] = set()
     for series in candles:
         if not isinstance(series, dict):
@@ -96,6 +115,54 @@ def _validate_evidence_contract(
         ):
             raise ValueError("snapshot candle series is outside the frozen window")
         symbols.add(symbol)
+
+
+def _require_live_candle_evidence(
+    frozen_rules: Mapping[str, object],
+    snapshot: Mapping[str, object],
+    candles: list[object],
+) -> None:
+    window = frozen_rules.get("market_window_candles")
+    if (
+        snapshot.get("candle_error") is not None
+        or window != 12
+        or len(candles) != len(BASELINE_SYMBOLS)
+    ):
+        raise InputEvidenceError("live market candle evidence is incomplete")
+    by_symbol: dict[str, object] = {}
+    for series in candles:
+        if not isinstance(series, dict):
+            raise InputEvidenceError("live market candle series is malformed")
+        symbol = series.get("symbol")
+        if (
+            not isinstance(symbol, str)
+            or symbol not in BASELINE_SYMBOLS
+            or symbol in by_symbol
+            or series.get("interval") != "3m"
+        ):
+            raise InputEvidenceError("live market candle symbols are incomplete")
+        by_symbol[symbol] = series
+    if set(by_symbol) != set(BASELINE_SYMBOLS):
+        raise InputEvidenceError("live market candle symbols are incomplete")
+    for symbol in BASELINE_SYMBOLS:
+        series = by_symbol[symbol]
+        if not isinstance(series, dict):
+            raise InputEvidenceError("live market candle series is malformed")
+        bars = series.get("bars")
+        if not isinstance(bars, list) or len(bars) != window:
+            raise InputEvidenceError("live market candle window is incomplete")
+        for bar in bars:
+            if not isinstance(bar, dict) or any(
+                bar.get(feature) is None
+                for feature in (
+                    "ema20",
+                    "rsi7",
+                    "macd",
+                    "macd_signal",
+                    "macd_histogram",
+                )
+            ):
+                raise InputEvidenceError("live market candle indicators are not warmed")
 
 
 def build_agent_request_bytes(

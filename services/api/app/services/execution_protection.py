@@ -213,14 +213,6 @@ def _apply_triggers(
         if action_result is None:
             continue
         event_name, event_detail = action_result.events[0]
-        persist_engine_result(
-            db,
-            action_result,
-            account_id=account_row.id,
-            proposal_id=None,
-            idempotency_key=f"protective:{row.id}:{quote_set_id}",
-            kind="PROTECTIVE_EXIT",
-        )
         append_event(
             db,
             competition,
@@ -233,6 +225,19 @@ def _apply_triggers(
             },
             at=now,
         )
+        order = persist_engine_result(
+            db,
+            action_result,
+            account_id=account_row.id,
+            proposal_id=None,
+            idempotency_key=f"protective:{row.id}:{quote_set_id}",
+            kind="PROTECTIVE_EXIT",
+            executed_at=now,
+            quote_set_id=quote_set_id,
+            event_sequence=competition.event_seq,
+        )
+        if order is None:
+            raise RuntimeError("protective exit has no persisted fill order")
         account = action_result.account
         positions = sync_position_rows(db, account_row.id, positions, account, row.symbol, now)
         count += 1

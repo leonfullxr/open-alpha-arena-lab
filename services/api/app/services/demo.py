@@ -120,22 +120,20 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
         raise ValueError("rounds must be from 1 through 200")
 
     def fixture_id(name: str) -> str:
-        return stable_id(f"demo:v2:{rounds}:{name}")
+        return stable_id(f"demo:v3:{rounds}:{name}")
 
-    competition_name = f"Offline Paper Arena · proposal evidence v2 · {rounds} rounds"
-    existing = db.scalar(
-        select(Competition).where(Competition.name == competition_name)
-    )
+    competition_name = f"Offline Paper Arena · fill evidence v3 · {rounds} rounds"
+    existing = db.scalar(select(Competition).where(Competition.name == competition_name))
     if existing:
         return existing.id
 
     rules_json = canonical_profile("alpha_2025_baseline")
-    rules_json["fixture_source"] = "fixture-replay-v2"
+    rules_json["fixture_source"] = "fixture-replay-v3"
     rules_bytes = canonical_json_bytes(rules_json)
     root = Path(__file__).resolve().parents[4]
     prompt_bytes = (root / "prompts/baseline-v1.md").read_bytes()
     competition_id = fixture_id("competition")
-    prompt_id = stable_id("demo:v2:prompt")
+    prompt_id = stable_id("demo:v3:prompt")
     competition = Competition(
         id=competition_id,
         name=competition_name,
@@ -144,7 +142,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
         rules_sha256=sha256_hex(rules_bytes),
         initial_balance=D("10000"),
         state="FINISHED",
-        source_label="DEMO REPLAY · proposal evidence v2 · deterministic local fixtures",
+        source_label="DEMO REPLAY · fill evidence v3 · deterministic local fixtures",
         started_at=NOW,
         ended_at=NOW + timedelta(seconds=rounds * 180),
         event_seq=0,
@@ -156,7 +154,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
             PromptVersion(
                 id=prompt_id,
                 name="baseline",
-                version=2,
+                version=3,
                 template_bytes=prompt_bytes,
                 sha256=sha256_hex(prompt_bytes),
             )
@@ -166,8 +164,8 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
     db.flush()
 
     agents = [
-        ("atlas", "Atlas", "MockLLMAdapter", "mock-atlas-v2", 0),
-        ("vector", "Vector", "MockLLMAdapter", "mock-vector-v2", 1),
+        ("atlas", "Atlas", "MockLLMAdapter", "mock-atlas-v3", 0),
+        ("vector", "Vector", "MockLLMAdapter", "mock-vector-v3", 1),
     ]
     state: dict[str, Account] = {}
     accounts: dict[str, str] = {}
@@ -252,7 +250,9 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
             }
         snapshot_payload = {
             "schema_version": 1,
-            "source": "fixture-replay-v2",
+            "source": "fixture-replay-v3",
+            "indicator_policy": rules_json["indicator_policy"],
+            "indicator_warmup_bars": rules_json["indicator_warmup_bars"],
             "round": index,
             "quotes": quote_payload,
             "candles": [],
@@ -264,7 +264,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
         db.add(
             QuoteSet(
                 id=quote_set_id,
-                source="fixture-replay-v2",
+                source="fixture-replay-v3",
                 captured_at=at,
                 complete=True,
                 max_age_ms=0,
@@ -293,7 +293,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                 id=snapshot_id,
                 canonical_bytes=snapshot_bytes,
                 sha256=snapshot_hash,
-                source_label="fixture-replay-v2",
+                source_label="fixture-replay-v3",
                 captured_at=at,
                 quote_set_id=quote_set_id,
             )
@@ -307,6 +307,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                 round_index=index,
                 logical_at=at,
                 snapshot_id=snapshot_id,
+                execution_quote_set_id=quote_set_id,
                 deadline_at=at + timedelta(seconds=120),
             )
         )
@@ -513,6 +514,24 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                 )
             db.flush()
             result = results[0]
+            seq += 1
+            db.add(
+                DomainEvent(
+                    id=fixture_id(f"event:{index}:{key}"),
+                    competition_id=competition_id,
+                    sequence=seq,
+                    account_id=accounts[key],
+                    event_type="agent.decision",
+                    payload={
+                        "agent_id": fixture_id(f"agent:{key}"),
+                        "round": index,
+                        "action": action.value,
+                        "source": "DEMO REPLAY",
+                    },
+                    event_at=at,
+                )
+            )
+            db.flush()
             if result is not None and result.fills:
                 proposal_id = fixture_id(f"proposal:{index}:{key}:0")
                 order_id = fixture_id(f"order:{index}:{key}")
@@ -521,9 +540,11 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                         id=order_id,
                         account_id=accounts[key],
                         proposal_id=proposal_id,
+                        quote_set_id=quote_set_id,
                         idempotency_key=proposal_id,
                         kind="MARKET",
                         status="FILLED",
+                        event_sequence=seq,
                     )
                 )
                 db.flush()
@@ -537,6 +558,8 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                             quantity=fill.quantity,
                             price=fill.price,
                             fee=fill.fee,
+                            executed_at=at,
+                            ordinal=fill_index,
                         )
                     )
                 journal_id = fixture_id(f"journal:{index}:{key}")
@@ -630,24 +653,6 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                     funding=current.funding,
                 )
             )
-            seq += 1
-            db.add(
-                DomainEvent(
-                    id=fixture_id(f"event:{index}:{key}"),
-                    competition_id=competition_id,
-                    sequence=seq,
-                    account_id=accounts[key],
-                    event_type="agent.decision",
-                    payload={
-                        "agent_id": fixture_id(f"agent:{key}"),
-                        "round": index,
-                        "action": action.value,
-                        "source": "DEMO REPLAY",
-                    },
-                    event_at=at,
-                )
-            )
-            db.flush()
         competition.event_seq = seq
     db.commit()
     return competition_id

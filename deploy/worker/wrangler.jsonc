@@ -1,5 +1,5 @@
 {
-  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "open-alpha-arena-edge",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-15",

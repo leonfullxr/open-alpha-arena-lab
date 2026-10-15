@@ -6,13 +6,14 @@ from decimal import Decimal as D
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.api.public_chart import chart_router
 from app.api.public_funding import funding_history, funding_router
-from app.api.public_history import bounded_page, decisions, history_router
+from app.api.public_history import bounded_page, decisions, history_router, positions, trades
 from app.api.public_metrics import metrics_router
+from app.api.public_rules import rules_router, serialize_rules
 from app.api.public_schemas import (
     AgentSummary,
     CompetitionSummary,
@@ -23,8 +24,10 @@ from app.api.public_schemas import (
     ExportDTO,
     LeaderboardRow,
     PageDTO,
+    PositionDTO,
     StatusDTO,
     TickerItem,
+    TradeDTO,
     public_event_payload,
 )
 from app.api.public_stream import stream_router
@@ -35,11 +38,8 @@ from app.db.models import (
     DecisionRound,
     DomainEvent,
     EquitySample,
-    FundingPayment,
-    InvocationAttempt,
     MarketSnapshot,
     Order,
-    RoundAgentJob,
 )
 from app.db.session import get_db
 
@@ -49,6 +49,7 @@ router.include_router(metrics_router)
 router.include_router(history_router)
 router.include_router(funding_router)
 router.include_router(chart_router)
+router.include_router(rules_router)
 
 
 def _competition(db: Session, competition_id: str) -> Competition:
@@ -312,78 +313,110 @@ def export_competition(
 ) -> ExportDTO:
     if not 1 <= limit <= 2000:
         raise HTTPException(status_code=422, detail="limit must be 1..2000")
+    if db.get_bind().dialect.name == "postgresql":
+        db.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+        db.execute(text("SET TRANSACTION READ ONLY"))
     comp = _competition(db, competition_id)
     equity_rows: list[EquityPoint] = []
     decision_rows: list[DecisionDTO] = []
     funding_rows = []
+    trade_rows: list[TradeDTO] = []
+    position_rows: list[PositionDTO] = []
+    total_equity = total_decisions = total_funding = total_trades = total_positions = 0
     for offset in range(0, limit, 200):
         page_size = min(200, limit - offset)
-        equity_rows.extend(equity_curve(competition_id, db, limit=page_size, offset=offset).items)
-        decision_rows.extend(
-            decisions(
-                competition_id,
-                db,
-                limit=page_size,
-                offset=offset,
-                agent_id=None,
-                symbol=None,
-            ).items
+        equity_page = equity_curve(competition_id, db, limit=page_size, offset=offset)
+        decision_page = decisions(
+            competition_id,
+            db,
+            limit=page_size,
+            offset=offset,
+            agent_id=None,
+            symbol=None,
         )
-        funding_rows.extend(
-            funding_history(
-                competition_id,
-                db,
-                limit=page_size,
-                offset=offset,
-                agent_id=None,
-                symbol=None,
-            ).items
+        funding_page = funding_history(
+            competition_id,
+            db,
+            limit=page_size,
+            offset=offset,
+            agent_id=None,
+            symbol=None,
         )
-    total_equity = (
-        db.scalar(
-            select(func.count())
-            .select_from(EquitySample)
-            .join(Account, Account.id == EquitySample.account_id)
-            .join(AgentRun, AgentRun.id == Account.agent_run_id)
-            .where(AgentRun.competition_id == competition_id)
+        trade_page = trades(
+            competition_id,
+            db,
+            limit=page_size,
+            offset=offset,
+            agent_id=None,
+            symbol=None,
         )
-        or 0
-    )
-    total_decisions = (
-        db.scalar(
-            select(func.count())
-            .select_from(RoundAgentJob)
-            .outerjoin(InvocationAttempt, InvocationAttempt.job_id == RoundAgentJob.id)
-            .join(DecisionRound, DecisionRound.id == RoundAgentJob.round_id)
-            .where(
-                DecisionRound.competition_id == competition_id,
-                or_(InvocationAttempt.id.is_not(None), RoundAgentJob.state == "TERMINAL"),
-            )
+        position_page = positions(
+            competition_id,
+            db,
+            limit=page_size,
+            offset=offset,
+            include_closed=True,
+            agent_id=None,
+            symbol=None,
         )
-        or 0
-    )
-    total_funding = (
-        db.scalar(
-            select(func.count())
-            .select_from(FundingPayment)
-            .join(Account, Account.id == FundingPayment.account_id)
-            .join(AgentRun, AgentRun.id == Account.agent_run_id)
-            .where(AgentRun.competition_id == competition_id)
-        )
-        or 0
-    )
+        if offset == 0:
+            total_equity = equity_page.total
+            total_decisions = decision_page.total
+            total_funding = funding_page.total
+            total_trades = trade_page.total
+            total_positions = position_page.total
+        equity_rows.extend(equity_page.items)
+        decision_rows.extend(decision_page.items)
+        funding_rows.extend(funding_page.items)
+        trade_rows.extend(trade_page.items)
+        position_rows.extend(position_page.items)
+    leaderboard_rows = leaderboard(competition_id, db)
+    try:
+        rules_artifact = serialize_rules(comp)
+    except ValueError:
+        raise HTTPException(
+            status_code=503, detail="Competition rules evidence unavailable"
+        ) from None
+    truncated_leaderboard = False
+    truncated_equity = total_equity > len(equity_rows)
+    truncated_decisions = total_decisions > len(decision_rows)
+    truncated_funding = total_funding > len(funding_rows)
+    truncated_trades = total_trades > len(trade_rows)
+    truncated_positions = total_positions > len(position_rows)
     return ExportDTO(
         competition=_serialize_competition(db, comp),
-        leaderboard=leaderboard(competition_id, db),
+        leaderboard=leaderboard_rows,
+        rules=rules_artifact,
         equity=equity_rows,
         decisions=decision_rows,
         funding=funding_rows,
-        truncated=(
-            total_equity > len(equity_rows)
-            or total_decisions > len(decision_rows)
-            or total_funding > len(funding_rows)
+        trades=trade_rows,
+        positions=position_rows,
+        truncated=any(
+            (
+                truncated_leaderboard,
+                truncated_equity,
+                truncated_decisions,
+                truncated_funding,
+                truncated_trades,
+                truncated_positions,
+            )
         ),
         exported_decisions=len(decision_rows),
         exported_equity_points=len(equity_rows),
         exported_funding_payments=len(funding_rows),
+        exported_trades=len(trade_rows),
+        exported_positions=len(position_rows),
+        total_leaderboard=len(leaderboard_rows),
+        total_equity_points=total_equity,
+        total_decisions=total_decisions,
+        total_funding_payments=total_funding,
+        total_trades=total_trades,
+        total_positions=total_positions,
+        truncated_leaderboard=truncated_leaderboard,
+        truncated_equity=truncated_equity,
+        truncated_decisions=truncated_decisions,
+        truncated_funding=truncated_funding,
+        truncated_trades=truncated_trades,
+        truncated_positions=truncated_positions,
     )

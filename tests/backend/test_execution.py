@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from app.core.canonical import canonical_json_bytes, sha256_hex
@@ -40,7 +43,8 @@ from app.services.execution import (
     run_protective_exit_cycle,
 )
 from sqlalchemy import create_engine, func, select, text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 
@@ -229,6 +233,15 @@ def test_execution_persists_balanced_ledger_and_is_idempotent() -> None:
     evaluation = db.scalar(select(RiskEvaluation))
     assert evaluation is not None and evaluation.decision == "ACCEPTED"
     assert db.scalar(select(func.count()).select_from(DomainEvent)) == 1
+    order = db.scalar(select(Order))
+    fill = db.scalar(select(Fill))
+    event = db.scalar(select(DomainEvent))
+    assert order is not None and fill is not None and event is not None
+    assert order.event_sequence == event.sequence
+    assert order.quote_set_id == quote_set_id
+    assert fill.executed_at == event.event_at
+    assert fill.ordinal == 0
+    assert fill.order_id == order.id
     db.close()
 
 
@@ -394,11 +407,32 @@ def test_postgres_fencing_crash_rollback_and_competing_protective_closes(
     admin = create_engine(_EXECUTION_PG_URL, pool_pre_ping=True)
     with admin.begin() as connection:
         connection.execute(text(f'CREATE SCHEMA "{schema}"'))
-    engine = create_engine(
-        _EXECUTION_PG_URL,
-        pool_pre_ping=True,
-        connect_args={"options": f"-csearch_path={schema}"},
+    isolated_url = make_url(_EXECUTION_PG_URL).set(
+        drivername="postgresql+psycopg", query={"options": f"-csearch_path={schema}"}
     )
+    migration_env = os.environ.copy()
+    migration_env["DATABASE_URL"] = isolated_url.render_as_string(hide_password=False)
+    migration_env["PYTHONPATH"] = os.pathsep.join(
+        filter(None, ("services/api", migration_env.get("PYTHONPATH")))
+    )
+    migration = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "alembic",
+            "-c",
+            "services/api/alembic.ini",
+            "upgrade",
+            "head",
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        env=migration_env,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    assert migration.returncode == 0, "isolated Alembic upgrade failed"
+    engine = create_engine(isolated_url, pool_pre_ping=True)
     try:
         db, job_id, fence, quote_set_id, account_id = _setup(output=b"not-json", engine=engine)
         round_row = db.get(DecisionRound, "round-1")
@@ -443,6 +477,8 @@ def test_postgres_fencing_crash_rollback_and_competing_protective_closes(
             position = check_db.get(Position, "pg-protective-position")
             assert position is not None and position.state == "OPEN"
             assert check_db.scalar(select(func.count()).select_from(Fill)) == 0
+            assert check_db.scalar(select(func.count()).select_from(Order)) == 0
+            assert check_db.scalar(select(func.count()).select_from(DomainEvent)) == 0
             assert check_db.scalar(select(func.count()).select_from(LedgerJournal)) == 0
 
         monkeypatch.undo()
@@ -460,8 +496,32 @@ def test_postgres_fencing_crash_rollback_and_competing_protective_closes(
             assert position.closed_at is not None
             assert check_db.scalar(select(func.count()).select_from(Fill)) == 1
             assert check_db.scalar(select(func.count()).select_from(LedgerJournal)) == 1
+            order = check_db.scalar(select(Order).where(Order.kind == "PROTECTIVE_EXIT"))
+            fill = check_db.scalar(select(Fill))
+            event = check_db.scalar(
+                select(DomainEvent).where(DomainEvent.event_type == "position.protective_exit")
+            )
+            assert order is not None and fill is not None and event is not None
+            assert order.event_sequence == event.sequence
+            assert order.quote_set_id == quote_set_id
+            assert fill.executed_at == event.event_at
+            assert fill.ordinal == 0
+            assert fill.order_id == order.id
             postings = check_db.scalars(select(LedgerPosting)).all()
             assert sum((row.amount for row in postings), Decimal("0")) == Decimal("0")
+
+        with Session(engine) as immutable_db:
+            order = immutable_db.scalar(select(Order))
+            round_row = immutable_db.get(DecisionRound, "round-1")
+            assert order is not None and round_row is not None
+            order.event_sequence = (order.event_sequence or 0) + 1
+            with pytest.raises(DBAPIError):
+                immutable_db.commit()
+            immutable_db.rollback()
+            round_row.deadline_at += timedelta(seconds=1)
+            with pytest.raises(DBAPIError):
+                immutable_db.commit()
+            immutable_db.rollback()
     finally:
         engine.dispose()
         with admin.begin() as connection:
@@ -534,6 +594,21 @@ def test_protective_exit_runs_without_response_or_complete_quote_universe() -> N
     position = db.scalar(select(Position).where(Position.account_id == account_id))
     assert position is not None and position.state == "CLOSED"
     assert db.scalar(select(func.count()).select_from(Order)) == 2
+    protective_order = db.scalar(select(Order).where(Order.kind == "PROTECTIVE_EXIT"))
+    protective_fill = db.scalar(
+        select(Fill)
+        .join(Order, Order.id == Fill.order_id)
+        .where(Order.kind == "PROTECTIVE_EXIT")
+    )
+    protective_event = db.scalar(
+        select(DomainEvent).where(DomainEvent.event_type == "position.protective_exit")
+    )
+    assert protective_order is not None
+    assert protective_fill is not None and protective_event is not None
+    assert protective_order.event_sequence == protective_event.sequence
+    assert protective_order.quote_set_id == protective_set.quote_set_id
+    assert protective_fill.executed_at == protective_event.event_at
+    assert protective_fill.ordinal == 0
     db.close()
 
 

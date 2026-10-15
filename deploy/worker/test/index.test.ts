@@ -131,6 +131,30 @@ describe("edge request boundaries", () => {
     expect(String(fetchMock.mock.calls[1]?.[0])).toBe(`${apiOrigin}/api/v1/public/funding/evidence/evidence-1`);
   });
 
+  it("allows only the competition's frozen-rules artifact route", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(String(input), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const env = makeEnv();
+    const rules = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/rules"),
+      env,
+    );
+    const wrongMethod = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/rules", { method: "POST" }),
+      env,
+    );
+    const unlisted = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/rules/raw"),
+      env,
+    );
+
+    expect(rules.status).toBe(200);
+    expect(wrongMethod.status).toBe(405);
+    expect(unlisted.status).toBe(404);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`${apiOrigin}/api/v1/public/competitions/c1/rules`);
+  });
+
   it("allows competition metrics and validates the optional ticker competition UUID", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(String(input), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

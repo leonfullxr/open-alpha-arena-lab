@@ -191,6 +191,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/competitions/{competition_id}/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Competition Rules */
+        get: operations["competition_rules_competitions__competition_id__rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/competitions/{competition_id}/stream": {
         parameters: {
             query?: never;
@@ -525,6 +542,19 @@ export interface components {
             /** Next After */
             next_after: number;
         };
+        /** ExecutionQuoteDTO */
+        ExecutionQuoteDTO: {
+            /** Ask */
+            ask: string;
+            /** Bid */
+            bid: string;
+            /** Mark */
+            mark: string;
+            /** Source At */
+            source_at: string;
+            /** Source At Basis */
+            source_at_basis: string;
+        };
         /** ExportDTO */
         ExportDTO: {
             competition: components["schemas"]["CompetitionSummary"];
@@ -538,12 +568,45 @@ export interface components {
             exported_equity_points: number;
             /** Exported Funding Payments */
             exported_funding_payments: number;
+            /** Exported Positions */
+            exported_positions: number;
+            /** Exported Trades */
+            exported_trades: number;
             /** Funding */
             funding: components["schemas"]["FundingPaymentDTO"][];
             /** Leaderboard */
             leaderboard: components["schemas"]["LeaderboardRow"][];
+            /** Positions */
+            positions: components["schemas"]["PositionDTO"][];
+            rules: components["schemas"]["RulesArtifactDTO"];
+            /** Total Decisions */
+            total_decisions: number;
+            /** Total Equity Points */
+            total_equity_points: number;
+            /** Total Funding Payments */
+            total_funding_payments: number;
+            /** Total Leaderboard */
+            total_leaderboard: number;
+            /** Total Positions */
+            total_positions: number;
+            /** Total Trades */
+            total_trades: number;
+            /** Trades */
+            trades: components["schemas"]["TradeDTO"][];
             /** Truncated */
             truncated: boolean;
+            /** Truncated Decisions */
+            truncated_decisions: boolean;
+            /** Truncated Equity */
+            truncated_equity: boolean;
+            /** Truncated Funding */
+            truncated_funding: boolean;
+            /** Truncated Leaderboard */
+            truncated_leaderboard: boolean;
+            /** Truncated Positions */
+            truncated_positions: boolean;
+            /** Truncated Trades */
+            truncated_trades: boolean;
         };
         /** FundingEvidenceArtifactDTO */
         FundingEvidenceArtifactDTO: {
@@ -715,6 +778,12 @@ export interface components {
             agent_name: string;
             /** Average Entry */
             average_entry: string;
+            /** Closed At */
+            closed_at: string | null;
+            /** Id */
+            id: string;
+            /** Opened At */
+            opened_at: string;
             /** Quantity */
             quantity: string;
             /** Reserved Margin */
@@ -776,6 +845,97 @@ export interface components {
             /** Symbol */
             symbol?: string | null;
         };
+        /** PublicRulesDTO */
+        PublicRulesDTO: {
+            /** Allow Pyramiding */
+            allow_pyramiding: boolean;
+            /** Commission Rate */
+            commission_rate: string;
+            /** Fixture Funding Rate Per Hour */
+            fixture_funding_rate_per_hour: string;
+            /** Fixture Source */
+            fixture_source: string | null;
+            /** Funding History Max Offset Seconds */
+            funding_history_max_offset_seconds: number;
+            /** Funding Interval Hours */
+            funding_interval_hours: number;
+            /** Funding Mode */
+            funding_mode: string;
+            /** Funding Price Basis */
+            funding_price_basis: string;
+            /** Funding Rate Basis */
+            funding_rate_basis: string;
+            /**
+             * Indicator Policy
+             * @constant
+             */
+            indicator_policy: "trailing_500_v1";
+            /**
+             * Indicator Warmup Bars
+             * @constant
+             */
+            indicator_warmup_bars: 500;
+            /** Inference Budget Usd */
+            inference_budget_usd: string | null;
+            /** Initial Balance */
+            initial_balance: string;
+            /** Leverage Max */
+            leverage_max: string;
+            /** Liquidation Fee Rate */
+            liquidation_fee_rate: string;
+            /** Maintenance Margin Rate */
+            maintenance_margin_rate: string;
+            /** Market Window Candles */
+            market_window_candles: number;
+            /** Max Daily Loss */
+            max_daily_loss: string;
+            /** Max Drawdown Fraction */
+            max_drawdown_fraction: string;
+            /** Max Gross Exposure */
+            max_gross_exposure: string;
+            /** Max Notional */
+            max_notional: string;
+            /** Max Positions */
+            max_positions: number;
+            /** Min Notional */
+            min_notional: string;
+            /** Profile */
+            profile: string;
+            /** Proposal Schema Version */
+            proposal_schema_version: number;
+            /** Public Evidence Schema Version */
+            public_evidence_schema_version: number;
+            /** Quantity Precision */
+            quantity_precision: number;
+            /** Quote Max Age Seconds */
+            quote_max_age_seconds: string;
+            /** Quote Set Max Skew Seconds */
+            quote_set_max_skew_seconds: string;
+            /** Response Deadline Seconds */
+            response_deadline_seconds: number;
+            /** Risk Policy Version */
+            risk_policy_version: string;
+            /** Round Seconds */
+            round_seconds: number;
+            /** Slippage Bps */
+            slippage_bps: string;
+            /** Snapshot Schema Version */
+            snapshot_schema_version: number;
+            /** Symbols */
+            symbols: string[];
+        };
+        /** RulesArtifactDTO */
+        RulesArtifactDTO: {
+            /** Bytes Base64 */
+            bytes_base64: string | null;
+            /** Bytes Withheld */
+            bytes_withheld: boolean;
+            public: components["schemas"]["PublicRulesDTO"];
+            /** Sha256 */
+            sha256: string;
+            /** Withheld Fields */
+            withheld_fields: boolean;
+        };
         /** StatusDTO */
         StatusDTO: {
             /** Competition Count */
@@ -814,14 +974,33 @@ export interface components {
             agent_id: string;
             /** Agent Name */
             agent_name: string;
+            /** Decision Id */
+            decision_id: string | null;
+            /** Event Sequence */
+            event_sequence: number | null;
+            /** Executed At */
+            executed_at: string | null;
+            execution_quote: components["schemas"]["ExecutionQuoteDTO"] | null;
             /** Fee */
             fee: string;
+            /** Fill Id */
+            fill_id: string;
+            /** Fill Ordinal */
+            fill_ordinal: number | null;
             /** Order Id */
             order_id: string;
+            /** Order Kind */
+            order_kind: string;
             /** Price */
             price: string;
+            /** Proposal Sequence */
+            proposal_sequence: number | null;
             /** Quantity */
             quantity: string;
+            /** Quote Set Id */
+            quote_set_id: string | null;
+            /** Round */
+            round: number | null;
             /** Side */
             side: string;
             /** Status */
@@ -1195,6 +1374,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageDTO_PositionDTO_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    competition_rules_competitions__competition_id__rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                competition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulesArtifactDTO"];
                 };
             };
             /** @description Validation Error */

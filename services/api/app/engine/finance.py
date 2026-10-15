@@ -75,6 +75,8 @@ class Rules:
     proposal_schema_version: int = 1
     public_evidence_schema_version: int = 1
     market_window_candles: int = 12
+    indicator_policy: str = "trailing_500_v1"
+    indicator_warmup_bars: int = 500
 
 
 @dataclass(slots=True)
@@ -277,6 +279,8 @@ def validate_rules(rules: Rules) -> None:
         or rules.proposal_schema_version != 1
         or rules.public_evidence_schema_version != 1
         or rules.market_window_candles != 12
+        or rules.indicator_policy != "trailing_500_v1"
+        or rules.indicator_warmup_bars != 500
     ):
         raise FinanceError("unsupported frozen evidence schema or market window")
     if (
@@ -313,6 +317,8 @@ def rules_from_config(data: Mapping[str, object]) -> Rules:
     proposal_schema_version = data.get("proposal_schema_version")
     public_evidence_schema_version = data.get("public_evidence_schema_version")
     market_window_candles = data.get("market_window_candles")
+    indicator_policy = data.get("indicator_policy")
+    indicator_warmup_bars = data.get("indicator_warmup_bars")
     if not isinstance(max_positions, int) or isinstance(max_positions, bool):
         raise FinanceError("frozen rule max_positions must be an integer")
     if not isinstance(allow_pyramiding, bool):
@@ -336,6 +342,7 @@ def rules_from_config(data: Mapping[str, object]) -> Rules:
         ("proposal_schema_version", proposal_schema_version),
         ("public_evidence_schema_version", public_evidence_schema_version),
         ("market_window_candles", market_window_candles),
+        ("indicator_warmup_bars", indicator_warmup_bars),
     ):
         if not isinstance(value, int) or isinstance(value, bool):
             raise FinanceError(f"frozen rule {name} must be an integer")
@@ -363,6 +370,8 @@ def rules_from_config(data: Mapping[str, object]) -> Rules:
         proposal_schema_version=cast(int, proposal_schema_version),
         public_evidence_schema_version=cast(int, public_evidence_schema_version),
         market_window_candles=cast(int, market_window_candles),
+        indicator_policy=cast(str, indicator_policy),
+        indicator_warmup_bars=cast(int, indicator_warmup_bars),
     )
     decimal("fixture_funding_rate_per_hour")
     validate_rules(rules)

@@ -256,6 +256,7 @@ def terminalize_undispatched(db: Session, *, job_id: str, fence: int, error_code
         "BUDGET_NOT_CONFIGURED",
         "BUDGET_EXCEEDED",
         "COMPETITION_STOPPED",
+        "MARKET_INPUT_UNAVAILABLE",
     }
     if error_code not in terminal_errors:
         raise ValueError("undispatched error code is not allowlisted")

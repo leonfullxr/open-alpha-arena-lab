@@ -40,6 +40,8 @@ _REQUIRED = {
     "proposal_schema_version",
     "public_evidence_schema_version",
     "market_window_candles",
+    "indicator_policy",
+    "indicator_warmup_bars",
 }
 
 

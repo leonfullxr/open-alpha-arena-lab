@@ -4,6 +4,7 @@ import os
 import uuid
 
 import pytest
+from app.api.admin import change_competition_state
 from app.db.models import Account, AgentRun, PromptVersion, ProviderProfile
 from app.services.admin import (
     AdminInputError,
@@ -14,6 +15,7 @@ from app.services.admin import (
 )
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
+from starlette.requests import Request
 
 DATABASE_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
 PG_URL = DATABASE_URL if DATABASE_URL and DATABASE_URL.startswith("postgresql") else None
@@ -61,6 +63,7 @@ def test_admin_profiles_freeze_rules_and_never_store_provider_secret(monkeypatch
             },
         )
         assert competition.state == "DRAFT"
+        assert competition.source_label == "PAPER · NOT STARTED"
         assert competition.rules_sha256
         assert b'"inference_budget_usd":"1"' in competition.rules_bytes
         agent = db.scalar(select(AgentRun).where(AgentRun.competition_id == competition.id))
@@ -74,6 +77,21 @@ def test_admin_profiles_freeze_rules_and_never_store_provider_secret(monkeypatch
             validate_competition_start(db, competition)
         monkeypatch.setenv(provider.api_key_env, "secret-canary-not-persisted")
         validate_competition_start(db, competition)
+        request = Request(
+            {
+                "type": "http",
+                "method": "POST",
+                "path": f"/competitions/{competition.id}/start",
+                "headers": [(b"origin", b"http://localhost:3000")],
+                "query_string": b"",
+                "server": ("localhost", 3000),
+                "client": ("127.0.0.1", 10000),
+                "scheme": "http",
+            }
+        )
+        started = change_competition_state(competition.id, "start", request, "test-admin", db)
+        assert started["state"] == "RUNNING"
+        assert competition.source_label == "LIVE DATA · PAPER"
         stored = db.get(ProviderProfile, provider.id)
         assert stored is not None
         assert "secret-canary-not-persisted" not in str(stored.api_key_env)
