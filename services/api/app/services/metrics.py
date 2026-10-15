@@ -121,7 +121,7 @@ def btc_buy_and_hold(db: Session, competition: Competition) -> dict[str, str] | 
     start, start_quote = points[0]
     end, end_quote = points[-1]
     rules = json.loads(competition.rules_bytes)
-    fee = Decimal(str(rules.get("fee_rate", "0")))
+    fee = Decimal(str(rules.get("commission_rate", rules.get("fee_rate", "0"))))
     slip = Decimal(str(rules.get("slippage_bps", "0"))) / Decimal(10_000)
     entry_price = Decimal(start_quote["ask"]) * (Decimal("1") + slip)
     exit_price = Decimal(end_quote["bid"]) * (Decimal("1") - slip)
