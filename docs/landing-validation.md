@@ -1,6 +1,6 @@
 # Landing validation
 
-Checked 2026-10-15 in local Chromium against the Vite development build. The landing was accepted before simulation frontend implementation began.
+The original integration checkpoint was checked on 2026-10-15 in local Chromium against the Vite development build. The landing was accepted before simulation frontend implementation began. The reference fidelity revision below follows the user's subsequent visual review.
 
 The five scenes use original deterministic geometry: 220 terrain slices, a 20 by 11 grid, six annotated chart spans, six lattice families, and a 36-strip tiled mark. The chart and grid captions identify conceptual artwork. The layout follows the supplied PDF's measurements and palette; original geometry and transfer trajectories are adaptations, rather than recovered reference animation data.
 
@@ -37,3 +37,31 @@ The follow-up fixes three animation defects found during a read-only GPT-6.1 Sol
 Luna validated the production preview at 1440 by 900, 768 by 1024 and 390 by 844. All five scenes rendered, copy fit, and document width matched each viewport. Forward and reverse scrolling, Home and Methodology navigation passed. At 1440 by 1200, the final mark rendered after fresh navigation to the bottom and after increasing the height from 900 while already at the bottom. The primary independently built the frontend and ran the three browser regressions. Sol's correction review found no medium-or-higher defect.
 
 The local browser regression script compares the actual transfer paths with the settled canvas paths and checks the final mark's pixels. All three checks failed when their corresponding fixes were removed. Mutation sources were restored byte for byte. The scripts, logs and follow-up screenshots remain local evidence. Safari, physical-device and assistive-technology checks remain pending.
+
+## Reference fidelity revision
+
+The user's four landing screenshots establish the visual targets for this revision. Their 1920 by 1080 captures include 149 pixels of browser chrome, so comparison captures use a 1920 by 931 page viewport. The content spans x280 to x1640, the hero heading starts at y346 and the hero divider sits at y718.
+
+The terrain has a shared base and 220 profiles with decreasing elevation toward the foreground. The chart samples the selected profile, fills six pastel spans and opens narrow gaps without translating their coordinates. Its leaders attach to that same plotted contour. The lattice uses five colored clusters and a gray center, with shaded cube faces. The original OA monogram uses outlines from the bundled Newsreader font, a fine mosaic pattern and a tiled frame. Header and footer use a dark version of the same geometry; the favicon retains the mosaic colors.
+
+| Scene | Revision capture |
+| --- | --- |
+| Mountain and hero | [Desktop hero](screenshots/landing-reference-hero.png) |
+| Filled chart and callouts | [Desktop chart](screenshots/landing-reference-chart.png) |
+| Cube field | [Desktop lattice](screenshots/landing-reference-lattice.png) |
+| Original tiled OA mark | [Desktop mark](screenshots/landing-reference-team.png) |
+| Stacked mobile hero | [Mobile hero](screenshots/landing-reference-mobile.png) |
+
+To repeat the captures against a running frontend, use `chrome-devtools-axi` and Node:
+
+```sh
+node scripts/capture-landing.mjs http://localhost:5173 /tmp/arena-landing-captures
+```
+
+Set `CHROME_DEVTOOLS_AXI_BIN` if the browser command is outside `PATH`. The script writes five desktop and five mobile screenshots plus a manifest of actual viewport, scroll and element bounds. It checks dimensions, missing content and overflow. Inspect the resulting artwork against the references; passing those geometry checks does not establish visual fidelity. The script's baseline hero capture matched the independent manual capture byte for byte.
+
+The primary independently built the final source and captured all ten scenes. The five saved revision screenshots match those independent captures byte for byte. The three animation regressions passed again: the mountain-to-grid endpoint matched the settled grid within one CSS pixel, and the final mark rendered both after a bottom-of-page resize from 1440 by 900 to 1440 by 1200 and after fresh navigation in the taller viewport. The updated preview at port 4173 loaded the revised assets, made no API requests and had no horizontal overflow at 1920 by 931.
+
+Luna checked 1920 by 931, 1440 by 900, 1024 by 768, 768 by 1024 and 390 by 844 with no document overflow. Forward and reverse scrolling, Home and Methodology navigation, chart labels, the lattice legend and the final mark after resize passed. A reduced-motion session retained nonzero artwork dimensions. Manually activating the app's canvas-unavailable class exposed all five SVG fallbacks with geometry and matching layout boxes; the fallback capture visibly rendered the mountain, profile grid and filled chart. This last check exercised the fallback presentation, rather than simulating a failed canvas context.
+
+GPT-6.1 Sol reviewed the source, capture tool and four desktop comparisons and found no medium-or-higher defect. The user's visual acceptance remains pending. This revision does not establish Safari, physical-device or complete assistive-technology coverage; simulation layout work and the accessibility pass remain separate follow-ups.

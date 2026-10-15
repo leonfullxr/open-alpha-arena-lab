@@ -7,7 +7,7 @@ Public repository: https://github.com/leonfullxr/open-alpha-arena-lab
 | Milestone | State | Evidence and remaining work |
 | --- | --- | --- |
 | M0 repository and foundations | Published | Independent MIT repository, separate public/admin contracts, authentication, ten migrations, containers and CI; PR #1 merged |
-| M1a landing | Accepted | Five requested viewport captures, connected forward/reverse motion, resize, Home, reduced motion and canvas failure; simulation work began afterward |
+| M1a landing | Revised; visual review pending | Original integration accepted before simulation work; subsequent user review prompted closer reference artwork, layout and an original OA mark. See landing validation for captures and checks |
 | M1b simulation | Locally verified | Typed dashboard, leaderboard, model evidence, ranges, toggles, tooltips, filters, pagination, funding history, rules and separate admin entry |
 | M2 live market data | Locally verified | Trusted real Hyperliquid quotes, metadata, completed candle backfill, fixed-window indicators, append-only restart and bounded gap recovery |
 | M3 paper engine | Locally verified | Decimal accounting, margin, fees, historical funding, independent exits, reconciliation, competing workers and crash rollback passed PostgreSQL checks |
@@ -49,7 +49,7 @@ The remove-ai-marks service processed nineteen original prose/screenshot artifac
 - `9481931`, `45dabc0`: regression-test cleanup and a shared deterministic fixture deadline.
 - `bd786bb`, `a05e117`: no-mistakes review fixes. SSE admission slots are released by the response lifetime, a PostgreSQL tiny-imbalance regression is added, pre-v3 fixture outputs are withheld from public display, and the `market_summary` field is removed from the public contract.
 
-[PR #1](https://github.com/leonfullxr/open-alpha-arena-lab/pull/1) was squash-merged on 2026-10-15 as `999e3bbf5ccb65bab492e2260e5f9d50643ce194`. The no-mistakes run completed, and all three GitHub checks passed. The integration used one PR with milestone checkpoint commits. No DNS, Tunnel or production deployment change was made. The landing follow-up is local on `fix/landing-transitions` and has not been published. Further source publication uses the requested no-mistakes gate.
+[PR #1](https://github.com/leonfullxr/open-alpha-arena-lab/pull/1) was squash-merged on 2026-10-15 as `999e3bbf5ccb65bab492e2260e5f9d50643ce194`. The no-mistakes run completed, and all three GitHub checks passed. The integration used one PR with milestone checkpoint commits. No DNS, Tunnel or production deployment change was made. The landing corrections are local on `feat/landing-reference-fidelity` and have not been published. Further source publication uses the requested no-mistakes gate.
 
 ## Remaining acceptance
 

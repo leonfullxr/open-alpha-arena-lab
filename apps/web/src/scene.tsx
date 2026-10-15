@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { ART_HEIGHT, ART_WIDTH, FAMILY_COLORS, SLICE_COUNT, mixColor, profileAt, selectedSlice, slices, spanBounds, type Slice } from './geometry';
+import { ART_HEIGHT, ART_WIDTH, CHART_BASE, CHART_TOP, FAMILY_COLORS, SLICE_COUNT, chartPointAt, mixColor, selectedSlice, slices, spanBounds, type Slice } from './geometry';
+import { BrandMark, paintBrandMark } from './branding';
 
 type Stage = 0 | 1 | 2 | 3 | 4;
 type Vec = { x: number; y: number };
@@ -9,9 +10,9 @@ type Flight = { start: number; end: number; started: number; duration: number };
 
 const forwardRatios = [0, 0.54, 0.62, 0.87, 0.4] as const;
 const reverseHysteresis = [0, 0.13, 0.13, 0.13, 0.13] as const;
-const chartTop = 120;
-const chartBase = 700;
-const chartOffsets = [0, .012, .024, .036, .048, .06] as const;
+const latticeAngles = [-1.05, -2.1, .2, 2.2, 1.48] as const;
+const latticeReach = [480, 400, 340, 480, 400] as const;
+const latticeSpread = [175, 190, 150, 170, 190] as const;
 const gridWidth = 1183;
 const gridHeight = 835;
 
@@ -41,9 +42,11 @@ function gridCellOrigin(id: number): Vec {
 function gridSlicePolygon(id: number): Vec[] {
   const slice = slices[id]!;
   const origin = gridCellOrigin(id);
+  const minimum = Math.min(...slice.points.map(({ y }) => y));
+  const maximum = Math.max(...slice.points.map(({ y }) => y));
   const upper = slice.points.map((point) => ({
     x: origin.x + point.x / ART_WIDTH * 34,
-    y: origin.y + 3 + Math.max(0, Math.min(1, (point.y - 140) / 480)) * 29,
+    y: origin.y + 3 + (point.y - minimum) / Math.max(1, maximum - minimum) * 29,
   }));
   return [...upper, { x: origin.x + 34, y: origin.y + 35 }, { x: origin.x, y: origin.y + 35 }];
 }
@@ -52,43 +55,35 @@ const gridPolygons = Array.from({ length: SLICE_COUNT }, (_, id) => gridSlicePol
 
 function drawSlice(ctx: CanvasRenderingContext2D, points: Vec[], id: number, alpha = 1, selected = false, selectedFill = 0.13): void {
   const slice = slices[id]!;
+  const emphasis = FAMILY_COLORS[4];
   path(ctx, points, true);
-  ctx.fillStyle = selected ? `rgba(200,150,29,${selectedFill * alpha})` : slice.color ? mixColor(slice.color, 0.14 * alpha) : `rgba(33,32,28,${(id === selectedSlice.id ? 0.06 : 0.018) * alpha})`;
+  ctx.fillStyle = selected ? mixColor(emphasis, selectedFill * alpha) : slice.color ? mixColor(slice.color, 0.14 * alpha) : `rgba(33,32,28,${(id === selectedSlice.id ? 0.045 : 0.035) * alpha})`;
   ctx.fill();
-  ctx.strokeStyle = selected ? `rgba(200,150,29,${alpha})` : slice.color ? mixColor(slice.color, 0.7 * alpha) : `rgba(33,32,28,${(0.1 + slice.depth * 0.09) * alpha})`;
-  ctx.lineWidth = selected ? 2 : 0.9;
+  ctx.strokeStyle = selected ? mixColor(emphasis, alpha) : slice.color ? mixColor(slice.color, 0.82 * alpha) : `rgba(249,249,248,${(0.075 + slice.depth * 0.045) * alpha})`;
+  ctx.lineWidth = selected ? 2 : 0.75;
   ctx.stroke();
 }
 
 function drawMountain(ctx: CanvasRenderingContext2D, box: Box): void {
   ctx.save();
   scaledBox(ctx, box);
-  const order = slices.filter((slice) => slice.id !== selectedSlice.id);
-  for (const slice of order) {
+  for (const slice of slices) {
     const points = slicePolygon(slice);
-    drawSlice(ctx, points, slice.id);
-    if (slice.depth > 0.18) {
-      const topRight = slice.points.at(-1)!;
-      const backRight = { x: topRight.x + 11, y: topRight.y - 8 };
-      const baseRight = { x: topRight.x, y: slice.baseline };
-      path(ctx, [topRight, backRight, { x: backRight.x, y: slice.baseline - 8 }, baseRight], true);
-      ctx.fillStyle = `rgba(33,32,28,${0.025 + slice.depth * 0.04})`;
-      ctx.fill();
-    }
+    path(ctx, points, true);
+    const shade = Math.round(52 + slice.depth * 6);
+    ctx.fillStyle = `rgb(${shade},${shade + 1},${shade - 3})`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(249,249,248,.14)';
+    ctx.lineWidth = .5;
+    ctx.stroke();
     if (slice.color) {
-      const band = slice.points.slice(34, 87);
+      const band = slice.points.slice(12 + (slice.id % 5) * 5, 81 + (slice.id % 5) * 5);
       path(ctx, band);
-      ctx.strokeStyle = mixColor(slice.color, 0.62);
-      ctx.lineWidth = 3.2;
+      ctx.strokeStyle = mixColor(slice.color, 0.58);
+      ctx.lineWidth = slice.id === selectedSlice.id ? 4 : 3;
       ctx.stroke();
     }
   }
-  const selected = selectedSlice;
-  drawSlice(ctx, slicePolygon(selected), selected.id, 1, true, 0.035);
-  path(ctx, selected.points.map(({ x, y }) => ({ x, y })));
-  ctx.strokeStyle = '#c8961d';
-  ctx.lineWidth = 2.6;
-  ctx.stroke();
   ctx.restore();
 }
 
@@ -105,14 +100,13 @@ function drawGrid(ctx: CanvasRenderingContext2D, box: Box, omitSelected = false)
 function chartSpanPolygon(index: number): Vec[] {
   const start = spanBounds[index]!;
   const end = spanBounds[index + 1]!;
-  const left = 92 + start * 1028;
-  const right = 92 + end * 1028;
+  const left = start * ART_WIDTH;
+  const right = end * ART_WIDTH;
   const contour = Array.from({ length: 26 }, (_, sample) => {
     const ratio = start + (end - start) * sample / 25;
-    const point = profileAt(ratio);
-    return { x: left + (right - left) * sample / 25, y: chartTop + (point.y - 140) / 480 * 500 };
+    return chartPointAt(ratio);
   });
-  return [{ x: left, y: chartBase }, ...contour, { x: right, y: chartBase }];
+  return [{ x: left, y: CHART_BASE }, ...contour, { x: right, y: CHART_BASE }];
 }
 
 const chartSpans = Array.from({ length: 6 }, (_, index) => chartSpanPolygon(index));
@@ -120,71 +114,103 @@ const chartSpans = Array.from({ length: 6 }, (_, index) => chartSpanPolygon(inde
 function drawChart(ctx: CanvasRenderingContext2D, box: Box, fill = 1, separated = 0): void {
   ctx.save();
   scaledBox(ctx, box);
-  for (let rule = 0; rule < 5; rule += 1) {
-    const y = chartTop + rule * 135;
-    ctx.beginPath(); ctx.moveTo(92, y); ctx.lineTo(1120, y);
-    ctx.strokeStyle = 'rgba(33,32,28,0.09)'; ctx.lineWidth = 1; ctx.stroke();
+  for (let rule = 1; rule < 5; rule += 1) {
+    const y = CHART_TOP + (CHART_BASE - CHART_TOP) * rule / 5;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ART_WIDTH, y);
+    ctx.strokeStyle = 'rgba(33,32,28,0.075)'; ctx.lineWidth = 1; ctx.stroke();
   }
-  ctx.beginPath(); ctx.moveTo(92, chartTop); ctx.lineTo(92, chartBase); ctx.lineTo(1120, chartBase);
-  ctx.strokeStyle = 'rgba(33,32,28,0.7)'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, CHART_TOP); ctx.lineTo(0, CHART_BASE); ctx.lineTo(ART_WIDTH, CHART_BASE);
+  ctx.strokeStyle = 'rgba(33,32,28,0.78)'; ctx.lineWidth = 1.5; ctx.stroke();
+  for (let tick = 0; tick <= 6; tick += 1) {
+    const x = ART_WIDTH * tick / 6;
+    ctx.beginPath(); ctx.moveTo(x, CHART_BASE); ctx.lineTo(x, CHART_BASE + 10);
+    ctx.strokeStyle = 'rgba(33,32,28,0.78)'; ctx.lineWidth = 1.25; ctx.stroke();
+  }
+  const familyFill = (index: number): CanvasGradient => {
+    const gradient = ctx.createLinearGradient(0, CHART_TOP, 0, CHART_BASE);
+    gradient.addColorStop(0, mixColor(FAMILY_COLORS[index]!, 0.62 * fill));
+    gradient.addColorStop(1, mixColor(FAMILY_COLORS[index]!, 0.3 * fill));
+    return gradient;
+  };
   for (let span = 0; span < 6; span += 1) {
     const original = chartSpans[span]!;
-    const offset = separated * chartOffsets[span]! * 1028;
-    ctx.beginPath(); ctx.moveTo(original[0]!.x + offset, original[0]!.y);
-    for (let point = 1; point < original.length; point += 1) ctx.lineTo(original[point]!.x + offset, original[point]!.y);
+    const left = spanBounds[span]! * ART_WIDTH;
+    const right = spanBounds[span + 1]! * ART_WIDTH;
+    const inset = separated * 4;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left + (span > 0 ? inset : 0), CHART_TOP, right - left - (span > 0 ? inset : 0) - (span < 5 ? inset : 0), ART_HEIGHT);
+    ctx.clip();
+    ctx.beginPath(); ctx.moveTo(original[0]!.x, original[0]!.y);
+    for (let point = 1; point < original.length; point += 1) ctx.lineTo(original[point]!.x, original[point]!.y);
     ctx.closePath();
-    ctx.fillStyle = mixColor(FAMILY_COLORS[span]!, 0.13 * fill); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(original[1]!.x + offset, original[1]!.y);
-    for (let point = 2; point < original.length - 1; point += 1) ctx.lineTo(original[point]!.x + offset, original[point]!.y);
-    ctx.strokeStyle = FAMILY_COLORS[span]!; ctx.lineWidth = 1.8; ctx.stroke();
-    if (span > 0) {
-      const x = 92 + spanBounds[span]! * 1028 + offset;
-      ctx.setLineDash([4, 7]); ctx.beginPath(); ctx.moveTo(x, chartTop - 8); ctx.lineTo(x, chartBase + 4);
-      ctx.strokeStyle = 'rgba(33,32,28,0.24)'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
-    }
+    ctx.fillStyle = familyFill(span); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(original[1]!.x, original[1]!.y);
+    for (let point = 2; point < original.length - 1; point += 1) ctx.lineTo(original[point]!.x, original[point]!.y);
+    ctx.strokeStyle = FAMILY_COLORS[span]!; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.restore();
   }
   ctx.restore();
 }
 
-type Cube = { x: number; y: number; size: number; color: string; depth: number; family: number };
+type Cube = { x: number; y: number; size: number; color: string; depth: number; family: number; within: number };
 
 function cubeFor(family: number, within: number, box: Box): Cube {
-  const angle = family * Math.PI / 3 - Math.PI / 2;
-  const radius = 48 + Math.sqrt(within) * 61 + Math.sin(within * 8 + family) * 17;
-  const lateral = Math.cos(within * 4.3 + family) * 56;
-  const x = 590 + Math.cos(angle) * radius + Math.cos(angle + Math.PI / 2) * lateral;
-  const y = 554 + Math.sin(angle) * radius * .74 + Math.sin(angle + Math.PI / 2) * lateral * .58;
+  let x: number; let y: number;
+  if (family < 5) {
+    const angle = latticeAngles[family]!;
+    const turn = within * 2.399963229728653;
+    const radial = Math.sqrt((within + 0.5) / 48);
+    const radius = 92 + (.55 + .5 * radial * Math.cos(turn)) * latticeReach[family]!;
+    const lateral = radial * Math.sin(turn) * latticeSpread[family]!;
+    x = 591 + Math.cos(angle) * radius + Math.cos(angle + Math.PI / 2) * lateral;
+    y = 510 + Math.sin(angle) * radius * .92 + Math.sin(angle + Math.PI / 2) * lateral * .72;
+  } else {
+    const angle = within * 2.399963229728653;
+    const radius = Math.sqrt((within + 0.5) / 42) * 170;
+    x = 591 + Math.cos(angle) * radius;
+    y = 510 + Math.sin(angle) * radius * .92;
+  }
   const side = Math.min(box.width, box.height);
   return {
     x: box.left + (box.width - side) / 2 + x / 1183 * side,
     y: box.top + (box.height - side) / 2 + y / 1183 * side,
-    size: Math.min(box.width, box.height) * (8 + (within % 4) * 1.3) / 1183,
+    size: Math.min(box.width, box.height) * (12 + (within % 4) * 1.5) / 1183,
     color: FAMILY_COLORS[family]!,
     depth: y,
     family,
+    within,
   };
 }
 
 function drawCube(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string, alpha = 1): void {
-  const d = size * .58;
+  const d = size * 1.16;
   const top = [{ x, y: y - d }, { x: x + size, y: y - d / 2 }, { x, y }, { x: x - size, y: y - d / 2 }];
   const left = [{ x: x - size, y: y - d / 2 }, { x, y }, { x, y: y + d }, { x: x - size, y: y + d / 2 }];
   const right = [{ x, y }, { x: x + size, y: y - d / 2 }, { x: x + size, y: y + d / 2 }, { x, y: y + d }];
-  for (const [points, shade] of [[top, 1], [left, .68], [right, .82]] as const) {
+  for (const [points, shade] of [[top, 1], [left, .76], [right, .88]] as const) {
     path(ctx, points, true);
     ctx.fillStyle = mixColor(color, alpha * shade); ctx.fill();
-    ctx.strokeStyle = `rgba(249,249,248,${.48 * alpha})`; ctx.lineWidth = .8; ctx.stroke();
+    ctx.strokeStyle = `rgba(33,32,28,${.42 * alpha})`; ctx.lineWidth = .65; ctx.stroke();
   }
 }
 
 function drawLattice(ctx: CanvasRenderingContext2D, box: Box, alpha = 1, includeCubes = true): void {
-  const center = { x: box.left + box.width / 2, y: box.top + box.height * .48 };
-  const points: Cube[] = Array.from({ length: 144 }, (_, index) => cubeFor(Math.floor(index / 24), index % 24, box));
+  const center = { x: box.left + box.width / 2, y: box.top + box.height * .431 };
+  const points: Cube[] = [
+    ...Array.from({ length: 42 }, (_, index) => cubeFor(5, index, box)),
+    ...Array.from({ length: 5 * 48 }, (_, index) => cubeFor(Math.floor(index / 48), index % 48, box)),
+  ];
   points.sort((a, b) => a.depth - b.depth);
   for (const point of points) {
     ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(point.x, point.y);
-    ctx.strokeStyle = `rgba(249,249,248,${.12 * alpha})`; ctx.lineWidth = .8; ctx.stroke();
-    if (includeCubes) drawCube(ctx, point.x, point.y, point.size, point.color, .72 * alpha);
+    ctx.strokeStyle = `rgba(249,249,248,${.075 * alpha})`; ctx.lineWidth = .7; ctx.stroke();
+    if (point.within > 0) {
+      const neighbor = cubeFor(point.family, point.within - 1, box);
+      ctx.beginPath(); ctx.moveTo(neighbor.x, neighbor.y); ctx.lineTo(point.x, point.y);
+      ctx.strokeStyle = `rgba(249,249,248,${.055 * alpha})`; ctx.lineWidth = .65; ctx.stroke();
+    }
+    if (includeCubes) drawCube(ctx, point.x, point.y, point.size, point.color, .98 * alpha);
   }
 }
 
@@ -198,31 +224,8 @@ function getLogoArtwork(): HTMLCanvasElement {
   canvas.width = 512; canvas.height = 512;
   const context = canvas.getContext('2d');
   if (!context) return canvas;
-  context.fillStyle = '#f9f9f8'; context.fillRect(0, 0, 512, 512);
-  const weights = Array.from({ length: 36 }, (_, index) => .72 + ((index * 5) % 7) / 10);
-  const total = weights.reduce((sum, weight) => sum + weight, 0);
-  let y = 0;
-  const colors = FAMILY_COLORS;
-  for (let strip = 0; strip < 36; strip += 1) {
-    const height = strip === 35 ? 512 - y : 512 * weights[strip]! / total;
-    logoStrips.push({ top: y, height });
-    const stripCenter = y + height / 2;
-    const visualRow = stripCenter / 512 * 36;
-    for (let column = 0; column < 24; column += 1) {
-      const x = column + .5;
-      const ring = Math.hypot((x - 7.7) / 1.1, (visualRow - 18) / 1.5);
-      const letterO = ring > 5 && ring < 9;
-      const stem = column >= 13 && column <= 15 && strip >= 3;
-      const arm = column >= 15 && column <= 21 && strip >= 3 && strip <= 7;
-      const diagonal = column >= 15 && column <= 22 && strip >= 8 && strip <= 19 && Math.abs((column - 18) - (strip - 13) * .48) < 1.3;
-      const foot = column >= 15 && column <= 22 && strip >= 19 && strip <= 21;
-      if (letterO || stem || arm || diagonal || foot) {
-        context.fillStyle = colors[(column + Math.floor(strip / 4)) % colors.length]!;
-        context.fillRect(column / 24 * 512, y, 512 / 24 + .8, height + .5);
-      }
-    }
-    y += height;
-  }
+  paintBrandMark(context);
+  for (let strip = 0; strip < 36; strip += 1) logoStrips.push({ top: strip / 36 * 512, height: 512 / 36 });
   logoArtwork = canvas;
   return canvas;
 }
@@ -273,7 +276,7 @@ const gridSpanTemplates = Array.from({ length: 6 }, (_, span) => {
 const chartSpanTemplates = chartSpans.map((polygon) => resamplePolygon(polygon, morphCount));
 const cubeSpanTemplates = Array.from({ length: 6 }, (_, family) => {
   const cube = cubeFor(family, 10, { left: 0, top: 0, width: 1183, height: 1183 });
-  const size = cube.size * 3.2; const d = size * .58;
+  const size = cube.size * 3.2; const d = size * 1.16;
   const polygon = [{ x: cube.x, y: cube.y - d }, { x: cube.x + size, y: cube.y - d / 2 }, { x: cube.x + size, y: cube.y + d / 2 }, { x: cube.x, y: cube.y + d }, { x: cube.x - size, y: cube.y + d / 2 }, { x: cube.x - size, y: cube.y - d / 2 }];
   return resamplePolygon(polygon, morphCount);
 });
@@ -320,8 +323,8 @@ function transferMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target
     }
     ctx.closePath();
     const selected = id === selectedSlice.id;
-    ctx.fillStyle = selected ? 'rgba(200,150,29,.13)' : slice.color ? mixColor(slice.color, .12) : 'rgba(33,32,28,.018)'; ctx.fill();
-    ctx.strokeStyle = selected ? '#c8961d' : slice.color ? mixColor(slice.color, .7) : 'rgba(33,32,28,.17)';
+    ctx.fillStyle = selected ? mixColor(FAMILY_COLORS[4], .13) : slice.color ? mixColor(slice.color, .14) : 'rgba(33,32,28,.018)'; ctx.fill();
+    ctx.strokeStyle = selected ? FAMILY_COLORS[4] : slice.color ? mixColor(slice.color, .78) : 'rgba(33,32,28,.17)';
     ctx.lineWidth = selected ? 2 : .8; ctx.stroke();
   }
 }
@@ -572,15 +575,32 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
 }
 
 export function svgFallback(stage: Stage): React.JSX.Element {
-  if (stage === 0) return <svg className="scene-fallback" viewBox={`0 0 ${ART_WIDTH} ${ART_HEIGHT}`} aria-hidden="true">{slices.map((slice) => <path key={slice.id} d={[...slice.points.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`), `L${slice.points.at(-1)!.x} ${slice.baseline}L${slice.points[0]!.x} ${slice.baseline}Z`].join(' ')} fill={slice.id === selectedSlice.id ? 'rgba(200,150,29,.035)' : 'rgba(33,32,28,.018)'} stroke={slice.id === selectedSlice.id ? '#c8961d' : 'rgba(33,32,28,.2)'} strokeWidth={slice.id === selectedSlice.id ? 3 : 1} />)}</svg>;
-  if (stage === 1) return <svg className="scene-fallback" viewBox="0 0 1183 835" aria-hidden="true">{slices.map((slice) => { const polygon = gridSlicePolygon(slice.id); return <polygon key={slice.id} points={polygon.map((point) => `${point.x},${point.y}`).join(' ')} fill={slice.id === selectedSlice.id ? 'rgba(200,150,29,.2)' : 'rgba(33,32,28,.025)'} stroke={slice.id === selectedSlice.id ? '#c8961d' : 'rgba(33,32,28,.22)'} strokeWidth={slice.id === selectedSlice.id ? 2 : 1} />; })}</svg>;
-  if (stage === 2) return <svg className="scene-fallback" viewBox={`0 0 ${ART_WIDTH} ${ART_HEIGHT}`} aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <polygon key={index} points={chartSpanPolygon(index).map((point) => `${point.x},${point.y}`).join(' ')} fill={mixColor(FAMILY_COLORS[index]!, .13)} stroke={FAMILY_COLORS[index]} />)}</svg>;
-  if (stage === 3) return <svg className="scene-fallback" viewBox="0 0 1183 1183" aria-hidden="true">{Array.from({ length: 144 }, (_, index) => { const cube = cubeFor(Math.floor(index / 24), index % 24, { left: 0, top: 0, width: 1183, height: 1183 }); return <path key={index} d={`M${cube.x} ${cube.y - 8}l10 5v11l-10 5-10-5V${cube.y - 3}z`} fill={mixColor(cube.color, .72)} stroke="rgba(249,249,248,.48)" />; })}</svg>;
-  return <svg className="scene-fallback" viewBox="0 0 24 24" aria-hidden="true">{Array.from({ length: 36 * 24 }, (_, cell) => {
-    const strip = Math.floor(cell / 24); const column = cell % 24;
-    const cx = column + .5; const cy = strip + .5;
-    const ring = Math.hypot((cx - 7.7) / 1.1, (cy - 18) / 1.5);
-    const ink = (ring > 5 && ring < 9) || (column >= 13 && column <= 15 && strip >= 4) || (column >= 15 && column <= 21 && strip >= 4 && strip <= 9) || (column >= 15 && column <= 22 && strip >= 10 && strip <= 28 && Math.abs((column - 18) - (strip - 19) * .48) < 1.3) || (column >= 15 && column <= 22 && strip >= 28 && strip <= 32);
-    return ink ? <rect key={cell} x={column} y={strip / 36 * 24} width="1.02" height=".68" fill={FAMILY_COLORS[(column + Math.floor(strip / 4)) % 6]} /> : null;
+  if (stage === 0) return <svg className="scene-fallback" viewBox={`0 0 ${ART_WIDTH} ${ART_HEIGHT}`} aria-hidden="true">{slices.map((slice) => {
+    const polygon = slicePolygon(slice);
+    const band = slice.points.slice(12 + (slice.id % 5) * 5, 81 + (slice.id % 5) * 5);
+    return <g key={slice.id}>
+      <path d={polygon.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' ') + 'Z'} fill={`rgb(${Math.round(52 + slice.depth * 6)},${Math.round(53 + slice.depth * 6)},${Math.round(49 + slice.depth * 6)})`} stroke="rgba(249,249,248,.14)" strokeWidth=".5" />
+      {slice.color ? <path d={band.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' ')} fill="none" stroke={mixColor(slice.color, .58)} strokeWidth={slice.id === selectedSlice.id ? 4 : 3} /> : null}
+    </g>;
   })}</svg>;
+  if (stage === 1) return <svg className="scene-fallback" viewBox="0 0 1183 835" aria-hidden="true">{slices.map((slice) => <polygon key={slice.id} points={gridPolygons[slice.id]!.map((point) => `${point.x},${point.y}`).join(' ')} fill={slice.id === selectedSlice.id ? mixColor(FAMILY_COLORS[4], .13) : 'rgba(33,32,28,.025)'} stroke={slice.id === selectedSlice.id ? FAMILY_COLORS[4] : 'rgba(33,32,28,.22)'} strokeWidth={slice.id === selectedSlice.id ? 2 : 1} />)}</svg>;
+  if (stage === 2) return <svg className="scene-fallback" viewBox={`0 0 ${ART_WIDTH} ${ART_HEIGHT}`} aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <polygon key={index} points={chartSpans[index]!.map((point) => `${point.x},${point.y}`).join(' ')} fill={mixColor(FAMILY_COLORS[index]!, .58)} stroke={FAMILY_COLORS[index]} strokeWidth="5" />)}</svg>;
+  if (stage === 3) {
+    const box = { left: 0, top: 0, width: 1183, height: 1183 };
+    const cubes = [
+      ...Array.from({ length: 42 }, (_, index) => cubeFor(5, index, box)),
+      ...Array.from({ length: 5 * 48 }, (_, index) => cubeFor(Math.floor(index / 48), index % 48, box)),
+    ];
+    return <svg className="scene-fallback" viewBox="0 0 1183 1183" aria-hidden="true">
+      <g fill="none" stroke="rgba(249,249,248,.13)" strokeWidth="1.4">{cubes.map((cube, index) => <path key={index} d={`M591 510L${cube.x} ${cube.y}`} />)}</g>
+      {cubes.map((cube, index) => {
+        const d = cube.size * 1.16;
+        const top = `M${cube.x} ${cube.y - d}L${cube.x + cube.size} ${cube.y - d / 2}L${cube.x} ${cube.y}L${cube.x - cube.size} ${cube.y - d / 2}Z`;
+        const left = `M${cube.x - cube.size} ${cube.y - d / 2}L${cube.x} ${cube.y}L${cube.x} ${cube.y + d}L${cube.x - cube.size} ${cube.y + d / 2}Z`;
+        const right = `M${cube.x} ${cube.y}L${cube.x + cube.size} ${cube.y - d / 2}L${cube.x + cube.size} ${cube.y + d / 2}L${cube.x} ${cube.y + d}Z`;
+      return <g key={index} stroke="rgba(33,32,28,.42)" strokeWidth="1.1"><path d={top} fill={mixColor(cube.color, .98)} /><path d={left} fill={mixColor(cube.color, .76)} /><path d={right} fill={mixColor(cube.color, .88)} /></g>;
+      })}
+    </svg>;
+  }
+  return <BrandMark className="scene-fallback" />;
 }
