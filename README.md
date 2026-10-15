@@ -6,6 +6,15 @@ The editorial landing and competition terminal load separately. Default startup 
 
 ## Run locally
 
+To preview the landing with Node 22:
+
+```sh
+npm ci
+npm run dev
+```
+
+Open [the landing preview](http://localhost:5173). The landing runs without the API, database or provider credentials. Simulation and admin pages need the services below.
+
 Install Docker with Compose, then run:
 
 ```sh

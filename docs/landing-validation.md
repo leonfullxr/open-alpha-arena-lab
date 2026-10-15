@@ -29,3 +29,11 @@ After simulation integration, a production-preview browser trace loaded five Jav
 Safari, physical mobile hardware and a complete assistive-technology session have not been tested. The recorded captures establish the landing checkpoint; later shared-shell changes require a final regression check. Production hosting remains unreviewed and undeployed.
 
 Final integration budget check, 2026-10-15: all seventeen emitted JavaScript/CSS files across the landing, simulation and admin entries total 143,777 bytes at gzip level 6 (165,997 bytes at level 1). Even that complete-build sum is below the landing's 256,000-byte allowance; fonts and artwork are excluded. The accepted landing-only browser trace and animation observations above remain the direct loading/motion measurements. Final Home and Methodology navigation and the landing's zero API requests were checked again during simulation regression.
+
+## Landing follow-up, 2026-10-15
+
+The follow-up fixes three animation defects found during a read-only GPT-6.1 Sol review. The mountain-to-grid transfer now scales its destination to match the settled grid. Resize measures the current scroll position before selecting a scene. Scene thresholds stay within the document's reachable scroll range, so the final mark appears in tall windows.
+
+Luna validated the production preview at 1440 by 900, 768 by 1024 and 390 by 844. All five scenes rendered, copy fit, and document width matched each viewport. Forward and reverse scrolling, Home and Methodology navigation passed. At 1440 by 1200, the final mark rendered after fresh navigation to the bottom and after increasing the height from 900 while already at the bottom. The primary independently built the frontend and ran the three browser regressions. Sol's correction review found no medium-or-higher defect.
+
+The local browser regression script compares the actual transfer paths with the settled canvas paths and checks the final mark's pixels. All three checks failed when their corresponding fixes were removed. Mutation sources were restored byte for byte. The scripts, logs and follow-up screenshots remain local evidence. Safari, physical-device and assistive-technology checks remain pending.

@@ -12,6 +12,8 @@ const reverseHysteresis = [0, 0.13, 0.13, 0.13, 0.13] as const;
 const chartTop = 120;
 const chartBase = 700;
 const chartOffsets = [0, .012, .024, .036, .048, .06] as const;
+const gridWidth = 1183;
+const gridHeight = 835;
 
 function path(ctx: CanvasRenderingContext2D, points: Vec[], close = false): void {
   if (!points.length) return;
@@ -45,6 +47,8 @@ function gridSlicePolygon(id: number): Vec[] {
   }));
   return [...upper, { x: origin.x + 34, y: origin.y + 35 }, { x: origin.x, y: origin.y + 35 }];
 }
+
+const gridPolygons = Array.from({ length: SLICE_COUNT }, (_, id) => gridSlicePolygon(id));
 
 function drawSlice(ctx: CanvasRenderingContext2D, points: Vec[], id: number, alpha = 1, selected = false, selectedFill = 0.13): void {
   const slice = slices[id]!;
@@ -90,10 +94,10 @@ function drawMountain(ctx: CanvasRenderingContext2D, box: Box): void {
 
 function drawGrid(ctx: CanvasRenderingContext2D, box: Box, omitSelected = false): void {
   ctx.save();
-  scaledBox(ctx, box, 1183, 835);
+  scaledBox(ctx, box, gridWidth, gridHeight);
   for (let id = 0; id < SLICE_COUNT; id += 1) {
     if (omitSelected && id === selectedSlice.id) continue;
-    drawSlice(ctx, gridSlicePolygon(id), id, id === selectedSlice.id ? 1 : 0.65, id === selectedSlice.id);
+    drawSlice(ctx, gridPolygons[id]!, id, id === selectedSlice.id ? 1 : 0.65, id === selectedSlice.id);
   }
   ctx.restore();
 }
@@ -261,7 +265,7 @@ function resamplePolygon(points: Vec[], count: number): Vec[] {
 
 const morphCount = 64;
 const gridSpanTemplates = Array.from({ length: 6 }, (_, span) => {
-  const polygon = gridSlicePolygon(selectedSlice.id);
+  const polygon = gridPolygons[selectedSlice.id]!;
   const first = Math.round(spanBounds[span]! * 120); const last = Math.round(spanBounds[span + 1]! * 120);
   const top = polygon.slice(0, 121);
   return resamplePolygon([...top.slice(first, last + 1), { x: top[last]!.x, y: polygon[121]!.y }, { x: top[first]!.x, y: polygon[121]!.y }], morphCount);
@@ -292,23 +296,25 @@ function interpolateTemplate(ctx: CanvasRenderingContext2D, source: Vec[], sourc
 
 function transferMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number): void {
   const amount = Math.min(1, Math.max(0, progress));
+  const targetScaleX = target.width / gridWidth;
+  const targetScaleY = target.height / gridHeight;
   for (let id = 0; id < SLICE_COUNT; id += 1) {
     const slice = slices[id]!;
-    const gridOrigin = gridCellOrigin(id);
+    const gridPolygon = gridPolygons[id]!;
     const scaleX = source.width / ART_WIDTH; const scaleY = source.height / ART_HEIGHT;
     ctx.beginPath();
-    for (let pointIndex = 0; pointIndex < 123; pointIndex += 1) {
-      let x1: number; let y1: number; let x2: number; let y2: number;
+    for (let pointIndex = 0; pointIndex < gridPolygon.length; pointIndex += 1) {
+      let x1: number; let y1: number;
       if (pointIndex < 121) {
         const point = slice.points[pointIndex]!;
         x1 = source.left + point.x * scaleX; y1 = source.top + point.y * scaleY;
-        x2 = target.left + gridOrigin.x + point.x / ART_WIDTH * 34;
-        y2 = target.top + gridOrigin.y + 3 + Math.max(0, Math.min(1, (point.y - 140) / 480)) * 29;
       } else {
         const right = pointIndex === 121; const point = slice.points[right ? 120 : 0]!;
         x1 = source.left + point.x * scaleX; y1 = source.top + slice.baseline * scaleY;
-        x2 = target.left + gridOrigin.x + (right ? 34 : 0); y2 = target.top + gridOrigin.y + 35;
       }
+      const gridPoint = gridPolygon[pointIndex]!;
+      const x2 = target.left + gridPoint.x * targetScaleX;
+      const y2 = target.top + gridPoint.y * targetScaleY;
       const x = x1 + (x2 - x1) * amount; const y = y1 + (y2 - y1) * amount;
       if (pointIndex === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
@@ -322,7 +328,7 @@ function transferMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target
 
 function transferGridChart(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number): void {
   for (let index = 0; index < 6; index += 1) {
-    interpolateTemplate(ctx, gridSpanTemplates[index]!, source, 1183, 835, chartSpanTemplates[index]!, target, ART_WIDTH, ART_HEIGHT, progress, FAMILY_COLORS[index]!);
+    interpolateTemplate(ctx, gridSpanTemplates[index]!, source, gridWidth, gridHeight, chartSpanTemplates[index]!, target, ART_WIDTH, ART_HEIGHT, progress, FAMILY_COLORS[index]!);
   }
 }
 
@@ -463,10 +469,12 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
       globalCanvas.height = Math.max(1, Math.round(viewportHeight * dpr));
       globalCanvas.style.width = `${viewportWidth}px`; globalCanvas.style.height = `${viewportHeight}px`;
       globalContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - viewportHeight);
       for (let stage = 1; stage < 5; stage += 1) {
         const anchor = byStage.get(stage as Stage);
         if (!anchor) continue;
-        thresholds[stage - 1] = anchor.documentTop - viewportHeight * forwardRatios[stage]!;
+        const threshold = anchor.documentTop - viewportHeight * forwardRatios[stage]!;
+        thresholds[stage - 1] = Math.max(stage > 1 ? thresholds[stage - 2]! : 0, Math.min(maxScroll, Math.max(0, threshold)));
       }
       schedule();
     };
@@ -474,7 +482,7 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
       const chart = byStage.get(2)?.element.closest('.chart-wrap');
       chart?.classList.toggle('is-chart-landed', landed);
     };
-    const resize = (): void => { measure(); flight = null; settledStage = 0; direction = 1; chartLandedAt = 0; updateChartClass(false); syncScroll(); };
+    const resize = (): void => { measure(); flight = null; settledStage = 0; lastScrollY = window.scrollY; direction = 1; chartLandedAt = 0; updateChartClass(false); syncScroll(); };
     const paint = (now: number): void => {
       frame = 0;
       globalContext.clearRect(0, 0, viewportWidth, viewportHeight);
