@@ -827,10 +827,11 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
       }
       schedule();
     };
+    const layoutKey = (): string => `${width}:${Math.round(heroHold)}:${anchors.map((anchor) => Math.round(anchor.top)).join()}`;
     const onResize = (): void => {
-      const previousWidth = width;
+      const previousLayout = layoutKey();
       measure();
-      if (width !== previousWidth) {
+      if (layoutKey() !== previousLayout) {
         const target = absoluteStage(window.scrollY);
         if (target !== settled) snapTo(target);
         lastFlagY = window.scrollY;
@@ -861,7 +862,7 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
     stillCanvas.addEventListener('webglcontextlost', onStillContextChange);
     stillCanvas.addEventListener('webglcontextrestored', onStillContextChange);
     measure(); initializeAtCurrentScroll();
-    void document.fonts.ready.then(() => { if (!disposed) measure(); });
+    void document.fonts.ready.then(() => { if (!disposed) onResize(); });
     return () => {
       disposed = true; document.documentElement.classList.remove('canvas-unavailable');
       panelCanvas?.removeEventListener('webglcontextlost', onPanelContextChange);

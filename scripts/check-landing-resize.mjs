@@ -78,20 +78,56 @@ try {
     && !splitting.after.landed && splitting.after.split < 1, splitting);
   check('split completes after resize', splitting.final.landed && splitting.final.split === 1, splitting);
 
-  browser(['resize', '390', '844']);
-  const mobile = evaluate(`async () => { ${helpers}
+  const reflow = evaluate(`async () => { ${helpers}
+    document.documentElement.style.overflowAnchor = 'none';
+    const hero = document.querySelector('.hero');
+    await reachGrid();
+    scrollTo(0, trigger(2) + 20); await idle();
+    const settled = state();
+    hero.style.paddingBottom = '120px';
+    await wait(400);
+    const shifted = { state: state(), behindReadingLine: scrollY < trigger(2) };
+    hero.style.paddingBottom = '';
+    await wait(400);
+    await reachGrid();
+    const landedHistory = [];
+    const observer = new MutationObserver(() => landedHistory.push(chart().getAttribute('data-signal-mass-landed')));
+    observer.observe(chart(), { attributes: true, attributeFilter: ['data-signal-mass-landed'] });
+    scrollTo(0, trigger(2) + 20);
+    await wait(150);
+    const flying = state();
+    hero.style.paddingBottom = '120px';
+    await wait(50);
+    const interrupted = state();
+    await idle();
+    observer.disconnect();
+    const final = state();
+    hero.style.paddingBottom = '';
+    document.documentElement.style.overflowAnchor = '';
+    return { settled, shifted, flying, interrupted, final, landedHistory };
+  }`);
+  check('same-width anchor reflow re-derives the settled stage', reflow.settled.targetStage === '2' && reflow.shifted.behindReadingLine
+    && reflow.shifted.state.targetStage === '1' && reflow.shifted.state.direction === 'idle' && !reflow.shifted.state.landed, reflow);
+  check('same-width reflow during an incoherent flight settles once without landing the chart', reflow.flying.direction === 'forward'
+    && reflow.interrupted.direction === 'idle' && reflow.interrupted.targetStage === '1' && reflow.final.targetStage === '1'
+    && !reflow.final.landed && !reflow.landedHistory.includes('true'), reflow);
+
+  browser(['resize', '1363', '1000']);
+  const tall = evaluate(`async () => { ${helpers}
     await wait(400); await reachGrid();
     scrollTo(0, trigger(2) + 20); await idle();
     return { settled: state(), innerWidth, innerHeight };
   }`);
-  browser(['resize', '390', '760']);
-  const urlBar = evaluate(`async () => { ${helpers}
+  browser(['resize', '1363', '960']);
+  const short = evaluate(`async () => { ${helpers}
     await wait(400);
     return { state: state(), behindReadingLine: scrollY < trigger(2), innerWidth, innerHeight };
   }`);
-  check('viewport-height-only resize keeps the settled stage (hysteresis)', mobile.settled.targetStage === '2' && urlBar.behindReadingLine
-    && urlBar.state.targetStage === '2' && urlBar.state.direction === 'idle' && urlBar.state.landed, { mobile, urlBar });
+  check('viewport-height-only resize with unchanged anchors keeps the settled stage (hysteresis)', tall.settled.targetStage === '2' && short.behindReadingLine
+    && short.state.targetStage === '2' && short.state.direction === 'idle' && short.state.landed, { tall, short });
 
+  browser(['resize', '390', '844']);
+  evaluate(`async () => { ${helpers} await wait(400); await reachGrid(); scrollTo(0, trigger(2) + 20); await idle(); return true; }`);
   browser(['resize', '844', '390']);
   const rotated = evaluate(`async () => { ${helpers}
     await wait(400);
