@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getCompetitions, getStatus, getTicker } from './api';
 
@@ -21,7 +21,7 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
   return <div className="terminal">
     <a className="terminal-skip" href="#terminal-main">Skip to content</a>
     <header className="terminal-header">
-      <div className="terminal-brand"><Link to="/" aria-label="Open Alpha Arena Lab home">OPEN ALPHA ARENA LAB</Link><span className="replay-badge">{selected?.source_label ?? status.data?.demo_label ?? 'MARKET DATA'}</span></div>
+      <div className="terminal-brand"><a href="/" aria-label="Open Alpha Arena Lab home">OPEN ALPHA ARENA LAB</a><span className="replay-badge">{selected?.source_label ?? status.data?.demo_label ?? 'MARKET DATA'}</span></div>
       <label className="competition-select">Competition
         <select value={selected?.id ?? ''} onChange={(event) => { if (event.target.value) window.location.assign(`/simulation/${event.target.value}`); }} disabled={!competitions.data?.length}>
           <option value="">{competitions.isLoading ? 'Loading…' : 'No competitions'}</option>
@@ -46,7 +46,7 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
     {status.isError && <div className="system-notice" role="status">Public API unavailable. {status.error.message} <button onClick={() => void status.refetch()}>Retry</button></div>}
     {ticker.isError && <div className="system-notice" role="alert">Market ticker unavailable. {ticker.error.message} <button onClick={() => void ticker.refetch()}>Retry ticker</button></div>}
     <main id="terminal-main" className="terminal-main">{children}</main>
-    <footer className="terminal-footer"><span>Open Alpha Arena Lab</span><span>Paper trading · public evidence</span><Link to="/">Methodology</Link></footer>
+    <footer className="terminal-footer"><span>Open Alpha Arena Lab</span><span>Paper trading · public evidence</span><a href="/#methodology">Methodology</a></footer>
   </div>;
 }
 
