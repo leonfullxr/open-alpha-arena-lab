@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ActivityPanel, type ActivityTab } from './activity';
-import { getCompetition, getCompetitionMetrics, getEquityHistory, getLeaderboard, type Benchmark } from './api';
+import { getCompetition, getCompetitionMetrics, getEquityChart, getLeaderboard, type Benchmark, type EquityRange } from './api';
 import { EquityChart } from './equity-chart';
 import { useCompetitionStream } from './stream';
 import { AgentLink, DataStatus, money, PageHeading, QueryState, StatusBadge, timestamp } from './ui';
@@ -12,6 +12,8 @@ const tabs: ActivityTab[] = ['Live Trades', 'Model Chat', 'Positions', 'README.T
 export default function CompetitionPage(): React.JSX.Element {
   const { competitionId = '' } = useParams();
   const [tab, setTab] = useState<ActivityTab>('Live Trades');
+  const [chartRange, setChartRange] = useState<EquityRange>('ALL');
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const competitionQuery = useQuery({
     queryKey: ['competition', competitionId],
     queryFn: () => getCompetition(competitionId),
@@ -20,11 +22,22 @@ export default function CompetitionPage(): React.JSX.Element {
   });
   const competition = competitionQuery.data;
   const leaderboard = useQuery({ queryKey: ['competition', competitionId, 'leaderboard'], queryFn: () => getLeaderboard(competitionId), enabled: Boolean(competitionId) });
-  const equity = useQuery({ queryKey: ['competition', competitionId, 'equity'], queryFn: () => getEquityHistory(competitionId), enabled: Boolean(competitionId) });
+  const equity = useQuery({ queryKey: ['competition', competitionId, 'chart', chartRange], queryFn: () => getEquityChart(competitionId, chartRange), enabled: Boolean(competitionId) });
   const metrics = useQuery({ queryKey: ['competition', competitionId, 'metrics'], queryFn: () => getCompetitionMetrics(competitionId), enabled: Boolean(competitionId) });
   const stream = useCompetitionStream(competition);
   const leading = leaderboard.data?.[0];
   const benchmark = metrics.data?.benchmark;
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number): void {
+    const nextIndex = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+      : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length
+        : event.key === 'Home' ? 0
+          : event.key === 'End' ? tabs.length - 1 : null;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    setTab(tabs[nextIndex]!);
+    tabRefs.current[nextIndex]?.focus();
+  }
 
   return <QueryState loading={competitionQuery.isLoading} error={competitionQuery.error} retry={() => void competitionQuery.refetch()}>
     {competition && <>
@@ -36,7 +49,7 @@ export default function CompetitionPage(): React.JSX.Element {
       <div className="dashboard-grid">
         <div className="dashboard-main">
           <QueryState loading={equity.isLoading} error={equity.error} retry={() => void equity.refetch()} empty={equity.data?.items.length === 0 ? 'The API has no equity points for this competition.' : undefined}>
-            {equity.data && <EquityChart agents={competition.agents} rows={equity.data.items} initialBalance={competition.initial_balance} sampleCount={equity.data.total} benchmark={benchmark} />}
+            {equity.data && <EquityChart agents={competition.agents} rows={equity.data.items} initialBalance={competition.initial_balance} sampleCount={equity.data.total_raw} sampled={equity.data.sampled} range={chartRange} onRangeChange={setChartRange} benchmark={benchmark} />}
           </QueryState>
           <section className="account-summary" aria-label="Account summaries">
             <div className="account-summary-heading"><div><p className="terminal-eyebrow">ACCOUNT VALUE</p><h2>Model accounts</h2></div><span>{competition.agents.length} accounts</span></div>
@@ -55,7 +68,7 @@ export default function CompetitionPage(): React.JSX.Element {
           </section>
         </div>
         <aside className="dashboard-activity" aria-label="Competition activity">
-          <div className="tab-list" role="tablist" aria-label="Competition records">{tabs.map((item) => <button key={item} id={`tab-${slug(item)}`} role="tab" aria-selected={tab === item} aria-controls="activity-panel" onClick={() => setTab(item)}>{item}</button>)}</div>
+          <div className="tab-list" role="tablist" aria-label="Competition records" aria-orientation="horizontal">{tabs.map((item, index) => <button key={item} ref={(element) => { tabRefs.current[index] = element; }} id={`tab-${slug(item)}`} role="tab" tabIndex={tab === item ? 0 : -1} aria-selected={tab === item} aria-controls="activity-panel" onKeyDown={(event) => handleTabKeyDown(event, index)} onClick={() => setTab(item)}>{item}</button>)}</div>
           <div id="activity-panel" role="tabpanel" aria-labelledby={`tab-${slug(tab)}`}>
             <ActivityPanel competitionId={competition.id} tab={tab} agents={competition.agents} />
           </div>

@@ -1,18 +1,16 @@
 import { useMemo, useState } from 'react';
-import type { Agent, Benchmark, EquityPoint } from './api';
+import type { Agent, Benchmark, EquityPoint, EquityRange } from './api';
 import { money, timestamp } from './ui';
 
-type Range = 'ALL' | '72H' | '24H';
 type ChartPoint = { round: number; timestamp: string; values: Map<string, number> };
 const colors = ['#2e7db5', '#e5484d', '#46a758', '#f26a2e', '#9b72cf', '#c8961d'];
 const plot = { left: 78, right: 976, top: 28, bottom: 316 };
 
-export function EquityChart({ agents, rows, initialBalance, sampleCount, benchmark }: { agents: Agent[]; rows: EquityPoint[]; initialBalance: string; sampleCount: number; benchmark?: Benchmark | null }): React.JSX.Element {
-  const [range, setRange] = useState<Range>('ALL');
+export function EquityChart({ agents, rows, initialBalance, sampleCount, sampled, range, onRangeChange, benchmark }: { agents: Agent[]; rows: EquityPoint[]; initialBalance: string; sampleCount: number; sampled: boolean; range: EquityRange; onRangeChange: (range: EquityRange) => void; benchmark?: Benchmark | null }): React.JSX.Element {
   const [enabled, setEnabled] = useState<Record<string, boolean>>({});
   const [activePoint, setActivePoint] = useState<number | null>(null);
   const allPoints = useMemo(() => mergeEquity(rows), [rows]);
-  const points = useMemo(() => rangePoints(allPoints, range), [allPoints, range]);
+  const points = allPoints;
   const visibleAgents = agents.filter((agent) => enabled[agent.id] !== false);
   const values = visibleAgents.flatMap((agent) => points.flatMap((point) => {
     const value = point.values.get(agent.id);
@@ -38,9 +36,9 @@ export function EquityChart({ agents, rows, initialBalance, sampleCount, benchma
 
   return <section className="equity-panel" aria-labelledby="equity-title">
     <div className="panel-heading"><div><p className="terminal-eyebrow">ACCOUNT VALUE · USD</p><h2 id="equity-title">Total equity</h2></div><div className="range-control" role="group" aria-label="Chart time range">
-      {(['ALL', '72H', '24H'] as const).map((item) => <button key={item} className={range === item ? 'is-selected' : ''} aria-pressed={range === item} onClick={() => { setRange(item); setActivePoint(null); }}>{item}</button>)}
+      {(['ALL', '72H', '24H'] as const).map((item) => <button key={item} className={range === item ? 'is-selected' : ''} aria-pressed={range === item} onClick={() => { onRangeChange(item); setActivePoint(null); }}>{item}</button>)}
     </div></div>
-    <div className="chart-meta"><span>{points.length ? rows.length < sampleCount ? `Latest ${rows.length} of ${sampleCount} samples` : `${sampleCount} recorded samples` : 'No equity samples'}</span><span>Initial account capital: {money(initialBalance)}</span></div>
+    <div className="chart-meta"><span>{sampled ? `Sampled view · ${rows.length} plotted points from ${sampleCount} raw equity rows` : `${sampleCount} equity rows in ${range}`}</span><span>Initial account capital: {money(initialBalance)}</span></div>
     <div className="equity-plot-wrap">
       {points.length === 0 ? <div className="query-state">This competition has no equity samples.</div> : <svg className="equity-plot" viewBox="0 0 1000 360" role="img" aria-label="Account equity by recorded round. Use the arrow keys to inspect values." tabIndex={0}
         onPointerMove={(event) => hoverAt(event.clientX, event.currentTarget.getBoundingClientRect())}
@@ -89,13 +87,6 @@ function mergeEquity(rows: EquityPoint[]): ChartPoint[] {
     byRound.set(row.round, point);
   }
   return [...byRound.values()].sort((a, b) => a.round - b.round);
-}
-
-function rangePoints(points: ChartPoint[], range: Range): ChartPoint[] {
-  if (range === 'ALL' || !points.length) return points;
-  const duration = range === '72H' ? 72 * 60 * 60_000 : 24 * 60 * 60_000;
-  const last = Date.parse(points.at(-1)!.timestamp);
-  return points.filter((point) => last - Date.parse(point.timestamp) <= duration);
 }
 
 function shortDate(value: string): string {

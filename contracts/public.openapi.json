@@ -1,6 +1,112 @@
 {
   "components": {
     "schemas": {
+      "AgentMetricsDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "average_leverage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Leverage"
+          },
+          "closed_trades": {
+            "title": "Closed Trades",
+            "type": "integer"
+          },
+          "current_gross_exposure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Gross Exposure"
+          },
+          "current_margin_used": {
+            "title": "Current Margin Used",
+            "type": "string"
+          },
+          "losing_trades": {
+            "title": "Losing Trades",
+            "type": "integer"
+          },
+          "max_drawdown_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Drawdown Pct"
+          },
+          "profit_factor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profit Factor"
+          },
+          "sharpe_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharpe Ratio"
+          },
+          "win_rate_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate Pct"
+          },
+          "winning_trades": {
+            "title": "Winning Trades",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id",
+          "win_rate_pct",
+          "profit_factor",
+          "max_drawdown_pct",
+          "sharpe_ratio",
+          "average_leverage",
+          "current_margin_used",
+          "current_gross_exposure",
+          "closed_trades",
+          "winning_trades",
+          "losing_trades"
+        ],
+        "title": "AgentMetricsDTO",
+        "type": "object"
+      },
       "AgentSummary": {
         "additionalProperties": false,
         "properties": {
@@ -41,6 +147,10 @@
             "title": "Output Bytes Base64",
             "type": "string"
           },
+          "output_publicly_releasable": {
+            "title": "Output Publicly Releasable",
+            "type": "boolean"
+          },
           "output_sha256": {
             "title": "Output Sha256",
             "type": "string"
@@ -59,9 +169,107 @@
           "prompt_sha256",
           "output_sha256",
           "prompt_bytes_base64",
-          "output_bytes_base64"
+          "output_bytes_base64",
+          "output_publicly_releasable"
         ],
         "title": "ArtifactDTO",
+        "type": "object"
+      },
+      "BenchmarkDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "end_at": {
+            "title": "End At",
+            "type": "string"
+          },
+          "end_price": {
+            "title": "End Price",
+            "type": "string"
+          },
+          "equity": {
+            "title": "Equity",
+            "type": "string"
+          },
+          "fee_rate": {
+            "title": "Fee Rate",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "roi_pct": {
+            "title": "Roi Pct",
+            "type": "string"
+          },
+          "slippage_bps": {
+            "title": "Slippage Bps",
+            "type": "string"
+          },
+          "start_at": {
+            "title": "Start At",
+            "type": "string"
+          },
+          "start_price": {
+            "title": "Start Price",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "label",
+          "start_at",
+          "end_at",
+          "start_price",
+          "end_price",
+          "equity",
+          "roi_pct",
+          "fee_rate",
+          "slippage_bps",
+          "method"
+        ],
+        "title": "BenchmarkDTO",
+        "type": "object"
+      },
+      "CompetitionMetricsDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentMetricsDTO"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "benchmark": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "competition_id": {
+            "title": "Competition Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "competition_id",
+          "agents",
+          "benchmark"
+        ],
+        "title": "CompetitionMetricsDTO",
         "type": "object"
       },
       "CompetitionSummary": {
@@ -139,8 +347,15 @@
         "additionalProperties": false,
         "properties": {
           "action": {
-            "title": "Action",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
           },
           "agent_id": {
             "title": "Agent Id",
@@ -151,47 +366,165 @@
             "type": "string"
           },
           "artifact_url": {
-            "title": "Artifact Url",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Url"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "estimated_cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cost Usd"
+          },
+          "execution_result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Result"
           },
           "id": {
             "title": "Id",
             "type": "string"
           },
           "justification": {
-            "title": "Justification",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justification"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
           },
           "market_summary": {
-            "title": "Market Summary",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Summary"
           },
           "model": {
             "title": "Model",
             "type": "string"
           },
           "output_sha256": {
-            "title": "Output Sha256",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Sha256"
           },
           "prompt_sha256": {
-            "title": "Prompt Sha256",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Sha256"
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalEvidenceDTO"
+            },
+            "title": "Proposals",
+            "type": "array"
           },
           "provider": {
             "title": "Provider",
             "type": "string"
           },
           "quantity": {
-            "title": "Quantity",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
           },
           "round": {
             "title": "Round",
             "type": "integer"
           },
           "symbol": {
-            "title": "Symbol",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "usage": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Usage",
+            "type": "object"
+          },
+          "validation_errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Validation Errors",
+            "type": "array"
+          },
+          "validation_status": {
+            "title": "Validation Status",
             "type": "string"
           }
         },
@@ -205,13 +538,54 @@
           "quantity",
           "justification",
           "market_summary",
+          "proposals",
+          "validation_status",
+          "validation_errors",
           "prompt_sha256",
           "output_sha256",
           "artifact_url",
           "provider",
-          "model"
+          "model",
+          "usage"
         ],
         "title": "DecisionDTO",
+        "type": "object"
+      },
+      "EquityChartDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EquityPoint"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "points": {
+            "title": "Points",
+            "type": "integer"
+          },
+          "range": {
+            "title": "Range",
+            "type": "string"
+          },
+          "sampled": {
+            "title": "Sampled",
+            "type": "boolean"
+          },
+          "total_raw": {
+            "title": "Total Raw",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "range",
+          "points",
+          "total_raw",
+          "sampled",
+          "items"
+        ],
+        "title": "EquityChartDTO",
         "type": "object"
       },
       "EquityPoint": {
@@ -472,8 +846,12 @@
       "ModelDTO": {
         "additionalProperties": false,
         "properties": {
-          "api_key_configured": {
-            "title": "Api Key Configured",
+          "competition_id": {
+            "title": "Competition Id",
+            "type": "string"
+          },
+          "credential_reference_configured": {
+            "title": "Credential Reference Configured",
             "type": "boolean"
           },
           "id": {
@@ -488,8 +866,34 @@
             "title": "Name",
             "type": "string"
           },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "prompt_sha256": {
+            "title": "Prompt Sha256",
+            "type": "string"
+          },
           "provider": {
             "title": "Provider",
+            "type": "string"
+          },
+          "public_settings": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Public Settings",
+            "type": "object"
+          },
+          "settings_sha256": {
+            "title": "Settings Sha256",
             "type": "string"
           },
           "source_label": {
@@ -508,7 +912,12 @@
           "model",
           "status",
           "source_label",
-          "api_key_configured"
+          "credential_reference_configured",
+          "competition_id",
+          "profile",
+          "settings_sha256",
+          "prompt_sha256",
+          "public_settings"
         ],
         "title": "ModelDTO",
         "type": "object"
@@ -714,6 +1123,115 @@
         "title": "PositionDTO",
         "type": "object"
       },
+      "ProposalEvidenceDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "invalidation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalidation"
+          },
+          "justification": {
+            "title": "Justification",
+            "type": "string"
+          },
+          "leverage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leverage"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "risk_decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Decision"
+          },
+          "risk_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Risk Reasons",
+            "type": "array"
+          },
+          "stop_loss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "take_profit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Profit"
+          }
+        },
+        "required": [
+          "action",
+          "symbol",
+          "quantity",
+          "leverage",
+          "stop_loss",
+          "take_profit",
+          "confidence",
+          "invalidation",
+          "justification",
+          "risk_decision",
+          "risk_reasons"
+        ],
+        "title": "ProposalEvidenceDTO",
+        "type": "object"
+      },
       "PublicEventPayload": {
         "additionalProperties": false,
         "properties": {
@@ -852,6 +1370,10 @@
       "TickerItem": {
         "additionalProperties": false,
         "properties": {
+          "age_seconds": {
+            "title": "Age Seconds",
+            "type": "string"
+          },
           "ask": {
             "title": "Ask",
             "type": "string"
@@ -876,6 +1398,10 @@
             "title": "Source",
             "type": "string"
           },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
           "symbol": {
             "title": "Symbol",
             "type": "string"
@@ -888,7 +1414,9 @@
           "mark",
           "source",
           "event_at",
-          "received_at"
+          "received_at",
+          "age_seconds",
+          "stale"
         ],
         "title": "TickerItem",
         "type": "object"
@@ -1056,6 +1584,72 @@
         "summary": "Competition"
       }
     },
+    "/competitions/{competition_id}/chart": {
+      "get": {
+        "operationId": "equity_chart_competitions__competition_id__chart_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "competition_id",
+            "required": true,
+            "schema": {
+              "title": "Competition Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "72H",
+                "24H"
+              ],
+              "title": "Range",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "points",
+            "required": false,
+            "schema": {
+              "default": 400,
+              "maximum": 400,
+              "minimum": 2,
+              "title": "Points",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquityChartDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Equity Chart"
+      }
+    },
     "/competitions/{competition_id}/decisions": {
       "get": {
         "operationId": "decisions_competitions__competition_id__decisions_get",
@@ -1087,6 +1681,40 @@
               "default": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "agent_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
             }
           }
         ],
@@ -1328,6 +1956,45 @@
         "summary": "Leaderboard"
       }
     },
+    "/competitions/{competition_id}/metrics": {
+      "get": {
+        "operationId": "competition_metrics_competitions__competition_id__metrics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "competition_id",
+            "required": true,
+            "schema": {
+              "title": "Competition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionMetricsDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Competition Metrics"
+      }
+    },
     "/competitions/{competition_id}/positions": {
       "get": {
         "operationId": "positions_competitions__competition_id__positions_get",
@@ -1369,6 +2036,40 @@
               "default": false,
               "title": "Include Closed",
               "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "agent_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
             }
           }
         ],
@@ -1481,6 +2182,40 @@
               "default": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "agent_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
             }
           }
         ],
@@ -1608,6 +2343,24 @@
     "/ticker": {
       "get": {
         "operationId": "ticker_ticker_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "competition_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Competition Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1622,6 +2375,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Ticker"

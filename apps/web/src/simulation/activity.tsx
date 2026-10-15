@@ -26,6 +26,9 @@ export function ActivityPanel({ tab, competitionId, agentId, agents = [] }: {
   const active = tab === 'Live Trades' ? trades : tab === 'Model Chat' ? decisions : tab === 'Positions' ? positions : undefined;
   const total = active?.data?.total ?? 0;
   const pageCount = Math.ceil(total / PAGE_SIZE);
+  useEffect(() => {
+    if (active?.data) setPage((current) => Math.min(current, Math.max(0, pageCount - 1)));
+  }, [active?.data, pageCount]);
 
   function applyFilter(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -67,8 +70,8 @@ function DecisionsList({ rows }: { rows: Decision[] }): React.JSX.Element {
 function DecisionRecord({ decision }: { decision: Decision }): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const artifact = useQuery({ queryKey: ['artifact', decision.id], queryFn: () => getArtifact(decision.id), enabled: open });
-  const promptBytes = artifact.data ? decodeBase64(artifact.data.prompt_bytes_base64) : null;
-  const outputBytes = artifact.data?.output_publicly_releasable ? decodeBase64(artifact.data.output_bytes_base64) : null;
+  const promptArtifact = artifact.data ? decodeBase64Safely(artifact.data.prompt_bytes_base64) : null;
+  const outputArtifact = artifact.data?.output_publicly_releasable ? decodeBase64Safely(artifact.data.output_bytes_base64) : null;
   const usage = Object.entries(decision.usage).map(([name, value]) => `${name}: ${value}`).join(' · ') || 'Not reported';
   return <article className="decision-record">
     <button className="decision-toggle" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
@@ -85,10 +88,12 @@ function DecisionRecord({ decision }: { decision: Decision }): React.JSX.Element
       {decision.proposals.length > 0 && <section className="proposal-evidence"><h3>Recorded proposals</h3>{decision.proposals.map((proposal, index) => <article key={`${proposal.symbol}-${index}`}><header><strong>{proposal.action} {proposal.symbol}</strong><span>Risk: {proposal.risk_decision ?? 'Not evaluated'}</span></header><p>{proposal.justification}</p><dl className="decision-evidence"><div><dt>Quantity</dt><dd>{proposal.quantity}</dd></div><div><dt>Confidence</dt><dd>{proposal.confidence ?? 'Not reported'}</dd></div><div><dt>Leverage</dt><dd>{proposal.leverage ?? 'Not reported'}</dd></div><div><dt>Stop / take profit</dt><dd>{proposal.stop_loss ?? '—'} / {proposal.take_profit ?? '—'}</dd></div><div><dt>Invalidation</dt><dd>{proposal.invalidation ?? 'Not reported'}</dd></div></dl>{proposal.risk_reasons.length > 0 && <ul>{proposal.risk_reasons.map((reason, reasonIndex) => <li key={`${reasonIndex}-${reason}`}>{reason}</li>)}</ul>}</article>)}</section>}
       {artifact.isLoading && <p role="status">Loading exact artifact bytes…</p>}
       {artifact.error && <div className="query-error" role="alert">{artifact.error.message} <button onClick={() => void artifact.refetch()}>Retry</button></div>}
-      {promptBytes && <div className="artifact-grid">
-        <ArtifactText title="Prompt bytes" bytes={promptBytes} hash={artifact.data?.prompt_sha256 ?? 'unknown'} />
-        {outputBytes && artifact.data && <ArtifactText title="Provider output bytes" bytes={outputBytes} hash={artifact.data.output_sha256} />}
+      {(promptArtifact?.bytes || outputArtifact?.bytes) && <div className="artifact-grid">
+        {promptArtifact?.bytes && artifact.data && <ArtifactText title="Prompt bytes" bytes={promptArtifact.bytes} hash={artifact.data.prompt_sha256} />}
+        {outputArtifact?.bytes && artifact.data && <ArtifactText title="Provider output bytes" bytes={outputArtifact.bytes} hash={artifact.data.output_sha256} />}
       </div>}
+      {promptArtifact?.error && <p className="query-error" role="alert">Prompt artifact could not be decoded: {promptArtifact.error}</p>}
+      {outputArtifact?.error && <p className="query-error" role="alert">Provider output could not be decoded: {outputArtifact.error}</p>}
       {artifact.data && !artifact.data.output_publicly_releasable && <p className="availability-note">Provider output withheld from public display. SHA-256 {artifact.data.output_sha256} remains available for audit.</p>}
     </div>}
   </article>;
@@ -106,9 +111,13 @@ function ArtifactText({ title, bytes, hash }: { title: string; bytes: Uint8Array
   return <section className="artifact-block"><div><h3>{title}</h3><button className="small-button" onClick={download}>Download original bytes</button></div><code>SHA-256 {hash}</code><pre>{text || '[Empty artifact]'}</pre></section>;
 }
 
-function decodeBase64(value: string): Uint8Array {
-  const binary = atob(value);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+function decodeBase64Safely(value: string): { bytes: Uint8Array | null; error: string | null } {
+  try {
+    const binary = atob(value);
+    return { bytes: Uint8Array.from(binary, (character) => character.charCodeAt(0)), error: null };
+  } catch (error) {
+    return { bytes: null, error: error instanceof Error ? error.message : 'Invalid base64 data' };
+  }
 }
 
 function shortHash(value: string | null): string {

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
+from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation, localcontext
 from enum import StrEnum
 
@@ -63,6 +64,11 @@ class Rules:
     max_drawdown_fraction: Decimal = Decimal("1")
     allow_pyramiding: bool = False
     liquidation_fee_rate: Decimal = Decimal("0.005")
+    funding_mode: str = "hourly_historical_rate"
+    funding_interval_hours: int = 1
+    funding_rate_basis: str = "funding_history"
+    funding_price_basis: str = "oracle_px"
+    risk_policy_version: str = "risk-v1"
 
 
 @dataclass(slots=True)
@@ -86,12 +92,18 @@ class Account:
     funding: Decimal = ZERO
     halted: bool = False
     peak_equity: Decimal | None = None
+    daily_baseline_equity: Decimal | None = None
+    risk_day: date | None = None
 
     @classmethod
     def create(cls, initial_balance: Decimal) -> Account:
         _positive(initial_balance, "initial balance")
         return cls(
-            initial_balance=initial_balance, cash=initial_balance, peak_equity=initial_balance
+            initial_balance=initial_balance,
+            cash=initial_balance,
+            peak_equity=initial_balance,
+            daily_baseline_equity=initial_balance,
+            risk_day=datetime.now(UTC).date(),
         )
 
     @property
@@ -121,7 +133,7 @@ class EngineResult:
     fills: tuple[Fill, ...]
     postings: tuple[Posting, ...]
     events: tuple[tuple[str, dict[str, str]], ...]
-    equity: Decimal
+    equity: Decimal | None
 
 
 def _decimal(value: Decimal, label: str) -> Decimal:
@@ -138,7 +150,9 @@ def _positive(value: Decimal, label: str) -> None:
 def money(value: Decimal) -> Decimal:
     _decimal(value, "money")
     try:
-        rounded = value.quantize(MONEY_QUANTUM)
+        with localcontext() as ctx:
+            ctx.prec = 60
+            rounded = value.quantize(MONEY_QUANTUM)
     except InvalidOperation as exc:
         raise FinanceError("money exceeds numeric(38,18) range") from exc
     if len(rounded.as_tuple().digits) > 38 or abs(rounded) >= Decimal("1e20"):
@@ -150,10 +164,152 @@ def unrealized_pnl(
     position: Position, mark: Decimal, multiplier: Decimal = Decimal("1")
 ) -> Decimal:
     _positive(mark, "mark")
-    delta = mark - position.average_entry
-    if position.side is Side.SHORT:
-        delta = -delta
-    return money(position.quantity * delta * multiplier)
+    with localcontext() as ctx:
+        ctx.prec = 60
+        delta = mark - position.average_entry
+        if position.side is Side.SHORT:
+            delta = -delta
+        return money(position.quantity * delta * multiplier)
+
+
+def evaluate_risk(
+    account: Account,
+    current_equity: Decimal,
+    rules: Rules,
+    *,
+    as_of: date | None = None,
+) -> tuple[Account, tuple[str, ...]]:
+    """Update the persisted risk baseline and latch a breach without blocking exits."""
+    _decimal(current_equity, "equity")
+    account = deepcopy(account)
+    risk_day = as_of or datetime.now(UTC).date()
+    if account.risk_day != risk_day or account.daily_baseline_equity is None:
+        account.risk_day = risk_day
+        account.daily_baseline_equity = current_equity
+    peak = account.peak_equity or account.initial_balance
+    reasons: list[str] = []
+    if account.daily_baseline_equity - current_equity >= rules.max_daily_loss:
+        reasons.append("MAX_DAILY_LOSS")
+    if peak > ZERO and (peak - current_equity) / peak >= rules.max_drawdown_fraction:
+        reasons.append("MAX_DRAWDOWN")
+    account.peak_equity = max(peak, current_equity)
+    if reasons:
+        account.halted = True
+    return account, tuple(reasons)
+
+
+def validate_rules(rules: Rules) -> None:
+    for value, label in (
+        (rules.commission_rate, "commission rate"),
+        (rules.slippage_bps, "slippage"),
+        (rules.max_leverage, "maximum leverage"),
+        (rules.max_order_notional, "maximum order notional"),
+        (rules.max_gross_exposure, "maximum gross exposure"),
+        (rules.maintenance_margin_rate, "maintenance margin rate"),
+        (rules.max_quote_age_seconds, "maximum quote age"),
+        (rules.max_quote_skew_seconds, "maximum quote skew"),
+        (rules.max_daily_loss, "maximum daily loss"),
+        (rules.max_drawdown_fraction, "maximum drawdown fraction"),
+        (rules.liquidation_fee_rate, "liquidation fee rate"),
+    ):
+        _decimal(value, label)
+    if not ZERO <= rules.commission_rate < Decimal("1"):
+        raise FinanceError("commission rate must be in [0, 1)")
+    if not ZERO <= rules.slippage_bps < Decimal("10000"):
+        raise FinanceError("slippage must be in [0, 10000)")
+    for value, label in (
+        (rules.max_leverage, "maximum leverage"),
+        (rules.max_order_notional, "maximum order notional"),
+        (rules.max_gross_exposure, "maximum gross exposure"),
+        (rules.max_quote_age_seconds, "maximum quote age"),
+        (rules.max_daily_loss, "maximum daily loss"),
+    ):
+        if value <= ZERO:
+            raise FinanceError(f"{label} must be positive")
+    if not ZERO < rules.maintenance_margin_rate < Decimal("1"):
+        raise FinanceError("maintenance margin rate must be in (0, 1)")
+    if not ZERO <= rules.max_quote_skew_seconds:
+        raise FinanceError("maximum quote skew must be nonnegative")
+    if not ZERO < rules.max_drawdown_fraction <= Decimal("1"):
+        raise FinanceError("maximum drawdown fraction must be in (0, 1]")
+    if not ZERO <= rules.liquidation_fee_rate < Decimal("1"):
+        raise FinanceError("liquidation fee rate must be in [0, 1)")
+    if rules.funding_mode != "hourly_historical_rate":
+        raise FinanceError("unsupported funding mode")
+    if rules.funding_interval_hours != 1:
+        raise FinanceError("only the documented hourly funding interval is supported")
+    if rules.funding_rate_basis != "funding_history":
+        raise FinanceError("funding rate must come from historical funding evidence")
+    if rules.funding_price_basis != "oracle_px":
+        raise FinanceError("funding notional must use the captured oracle price")
+    if rules.risk_policy_version != "risk-v1":
+        raise FinanceError("unsupported risk policy version")
+    if (
+        not isinstance(rules.max_positions, int)
+        or isinstance(rules.max_positions, bool)
+        or rules.max_positions < 1
+    ):
+        raise FinanceError("maximum positions must be a positive integer")
+
+
+def rules_from_config(data: Mapping[str, object]) -> Rules:
+    """Parse the canonical frozen rule names into the engine's typed policy."""
+
+    def decimal(name: str) -> Decimal:
+        value = data.get(name)
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            raise FinanceError(f"frozen rule {name} must be a decimal string or integer")
+        try:
+            result = Decimal(value)
+        except InvalidOperation as exc:
+            raise FinanceError(f"frozen rule {name} is invalid") from exc
+        _decimal(result, name)
+        return result
+
+    max_positions = data.get("max_positions")
+    allow_pyramiding = data.get("allow_pyramiding")
+    interval = data.get("funding_interval_hours")
+    funding_mode = data.get("funding_mode")
+    funding_rate_basis = data.get("funding_rate_basis")
+    funding_price_basis = data.get("funding_price_basis")
+    policy_version = data.get("risk_policy_version")
+    if not isinstance(max_positions, int) or isinstance(max_positions, bool):
+        raise FinanceError("frozen rule max_positions must be an integer")
+    if not isinstance(allow_pyramiding, bool):
+        raise FinanceError("frozen rule allow_pyramiding must be boolean")
+    if not isinstance(interval, int) or isinstance(interval, bool):
+        raise FinanceError("frozen rule funding_interval_hours must be an integer")
+    if not isinstance(funding_mode, str):
+        raise FinanceError("frozen funding and risk policy identifiers are required")
+    if not isinstance(funding_rate_basis, str):
+        raise FinanceError("frozen funding and risk policy identifiers are required")
+    if not isinstance(funding_price_basis, str):
+        raise FinanceError("frozen funding and risk policy identifiers are required")
+    if not isinstance(policy_version, str):
+        raise FinanceError("frozen funding and risk policy identifiers are required")
+    rules = Rules(
+        commission_rate=decimal("commission_rate"),
+        slippage_bps=decimal("slippage_bps"),
+        max_leverage=decimal("leverage_max"),
+        max_order_notional=decimal("max_notional"),
+        max_gross_exposure=decimal("max_gross_exposure"),
+        maintenance_margin_rate=decimal("maintenance_margin_rate"),
+        max_positions=max_positions,
+        max_quote_age_seconds=decimal("quote_max_age_seconds"),
+        max_quote_skew_seconds=decimal("quote_set_max_skew_seconds"),
+        max_daily_loss=decimal("max_daily_loss"),
+        max_drawdown_fraction=decimal("max_drawdown_fraction"),
+        allow_pyramiding=allow_pyramiding,
+        liquidation_fee_rate=decimal("liquidation_fee_rate"),
+        funding_mode=funding_mode,
+        funding_interval_hours=interval,
+        funding_rate_basis=funding_rate_basis,
+        funding_price_basis=funding_price_basis,
+        risk_policy_version=policy_version,
+    )
+    decimal("fixture_funding_rate_per_hour")
+    validate_rules(rules)
+    return rules
 
 
 def gross_exposure(
@@ -199,6 +355,10 @@ def available_collateral(
 def quote_set_is_trusted(quotes: Iterable[Quote], required_symbols: set[str], rules: Rules) -> bool:
     materialized = tuple(quotes)
     by_symbol = {q.symbol: q for q in materialized}
+    try:
+        validate_rules(rules)
+    except FinanceError:
+        return False
     if (
         not required_symbols
         or len(materialized) != len(by_symbol)
@@ -240,11 +400,14 @@ def apply_action(
     idempotency_key: str,
     current_quotes: dict[str, Quote] | None = None,
     current_instruments: dict[str, Instrument] | None = None,
+    liquidation: bool = False,
+    as_of: date | None = None,
 ) -> EngineResult:
     """Apply one baseline order to a detached account value and return balanced journal postings."""
     account = deepcopy(account)
     with localcontext() as ctx:
         ctx.prec = 60
+        validate_rules(rules)
         _decimal(quantity, "quantity")
         for value, label in (
             (quote.bid, "bid"),
@@ -264,8 +427,6 @@ def apply_action(
             raise FinanceError("execution quote is stale or mismatched")
         if quote.bid <= ZERO or quote.ask < quote.bid or quote.mark <= ZERO:
             raise FinanceError("invalid execution quote")
-        if account.halted:
-            raise FinanceError("account is halted")
         if action in (Action.HOLD, Action.NO_ACTION):
             price_set = dict(current_quotes or {})
             instrument_set = dict(current_instruments or {})
@@ -274,19 +435,45 @@ def apply_action(
                     account.positions
                 ).issubset(instrument_set):
                     raise FinanceError("fresh marks for every open position are required")
+                held_quotes = {key: price_set[key] for key in account.positions}
+                if not quote_set_is_trusted(held_quotes.values(), set(account.positions), rules):
+                    raise FinanceError("fresh marks for every open position are required")
             price_set[symbol] = quote
             instrument_set[symbol] = instrument
+            value = equity(account, price_set, instrument_set)
+            account, _ = evaluate_risk(account, value, rules, as_of=as_of)
             return EngineResult(
                 account,
                 (),
                 (),
                 (("NO_ACTION", {"symbol": symbol}),),
-                equity(account, price_set, instrument_set),
+                value,
             )
         if action not in (Action.OPEN_LONG, Action.OPEN_SHORT, Action.CLOSE_POSITION):
             raise FinanceError("unsupported action")
         if not idempotency_key.strip():
             raise FinanceError("idempotency key is required")
+        if action in (Action.OPEN_LONG, Action.OPEN_SHORT) and account.halted:
+            raise FinanceError("account is halted for new entries")
+        old = account.positions.get(symbol)
+        if old is not None and action in (Action.OPEN_LONG, Action.OPEN_SHORT):
+            if not rules.allow_pyramiding:
+                raise FinanceError("baseline does not allow pyramiding or re-entry")
+            raise FinanceError("netting/pyramiding is not implemented")
+        if action in (Action.OPEN_LONG, Action.OPEN_SHORT) and account.positions:
+            marked_quotes = dict(current_quotes or {})
+            marked_instruments = dict(current_instruments or {})
+            if not set(account.positions).issubset(marked_quotes) or not set(
+                account.positions
+            ).issubset(marked_instruments):
+                raise FinanceError("fresh marks for every open position are required")
+            held_quotes = {key: marked_quotes[key] for key in account.positions}
+            if not quote_set_is_trusted(held_quotes.values(), set(account.positions), rules):
+                raise FinanceError("fresh marks for every open position are required")
+            marked_equity = equity(account, marked_quotes, marked_instruments)
+            account, risk_reasons = evaluate_risk(account, marked_equity, rules, as_of=as_of)
+            if risk_reasons:
+                raise FinanceError("account risk limits block new entries")
 
         old = account.positions.get(symbol)
         if action is Action.CLOSE_POSITION:
@@ -308,10 +495,6 @@ def apply_action(
                 raise FinanceError("quantity does not match instrument precision")
             if qty < instrument.min_quantity:
                 raise FinanceError("quantity is below instrument minimum")
-            if old is not None and not rules.allow_pyramiding:
-                raise FinanceError("baseline does not allow pyramiding or re-entry")
-            if old is not None:
-                raise FinanceError("netting/pyramiding is not implemented")
             if len(account.positions) >= rules.max_positions:
                 raise FinanceError("maximum open positions reached")
             new_side = Side.LONG if action is Action.OPEN_LONG else Side.SHORT
@@ -374,7 +557,8 @@ def apply_action(
             new_position = Position(
                 symbol, fill_side, qty, fill_price, margin_delta, stop_loss, take_profit
             )
-        fee = money(notional * rules.commission_rate)
+        fee_rate = rules.commission_rate + (rules.liquidation_fee_rate if liquidation else ZERO)
+        fee = money(notional * fee_rate)
         if action is Action.CLOSE_POSITION:
             if old is None:
                 raise FinanceError("no open position to close")
@@ -399,7 +583,12 @@ def apply_action(
             post_symbols.discard(symbol)
         if action is not Action.CLOSE_POSITION:
             post_symbols.add(symbol)
-        if not post_symbols.issubset(final_quotes) or not post_symbols.issubset(multipliers):
+        complete_marks = post_symbols.issubset(final_quotes) and post_symbols.issubset(multipliers)
+        if complete_marks and post_symbols:
+            complete_marks = quote_set_is_trusted(
+                (final_quotes[key] for key in post_symbols), post_symbols, rules
+            )
+        if not complete_marks and action is not Action.CLOSE_POSITION:
             raise FinanceError("fresh marks for every open position are required")
         account.cash = money(account.cash + cash_delta)
         account.realized_pnl = money(account.realized_pnl + realized)
@@ -412,8 +601,9 @@ def apply_action(
             account.positions[symbol] = new_position
             event = "ORDER_ACCEPTED"
         fill = Fill(symbol, fill_side, qty, money(fill_price), fee, action.value)
-        new_equity = equity(account, final_quotes, multipliers)
-        account.peak_equity = max(account.peak_equity or account.initial_balance, new_equity)
+        new_equity = equity(account, final_quotes, multipliers) if complete_marks else None
+        if new_equity is not None:
+            account, _ = evaluate_risk(account, new_equity, rules, as_of=as_of)
         detail = {
             "symbol": symbol,
             "quantity": str(qty),
@@ -425,22 +615,37 @@ def apply_action(
 
 
 def apply_funding(
-    account: Account, quotes: dict[str, Quote], instruments: dict[str, Instrument], rate: Decimal
+    account: Account,
+    quotes: dict[str, Quote],
+    instruments: dict[str, Instrument],
+    rate: Decimal,
+    rules: Rules | None = None,
+    *,
+    as_of: date | None = None,
+    funding_prices: dict[str, Decimal] | None = None,
 ) -> EngineResult:
     """Apply a positive funding rate (longs pay shorts) to all open positions."""
     _decimal(rate, "funding rate")
+    rules = rules or Rules()
+    validate_rules(rules)
     account = deepcopy(account)
     with localcontext() as ctx:
         ctx.prec = 60
         total = ZERO
         postings: list[Posting] = []
+        if set(account.positions) != set(funding_prices or {}):
+            if account.positions:
+                raise FinanceError("captured oracle funding prices are required for every position")
+        if account.positions and not quote_set_is_trusted(
+            (quotes[symbol] for symbol in account.positions), set(account.positions), rules
+        ):
+            raise FinanceError("fresh trusted held-symbol marks are required for funding")
         for symbol in sorted(account.positions):
             position = account.positions[symbol]
+            funding_price = (funding_prices or {})[symbol]
+            _positive(funding_price, "funding oracle price")
             base = (
-                position.quantity
-                * quotes[symbol].mark
-                * instruments[symbol].contract_multiplier
-                * rate
+                position.quantity * funding_price * instruments[symbol].contract_multiplier * rate
             )
             payment = -base if position.side is Side.LONG else base
             payment = money(payment)
@@ -451,6 +656,7 @@ def apply_funding(
         if sum((p.amount for p in postings), ZERO) != ZERO:
             raise FinanceError("funding postings do not balance")
         value = equity(account, quotes, instruments)
+        account, _ = evaluate_risk(account, value, rules, as_of=as_of)
         return EngineResult(
             account,
             (),
@@ -461,7 +667,16 @@ def apply_funding(
 
 
 def protective_exit(
-    account: Account, symbol: str, quote: Quote, instrument: Instrument, rules: Rules
+    account: Account,
+    symbol: str,
+    quote: Quote,
+    instrument: Instrument,
+    rules: Rules,
+    *,
+    current_quotes: dict[str, Quote] | None = None,
+    current_instruments: dict[str, Instrument] | None = None,
+    idempotency_key: str | None = None,
+    as_of: date | None = None,
 ) -> EngineResult | None:
     position = account.positions.get(symbol)
     if position is None:
@@ -485,7 +700,10 @@ def protective_exit(
         quote=quote,
         instrument=instrument,
         rules=rules,
-        idempotency_key=f"protective:{symbol}",
+        idempotency_key=idempotency_key or f"protective:{symbol}",
+        current_quotes=current_quotes,
+        current_instruments=current_instruments,
+        as_of=as_of,
     )
     event = "STOP_TRIGGERED" if stop_hit else "TP_TRIGGERED"
     return EngineResult(
@@ -495,3 +713,98 @@ def protective_exit(
         ((event, {"symbol": symbol, "trigger": str(stop if stop_hit else target)}), *result.events),
         result.equity,
     )
+
+
+def estimated_liquidation_required(
+    account: Account,
+    quotes: dict[str, Quote],
+    instruments: dict[str, Instrument],
+    rules: Rules,
+) -> bool:
+    """Return a conservative cross-margin trigger estimate, not venue liquidation math."""
+    validate_rules(rules)
+    if not account.positions:
+        return False
+    if not set(account.positions).issubset(quotes) or not set(account.positions).issubset(
+        instruments
+    ):
+        raise FinanceError("fresh marks for every open position are required for liquidation")
+    held_quotes = {symbol: quotes[symbol] for symbol in account.positions}
+    if not quote_set_is_trusted(held_quotes.values(), set(account.positions), rules):
+        raise FinanceError("fresh trusted held-symbol quotes are required for liquidation")
+    with localcontext() as ctx:
+        ctx.prec = 60
+        marked_equity = equity(account, quotes, instruments)
+        maintenance = money(
+            sum(
+                (
+                    position.quantity
+                    * quotes[symbol].mark
+                    * instruments[symbol].contract_multiplier
+                    * rules.maintenance_margin_rate
+                    for symbol, position in account.positions.items()
+                ),
+                ZERO,
+            )
+        )
+        estimated_exit_fees = money(
+            sum(
+                (
+                    position.quantity
+                    * quotes[symbol].mark
+                    * instruments[symbol].contract_multiplier
+                    * (rules.commission_rate + rules.liquidation_fee_rate)
+                    for symbol, position in account.positions.items()
+                ),
+                ZERO,
+            )
+        )
+        return marked_equity <= maintenance + estimated_exit_fees
+
+
+def liquidate_cross_margin_estimate(
+    account: Account,
+    quotes: dict[str, Quote],
+    instruments: dict[str, Instrument],
+    rules: Rules,
+    *,
+    idempotency_prefix: str,
+    as_of: date | None = None,
+) -> EngineResult | None:
+    """Close held positions in symbol order using bid/ask fills when estimated margin fails."""
+    if not estimated_liquidation_required(account, quotes, instruments, rules):
+        return None
+    state = deepcopy(account)
+    fills: list[Fill] = []
+    postings: list[Posting] = []
+    events: list[tuple[str, dict[str, str]]] = []
+    for symbol in sorted(state.positions):
+        position = state.positions[symbol]
+        result = apply_action(
+            state,
+            action=Action.CLOSE_POSITION,
+            symbol=symbol,
+            quantity=position.quantity,
+            leverage=Decimal("1"),
+            quote=quotes[symbol],
+            instrument=instruments[symbol],
+            rules=rules,
+            idempotency_key=f"{idempotency_prefix}:{symbol}",
+            current_quotes=quotes,
+            current_instruments=instruments,
+            liquidation=True,
+            as_of=as_of,
+        )
+        state = result.account
+        fills.extend(result.fills)
+        postings.extend(result.postings)
+        events.append(
+            (
+                "ESTIMATED_CROSS_MARGIN_LIQUIDATION",
+                {"symbol": symbol, "basis": "conservative_cross_margin_approximation"},
+            )
+        )
+        events.extend(result.events)
+    value = equity(state, quotes, instruments)
+    state, _ = evaluate_risk(state, value, rules, as_of=as_of)
+    return EngineResult(state, tuple(fills), tuple(postings), tuple(events), value)

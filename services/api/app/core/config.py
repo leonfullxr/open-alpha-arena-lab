@@ -1,3 +1,4 @@
+from decimal import Decimal
 from functools import lru_cache
 
 from pydantic import Field
@@ -26,6 +27,9 @@ class Settings(BaseSettings):
     admin_subjects: list[str] = Field(default_factory=list)
     max_streams: int = 12
     stream_seconds: int = 900
+    max_daily_llm_spend_usd: Decimal = Field(
+        default=Decimal("5"), gt=Decimal("0"), max_digits=12, decimal_places=6
+    )
 
 
 @lru_cache(maxsize=1)

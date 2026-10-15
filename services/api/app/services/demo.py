@@ -3,8 +3,10 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal as D
+from pathlib import Path
 
 from app.core.canonical import canonical_json_bytes, sha256_hex
+from app.core.rules import canonical_profile
 from app.db.models import Account as AccountRow
 from app.db.models import (
     AgentRun,
@@ -34,6 +36,7 @@ from app.engine.finance import (
     Rules,
     apply_action,
     equity,
+    rules_from_config,
     unrealized_pnl,
 )
 from sqlalchemy import select
@@ -61,14 +64,7 @@ def fixture_prices(round_index: int) -> dict[str, D]:
 
 
 def _rules() -> Rules:
-    return Rules(
-        commission_rate=D("0.0005"),
-        slippage_bps=D("2"),
-        max_leverage=D("3"),
-        max_order_notional=D("5000"),
-        max_gross_exposure=D("10000"),
-        max_positions=2,
-    )
+    return rules_from_config(canonical_profile("alpha_2025_baseline"))
 
 
 def seed_demo(db: Session, rounds: int = 20) -> str:
@@ -81,19 +77,11 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
     if existing:
         return existing.id
 
-    rules_json = {
-        "profile": "alpha_2025_baseline",
-        "symbols": list(SYMBOLS),
-        "initial_balance": "10000",
-        "round_seconds": 180,
-        "source": "fixture-replay-v1",
-        "fee_rate": "0.0005",
-        "slippage_bps": "2",
-        "max_leverage": "3",
-        "allow_pyramiding": False,
-    }
+    rules_json = canonical_profile("alpha_2025_baseline")
+    rules_json["fixture_source"] = "fixture-replay-v1"
     rules_bytes = canonical_json_bytes(rules_json)
-    prompt_bytes = open("prompts/baseline-v1.md", "rb").read()
+    root = Path(__file__).resolve().parents[3]
+    prompt_bytes = (root / "prompts/baseline-v1.md").read_bytes()
     competition_id = stable_id("demo:competition")
     prompt_id = stable_id("demo:prompt:v1")
     competition = Competition(
@@ -157,6 +145,9 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                 funding=D("0"),
                 reserved_margin=D("0"),
                 halted=False,
+                peak_equity=D("10000"),
+                daily_baseline_equity=D("10000"),
+                risk_day=NOW.date(),
                 version=0,
             )
         )

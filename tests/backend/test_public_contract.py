@@ -7,6 +7,7 @@ def test_public_openapi_exposes_only_safe_typed_contracts() -> None:
     spec = public_app.openapi()
     paths = spec["paths"]
     assert "/competitions/{competition_id}/stream" in paths
+    assert "/competitions/{competition_id}/chart" in paths
     assert "/decisions/{decision_id}/artifact" in paths
     assert "/stream" not in paths
     decision = spec["components"]["schemas"]["DecisionDTO"]["properties"]
@@ -33,6 +34,10 @@ def test_history_routes_use_bounded_page_envelopes() -> None:
         assert schema["$ref"].startswith("#/components/schemas/PageDTO_")
     page = spec["components"]["schemas"]["PageDTO_EquityPoint_"]["properties"]
     assert set(page) == {"items", "limit", "offset", "total"}
+    chart = spec["paths"]["/competitions/{competition_id}/chart"]["get"]["responses"][
+        "200"
+    ]["content"]["application/json"]["schema"]
+    assert chart["$ref"] == "#/components/schemas/EquityChartDTO"
     events = spec["components"]["schemas"]["EventPageDTO"]["properties"]
     assert set(events) == {"items", "after", "next_after", "has_more"}
 

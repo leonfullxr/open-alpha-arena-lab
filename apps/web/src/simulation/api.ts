@@ -20,7 +20,8 @@ export type Benchmark = PublicSchema['BenchmarkDTO'];
 export type TradePage = PublicSchema['PageDTO_TradeDTO_'];
 export type PositionPage = PublicSchema['PageDTO_PositionDTO_'];
 export type DecisionPage = PublicSchema['PageDTO_DecisionDTO_'];
-export type EquityPage = PublicSchema['PageDTO_EquityPoint_'];
+export type EquityChartData = PublicSchema['EquityChartDTO'];
+export type EquityRange = 'ALL' | '72H' | '24H';
 
 export type HistoryQuery = { limit: number; offset: number; agent_id?: string; symbol?: string };
 
@@ -69,14 +70,9 @@ export async function getArtifact(id: string): Promise<Artifact> {
   return requireData(await client.GET('/decisions/{decision_id}/artifact', { params: { path: { decision_id: id } } }));
 }
 
-export async function getEquityHistory(id: string): Promise<EquityPage> {
-  const first = await requireData(await client.GET('/competitions/{competition_id}/equity', {
-    params: { path: { competition_id: id }, query: { limit: 200, offset: 0 } },
-  }));
-  if (first.total <= first.limit) return first;
-  if (first.total > 100_200) throw new Error('The equity history is larger than the public API offset limit. Use the competition export.');
-  return requireData(await client.GET('/competitions/{competition_id}/equity', {
-    params: { path: { competition_id: id }, query: { limit: 200, offset: Math.max(0, first.total - 200) } },
+export async function getEquityChart(id: string, range: EquityRange): Promise<EquityChartData> {
+  return requireData(await client.GET('/competitions/{competition_id}/chart', {
+    params: { path: { competition_id: id }, query: { range, points: 400 } },
   }));
 }
 

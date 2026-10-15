@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/competitions/{competition_id}/chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Equity Chart */
+        get: operations["equity_chart_competitions__competition_id__chart_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/competitions/{competition_id}/decisions": {
         parameters: {
             query?: never;
@@ -417,6 +434,19 @@ export interface components {
             /** Validation Status */
             validation_status: string;
         };
+        /** EquityChartDTO */
+        EquityChartDTO: {
+            /** Items */
+            items: components["schemas"]["EquityPoint"][];
+            /** Points */
+            points: number;
+            /** Range */
+            range: string;
+            /** Sampled */
+            sampled: boolean;
+            /** Total Raw */
+            total_raw: number;
+        };
         /** EquityPoint */
         EquityPoint: {
             /** Agent Id */
@@ -509,10 +539,10 @@ export interface components {
         };
         /** ModelDTO */
         ModelDTO: {
-            /** Api Key Configured */
-            api_key_configured: boolean;
             /** Competition Id */
             competition_id: string;
+            /** Credential Reference Configured */
+            credential_reference_configured: boolean;
             /** Id */
             id: string;
             /** Model */
@@ -762,6 +792,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompetitionSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    equity_chart_competitions__competition_id__chart_get: {
+        parameters: {
+            query?: {
+                range?: "ALL" | "72H" | "24H";
+                points?: number;
+            };
+            header?: never;
+            path: {
+                competition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquityChartDTO"];
                 };
             };
             /** @description Validation Error */

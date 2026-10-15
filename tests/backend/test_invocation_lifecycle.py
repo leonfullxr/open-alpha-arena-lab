@@ -5,6 +5,7 @@ import os
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 import pytest
 from app.db.models import (
@@ -18,6 +19,7 @@ from app.db.models import (
     PromptVersion,
     QuoteSet,
     RoundAgentJob,
+    SpendReservation,
 )
 from app.services.invocation import (
     InvocationCompletion,
@@ -41,16 +43,33 @@ def _id() -> str:
 
 def _pending_job(db: Session, deadline_seconds: int = 120) -> str:
     now = datetime.now(UTC)
+    stale_jobs = db.scalars(
+        select(RoundAgentJob)
+        .join(DecisionRound, DecisionRound.id == RoundAgentJob.round_id)
+        .join(Competition, Competition.id == DecisionRound.competition_id)
+        .where(
+            Competition.source_label == "TEST",
+            RoundAgentJob.state.in_(("PENDING", "CLAIMED")),
+        )
+    ).all()
+    for stale in stale_jobs:
+        stale.state = "TERMINAL"
+        stale.terminal_result = "PROVIDER_ERROR"
+        stale.error_code = "TEST_RESET"
+        stale.lease_owner = None
+        stale.lease_expires_at = None
+    db.flush()
     competition_id, prompt_id, agent_id = _id(), _id(), _id()
     account_id, quote_set_id, snapshot_id = _id(), _id(), _id()
     round_id, job_id = _id(), _id()
+    frozen_rules = b'{"inference_budget_usd":"2"}'
     db.add(
         Competition(
             id=competition_id,
             name=f"Invocation test {competition_id}",
             profile="alpha_2025_baseline",
-            rules_bytes=b"{}",
-            rules_sha256="0" * 64,
+            rules_bytes=frozen_rules,
+            rules_sha256=hashlib.sha256(frozen_rules).hexdigest(),
             initial_balance=10000,
             state="RUNNING",
             source_label="TEST",
@@ -151,6 +170,7 @@ def test_claim_fence_exact_dispatch_and_result_are_durable() -> None:
             model="test-model",
             prompt_bytes=prompt,
             public_parameters={"temperature": 0},
+            reservation_amount=Decimal("0.1"),
         )
         assert prepared is not None
         receipt = apply_invocation_result(
@@ -193,6 +213,7 @@ def test_expired_round_keeps_result_as_late_evidence_only() -> None:
             model="test-model",
             prompt_bytes=b"late prompt",
             public_parameters={},
+            reservation_amount=Decimal("0.1"),
         )
         assert prepared is not None
         time.sleep(3.1)
@@ -209,4 +230,34 @@ def test_expired_round_keeps_result_as_late_evidence_only() -> None:
             select(InvocationResult).where(InvocationResult.attempt_id == prepared.attempt_id)
         )
         assert result is not None and result.late
+    engine.dispose()
+
+
+def test_budget_denial_terminalizes_without_creating_an_attempt() -> None:
+    assert TEST_DATABASE_URL is not None
+    engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
+    with Session(engine, expire_on_commit=False) as db:
+        job_id = _pending_job(db)
+        claim = claim_next_job(db, worker_name="budget-worker")
+        assert claim is not None
+        prepared = prepare_invocation_dispatch(
+            db,
+            job_id=job_id,
+            fence=claim.fence,
+            provider="billable-test-provider",
+            model="bounded-test-model",
+            prompt_bytes=b"must remain undispatched",
+            public_parameters={},
+            reservation_amount=Decimal("2.01"),
+        )
+        assert prepared is None
+        job = db.get(RoundAgentJob, job_id)
+        assert job is not None
+        assert job.state == "TERMINAL" and job.error_code == "BUDGET_EXCEEDED"
+        assert db.scalar(
+            select(InvocationAttempt).where(InvocationAttempt.job_id == job_id)
+        ) is None
+        assert db.scalar(
+            select(SpendReservation).where(SpendReservation.job_id == job_id)
+        ) is None
     engine.dispose()

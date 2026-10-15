@@ -1,18 +1,32 @@
 from __future__ import annotations
 
-import asyncio
 import json
-from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from decimal import Decimal as D
-from typing import Annotated, Any, TypeVar
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
+from app.api.public_chart import chart_router
+from app.api.public_history import bounded_page, decisions, history_router
+from app.api.public_metrics import metrics_router
+from app.api.public_schemas import (
+    AgentSummary,
+    CompetitionSummary,
+    DecisionDTO,
+    EquityPoint,
+    EventDTO,
+    EventPageDTO,
+    ExportDTO,
+    LeaderboardRow,
+    PageDTO,
+    StatusDTO,
+    TickerItem,
+    public_event_payload,
+)
+from app.api.public_stream import stream_router
 from app.db.models import (
     Account,
     AgentRun,
@@ -20,207 +34,18 @@ from app.db.models import (
     DecisionRound,
     DomainEvent,
     EquitySample,
-    Fill,
     InvocationAttempt,
-    InvocationResult,
     MarketSnapshot,
     Order,
-    Position,
     RoundAgentJob,
 )
-from app.db.session import SessionLocal, get_db
+from app.db.session import get_db
 
 router = APIRouter()
-
-
-class PublicModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-
-ItemT = TypeVar("ItemT")
-
-
-class PageDTO[ItemT](PublicModel):
-    items: list[ItemT]
-    limit: int
-    offset: int
-    total: int
-
-
-class StatusDTO(PublicModel):
-    state: str
-    demo_label: str
-    competition_count: int
-    schema_version: int
-
-
-class TickerItem(PublicModel):
-    symbol: str
-    bid: str
-    ask: str
-    mark: str
-    source: str
-    event_at: str
-    received_at: str
-
-
-class AgentSummary(PublicModel):
-    id: str
-    name: str
-    provider: str
-    model: str
-
-
-class CompetitionSummary(PublicModel):
-    id: str
-    name: str
-    profile: str
-    state: str
-    source_label: str
-    initial_balance: str
-    started_at: str | None
-    ended_at: str | None
-    agents: list[AgentSummary]
-
-
-class EquityPoint(PublicModel):
-    agent_id: str
-    agent_name: str
-    round: int
-    timestamp: str
-    equity: str
-    realized_pnl: str
-    unrealized_pnl: str
-    fees: str
-    funding: str
-
-
-class LeaderboardRow(PublicModel):
-    rank: int
-    agent_id: str
-    agent_name: str
-    model: str
-    equity: str
-    roi_pct: str
-    realized_pnl: str
-    unrealized_pnl: str
-    fees: str
-    funding: str
-    trade_count: int
-
-
-class EventDTO(PublicModel):
-    sequence: int
-    event_type: str
-    event_at: str
-    agent_id: str | None
-    payload: PublicEventPayload
-
-
-class EventPageDTO(PublicModel):
-    items: list[EventDTO]
-    after: int
-    next_after: int
-    has_more: bool
-
-
-class PublicEventPayload(PublicModel):
-    agent_id: str | None = None
-    round: int | None = None
-    action: str | None = None
-    source: str | None = None
-    symbol: str | None = None
-    quantity: str | None = None
-    price: str | None = None
-    fee: str | None = None
-    reason: str | None = None
-
-
-def _public_event_payload(value: dict[str, Any]) -> PublicEventPayload:
-    allowed = {
-        "agent_id",
-        "round",
-        "action",
-        "source",
-        "symbol",
-        "quantity",
-        "price",
-        "fee",
-        "reason",
-    }
-    return PublicEventPayload.model_validate(
-        {key: item for key, item in value.items() if key in allowed}
-    )
-
-
-class DecisionDTO(PublicModel):
-    id: str
-    agent_id: str
-    agent_name: str
-    round: int
-    action: str
-    symbol: str
-    quantity: str
-    justification: str
-    market_summary: str
-    prompt_sha256: str
-    output_sha256: str
-    artifact_url: str
-    provider: str
-    model: str
-
-
-class PositionDTO(PublicModel):
-    agent_id: str
-    agent_name: str
-    symbol: str
-    side: str
-    quantity: str
-    average_entry: str
-    reserved_margin: str
-    stop_loss: str | None
-    take_profit: str | None
-    state: str
-
-
-class TradeDTO(PublicModel):
-    agent_id: str
-    agent_name: str
-    symbol: str
-    side: str
-    quantity: str
-    price: str
-    fee: str
-    order_id: str
-    status: str
-
-
-class ModelDTO(PublicModel):
-    id: str
-    name: str
-    provider: str
-    model: str
-    status: str
-    source_label: str
-    api_key_configured: bool
-
-
-class ExportDTO(PublicModel):
-    competition: CompetitionSummary
-    leaderboard: list[LeaderboardRow]
-    equity: list[EquityPoint]
-    decisions: list[DecisionDTO]
-    truncated: bool
-    exported_decisions: int
-    exported_equity_points: int
-
-
-class ArtifactDTO(PublicModel):
-    id: str
-    prompt_sha256: str
-    output_sha256: str
-    prompt_bytes_base64: str
-    output_bytes_base64: str
+router.include_router(stream_router)
+router.include_router(metrics_router)
+router.include_router(history_router)
+router.include_router(chart_router)
 
 
 def _competition(db: Session, competition_id: str) -> Competition:
@@ -257,9 +82,15 @@ def _serialize_competition(db: Session, comp: Competition) -> CompetitionSummary
     )
 
 
-def bounded_page(limit: int, offset: int) -> None:
-    if not 1 <= limit <= 200 or not 0 <= offset <= 100000:
-        raise HTTPException(status_code=422, detail="limit must be 1..200 and offset 0..100000")
+def _quote_age(event_at: str) -> tuple[str, bool]:
+    try:
+        timestamp = datetime.fromisoformat(event_at)
+        if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+            return "unknown", True
+        age = (datetime.now(UTC) - timestamp.astimezone(UTC)).total_seconds()
+    except (TypeError, ValueError):
+        return "unknown", True
+    return str(age), age < 0 or age > 10
 
 
 @router.get("/status", response_model=StatusDTO)
@@ -273,23 +104,60 @@ def status(db: Annotated[Session, Depends(get_db)]) -> StatusDTO:
 
 
 @router.get("/ticker", response_model=list[TickerItem])
-def ticker(db: Annotated[Session, Depends(get_db)]) -> list[TickerItem]:
-    snapshot = db.scalar(select(MarketSnapshot).order_by(MarketSnapshot.captured_at.desc()))
+def ticker(
+    db: Annotated[Session, Depends(get_db)], competition_id: str | None = None
+) -> list[TickerItem]:
+    query = (
+        select(MarketSnapshot)
+        .join(DecisionRound, DecisionRound.snapshot_id == MarketSnapshot.id)
+        .join(Competition, Competition.id == DecisionRound.competition_id)
+    )
+    query = query.where(
+        Competition.id == competition_id
+        if competition_id
+        else Competition.source_label.like("DEMO REPLAY%")
+    )
+    snapshot = db.scalar(query.order_by(MarketSnapshot.captured_at.desc()).limit(1))
     if snapshot is None:
         return []
-    body = json.loads(snapshot.canonical_bytes)
-    return [
-        TickerItem(
-            symbol=s,
-            bid=q["bid"],
-            ask=q["ask"],
-            mark=q["mark"],
-            source="DEMO REPLAY · fixture-replay-v1",
-            event_at=q["event_at"],
-            received_at=q["received_at"],
+    competition = db.scalar(
+        select(Competition)
+        .join(DecisionRound, DecisionRound.competition_id == Competition.id)
+        .where(DecisionRound.snapshot_id == snapshot.id)
+    )
+    source = (
+        f"{competition.source_label} · {snapshot.source_label}"
+        if competition
+        else snapshot.source_label
+    )
+    try:
+        body = json.loads(snapshot.canonical_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return []
+    quotes = body.get("quotes") if isinstance(body, dict) else None
+    if not isinstance(quotes, dict):
+        return []
+    items = []
+    for symbol, quote in quotes.items():
+        if not isinstance(quote, dict) or not all(
+            field in quote for field in ("bid", "ask", "mark", "event_at", "received_at")
+        ):
+            continue
+        age, stale = _quote_age(quote["event_at"])
+        items.append(
+            TickerItem(
+                symbol=symbol,
+                bid=quote["bid"],
+                ask=quote["ask"],
+                mark=quote["mark"],
+                source=source,
+                event_at=quote["event_at"],
+                received_at=quote["received_at"],
+                age_seconds=age,
+                stale=stale,
+            )
         )
-        for s, q in body["quotes"].items()
-    ]
+    return items
 
 
 @router.get("/competitions", response_model=list[CompetitionSummary])
@@ -422,7 +290,7 @@ def events(
                 ),
                 None,
             ),
-            payload=_public_event_payload(e.payload),
+            payload=public_event_payload(e.payload),
         )
         for e in rows
     ]
@@ -431,190 +299,6 @@ def events(
         after=after,
         next_after=items[-1].sequence if items else after,
         has_more=has_more,
-    )
-
-
-@router.get("/competitions/{competition_id}/decisions", response_model=PageDTO[DecisionDTO])
-def decisions(
-    competition_id: str,
-    db: Annotated[Session, Depends(get_db)],
-    limit: int = Query(50),
-    offset: int = Query(0),
-) -> PageDTO[DecisionDTO]:
-    bounded_page(limit, offset)
-    _competition(db, competition_id)
-    rows = db.execute(
-        select(InvocationAttempt, InvocationResult, RoundAgentJob, DecisionRound, AgentRun)
-        .join(InvocationResult, InvocationResult.attempt_id == InvocationAttempt.id)
-        .join(RoundAgentJob, RoundAgentJob.id == InvocationAttempt.job_id)
-        .join(DecisionRound, DecisionRound.id == RoundAgentJob.round_id)
-        .join(AgentRun, AgentRun.id == RoundAgentJob.agent_run_id)
-        .where(DecisionRound.competition_id == competition_id)
-        .order_by(DecisionRound.round_index, AgentRun.manifest_order)
-        .offset(offset)
-        .limit(limit)
-    ).all()
-    items = []
-    for artifact, result, _job, round_row, agent in rows:
-        output = json.loads(result.output_bytes)
-        items.append(
-            DecisionDTO(
-                id=artifact.id,
-                agent_id=agent.id,
-                agent_name=agent.name,
-                round=round_row.round_index,
-                action=output["action"],
-                symbol=output["symbol"],
-                quantity=output["quantity"],
-                justification=output["justification"],
-                market_summary=output["market_summary"],
-                prompt_sha256=artifact.prompt_sha256,
-                output_sha256=result.output_sha256,
-                artifact_url=f"/api/v1/public/decisions/{artifact.id}/artifact",
-                provider=agent.provider,
-                model=agent.model,
-            )
-        )
-    total = (
-        db.scalar(
-            select(func.count())
-            .select_from(InvocationAttempt)
-            .join(InvocationResult, InvocationResult.attempt_id == InvocationAttempt.id)
-            .join(RoundAgentJob, RoundAgentJob.id == InvocationAttempt.job_id)
-            .join(DecisionRound, DecisionRound.id == RoundAgentJob.round_id)
-            .where(DecisionRound.competition_id == competition_id)
-        )
-        or 0
-    )
-    return PageDTO[DecisionDTO](items=items, limit=limit, offset=offset, total=total)
-
-
-@router.get("/decisions/{decision_id}/artifact", response_model=ArtifactDTO)
-def artifact(decision_id: str, db: Annotated[Session, Depends(get_db)]) -> ArtifactDTO:
-    import base64
-
-    item = db.get(InvocationAttempt, decision_id)
-    result = db.scalar(select(InvocationResult).where(InvocationResult.attempt_id == decision_id))
-    if item is None or result is None:
-        raise HTTPException(status_code=404, detail="Decision artifact not found")
-    return ArtifactDTO(
-        id=item.id,
-        prompt_sha256=item.prompt_sha256,
-        output_sha256=result.output_sha256,
-        prompt_bytes_base64=base64.b64encode(item.prompt_bytes).decode(),
-        output_bytes_base64=base64.b64encode(result.output_bytes).decode(),
-    )
-
-
-@router.get("/competitions/{competition_id}/positions", response_model=PageDTO[PositionDTO])
-def positions(
-    competition_id: str,
-    db: Annotated[Session, Depends(get_db)],
-    limit: int = Query(50),
-    offset: int = Query(0),
-    include_closed: bool = False,
-) -> PageDTO[PositionDTO]:
-    bounded_page(limit, offset)
-    _competition(db, competition_id)
-    query = (
-        select(Position, AgentRun)
-        .join(Account, Account.id == Position.account_id)
-        .join(AgentRun, AgentRun.id == Account.agent_run_id)
-    )
-    query = query.where(AgentRun.competition_id == competition_id)
-    if not include_closed:
-        query = query.where(Position.state == "OPEN")
-    rows = db.execute(
-        query.order_by(AgentRun.manifest_order, Position.symbol).offset(offset).limit(limit)
-    ).all()
-    items = [
-        PositionDTO(
-            agent_id=a.id,
-            agent_name=a.name,
-            symbol=p.symbol,
-            side=p.side,
-            quantity=str(p.quantity),
-            average_entry=str(p.average_entry),
-            reserved_margin=str(p.reserved_margin),
-            stop_loss=str(p.stop_loss) if p.stop_loss is not None else None,
-            take_profit=str(p.take_profit) if p.take_profit is not None else None,
-            state=p.state,
-        )
-        for p, a in rows
-    ]
-    count_query = (
-        select(func.count())
-        .select_from(Position)
-        .join(Account, Account.id == Position.account_id)
-        .join(AgentRun, AgentRun.id == Account.agent_run_id)
-        .where(AgentRun.competition_id == competition_id)
-    )
-    if not include_closed:
-        count_query = count_query.where(Position.state == "OPEN")
-    total = db.scalar(count_query) or 0
-    return PageDTO[PositionDTO](items=items, limit=limit, offset=offset, total=total)
-
-
-@router.get("/competitions/{competition_id}/trades", response_model=PageDTO[TradeDTO])
-def trades(
-    competition_id: str,
-    db: Annotated[Session, Depends(get_db)],
-    limit: int = Query(50),
-    offset: int = Query(0),
-) -> PageDTO[TradeDTO]:
-    bounded_page(limit, offset)
-    _competition(db, competition_id)
-    rows = db.execute(
-        select(Fill, Order, Account, AgentRun)
-        .join(Order, Order.id == Fill.order_id)
-        .join(Account, Account.id == Order.account_id)
-        .join(AgentRun, AgentRun.id == Account.agent_run_id)
-        .where(AgentRun.competition_id == competition_id)
-        .order_by(Fill.id)
-        .offset(offset)
-        .limit(limit)
-    ).all()
-    items = [
-        TradeDTO(
-            agent_id=a.id,
-            agent_name=a.name,
-            symbol=f.symbol,
-            side=f.side,
-            quantity=str(f.quantity),
-            price=str(f.price),
-            fee=str(f.fee),
-            order_id=o.id,
-            status=o.status,
-        )
-        for f, o, _, a in rows
-    ]
-    total = (
-        db.scalar(
-            select(func.count())
-            .select_from(Fill)
-            .join(Order, Order.id == Fill.order_id)
-            .join(Account, Account.id == Order.account_id)
-            .join(AgentRun, AgentRun.id == Account.agent_run_id)
-            .where(AgentRun.competition_id == competition_id)
-        )
-        or 0
-    )
-    return PageDTO[TradeDTO](items=items, limit=limit, offset=offset, total=total)
-
-
-@router.get("/models/{agent_id}", response_model=ModelDTO)
-def model_details(agent_id: str, db: Annotated[Session, Depends(get_db)]) -> ModelDTO:
-    agent = db.get(AgentRun, agent_id)
-    if agent is None:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    return ModelDTO(
-        id=agent.id,
-        name=agent.name,
-        provider=agent.provider,
-        model=agent.model,
-        status=agent.status,
-        source_label="DEMO REPLAY",
-        api_key_configured=bool(agent.api_key_env),
     )
 
 
@@ -630,7 +314,16 @@ def export_competition(
     for offset in range(0, limit, 200):
         page_size = min(200, limit - offset)
         equity_rows.extend(equity_curve(competition_id, db, limit=page_size, offset=offset).items)
-        decision_rows.extend(decisions(competition_id, db, limit=page_size, offset=offset).items)
+        decision_rows.extend(
+            decisions(
+                competition_id,
+                db,
+                limit=page_size,
+                offset=offset,
+                agent_id=None,
+                symbol=None,
+            ).items
+        )
     total_equity = (
         db.scalar(
             select(func.count())
@@ -644,10 +337,13 @@ def export_competition(
     total_decisions = (
         db.scalar(
             select(func.count())
-            .select_from(InvocationAttempt)
-            .join(RoundAgentJob, RoundAgentJob.id == InvocationAttempt.job_id)
+            .select_from(RoundAgentJob)
+            .outerjoin(InvocationAttempt, InvocationAttempt.job_id == RoundAgentJob.id)
             .join(DecisionRound, DecisionRound.id == RoundAgentJob.round_id)
-            .where(DecisionRound.competition_id == competition_id)
+            .where(
+                DecisionRound.competition_id == competition_id,
+                or_(InvocationAttempt.id.is_not(None), RoundAgentJob.state == "TERMINAL"),
+            )
         )
         or 0
     )
@@ -659,69 +355,4 @@ def export_competition(
         truncated=total_equity > len(equity_rows) or total_decisions > len(decision_rows),
         exported_decisions=len(decision_rows),
         exported_equity_points=len(equity_rows),
-    )
-
-
-_stream_slots = asyncio.Semaphore(12)
-
-
-async def _read_events(competition_id: str, after: int) -> list[DomainEvent]:
-    def query() -> list[DomainEvent]:
-        with SessionLocal() as db:
-            return list(
-                db.scalars(
-                    select(DomainEvent)
-                    .where(
-                        DomainEvent.competition_id == competition_id, DomainEvent.sequence > after
-                    )
-                    .order_by(DomainEvent.sequence)
-                    .limit(100)
-                )
-            )
-
-    return await asyncio.to_thread(query)
-
-
-@router.get("/competitions/{competition_id}/stream")
-async def stream(
-    competition_id: str,
-    db: Annotated[Session, Depends(get_db)],
-    last_event_id: Annotated[str | None, Header(alias="Last-Event-ID")] = None,
-) -> StreamingResponse:
-    _competition(db, competition_id)
-    if _stream_slots.locked() and _stream_slots._value <= 0:
-        raise HTTPException(status_code=429, detail="Stream limit reached")
-    try:
-        after = max(0, int(last_event_id or "0"))
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid Last-Event-ID") from exc
-
-    async def body() -> AsyncIterator[str]:
-        async with _stream_slots:
-            started = asyncio.get_running_loop().time()
-            cursor = after
-            while asyncio.get_running_loop().time() - started < get_settings().stream_seconds:
-                events = await _read_events(competition_id, cursor)
-                if not events:
-                    yield ": heartbeat\n\n"
-                    await asyncio.sleep(1)
-                    continue
-                for event in events:
-                    cursor = event.sequence
-                    data = json.dumps(
-                        {
-                            "type": event.event_type,
-                            "timestamp": event.event_at.isoformat(),
-                            "payload": _public_event_payload(event.payload).model_dump(
-                                exclude_none=True
-                            ),
-                        },
-                        separators=(",", ":"),
-                    )
-                    yield f"id: {event.sequence}\ndata: {data}\n\n"
-
-    return StreamingResponse(
-        body(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
     )

@@ -30,17 +30,20 @@ function slicePolygon(slice: Slice): Vec[] {
   return [...slice.points.map(({ x, y }) => ({ x, y })), { x: slice.points.at(-1)!.x, y: slice.baseline }, { x: slice.points[0]!.x, y: slice.baseline }];
 }
 
-function gridSlicePolygon(id: number): Vec[] {
-  const slice = slices[id]!;
+function gridCellOrigin(id: number): Vec {
   const column = id % 20;
   const row = Math.floor(id / 20);
-  const x = 36 + column * 57.7;
-  const y = 60 + row * 67.2;
+  return { x: 36 + column * 57.7, y: 60 + row * 67.2 };
+}
+
+function gridSlicePolygon(id: number): Vec[] {
+  const slice = slices[id]!;
+  const origin = gridCellOrigin(id);
   const upper = slice.points.map((point) => ({
-    x: x + point.x / ART_WIDTH * 34,
-    y: y + 3 + Math.max(0, Math.min(1, (point.y - 140) / 480)) * 29,
+    x: origin.x + point.x / ART_WIDTH * 34,
+    y: origin.y + 3 + Math.max(0, Math.min(1, (point.y - 140) / 480)) * 29,
   }));
-  return [...upper, { x: x + 34, y: y + 35 }, { x, y: y + 35 }];
+  return [...upper, { x: origin.x + 34, y: origin.y + 35 }, { x: origin.x, y: origin.y + 35 }];
 }
 
 function drawSlice(ctx: CanvasRenderingContext2D, points: Vec[], id: number, alpha = 1, selected = false, selectedFill = 0.13): void {
@@ -291,8 +294,7 @@ function transferMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target
   const amount = Math.min(1, Math.max(0, progress));
   for (let id = 0; id < SLICE_COUNT; id += 1) {
     const slice = slices[id]!;
-    const col = id % 20; const row = Math.floor(id / 20);
-    const gridX = 36 + col * 57.7; const gridY = 60 + row * 67.2;
+    const gridOrigin = gridCellOrigin(id);
     const scaleX = source.width / ART_WIDTH; const scaleY = source.height / ART_HEIGHT;
     ctx.beginPath();
     for (let pointIndex = 0; pointIndex < 123; pointIndex += 1) {
@@ -300,12 +302,12 @@ function transferMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target
       if (pointIndex < 121) {
         const point = slice.points[pointIndex]!;
         x1 = source.left + point.x * scaleX; y1 = source.top + point.y * scaleY;
-        x2 = target.left + gridX + point.x / ART_WIDTH * 34;
-        y2 = target.top + gridY + 3 + Math.max(0, Math.min(1, (point.y - 140) / 480)) * 29;
+        x2 = target.left + gridOrigin.x + point.x / ART_WIDTH * 34;
+        y2 = target.top + gridOrigin.y + 3 + Math.max(0, Math.min(1, (point.y - 140) / 480)) * 29;
       } else {
         const right = pointIndex === 121; const point = slice.points[right ? 120 : 0]!;
         x1 = source.left + point.x * scaleX; y1 = source.top + slice.baseline * scaleY;
-        x2 = target.left + gridX + (right ? 34 : 0); y2 = target.top + gridY + 35;
+        x2 = target.left + gridOrigin.x + (right ? 34 : 0); y2 = target.top + gridOrigin.y + 35;
       }
       const x = x1 + (x2 - x1) * amount; const y = y1 + (y2 - y1) * amount;
       if (pointIndex === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);

@@ -44,6 +44,7 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
       {ticker.data?.[0] && <span className="ticker-source">{ticker.data[0].source} · {formatTimestamp(ticker.data[0].received_at)}</span>}
     </div>
     {status.isError && <div className="system-notice" role="status">Public API unavailable. {status.error.message} <button onClick={() => void status.refetch()}>Retry</button></div>}
+    {ticker.isError && <div className="system-notice" role="alert">Market ticker unavailable. {ticker.error.message} <button onClick={() => void ticker.refetch()}>Retry ticker</button></div>}
     <main id="terminal-main" className="terminal-main">{children}</main>
     <footer className="terminal-footer"><span>Open Alpha Arena Lab</span><span>Paper trading · results are not financial advice</span><Link to="/">Methodology</Link></footer>
   </div>;

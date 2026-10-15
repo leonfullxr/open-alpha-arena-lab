@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "max_rounds": 5,
+  "max_input_body_bytes": 20000,
+  "max_output_tokens": 1000,
+  "max_spend_usd": "2.50",
+  "max_cost_per_request_usd": "0.50",
+  "reservation_price_assumption_usd_per_million": {
+    "input": "10",
+    "output": "30"
+  },
+  "api_key_env": "OPENCODE_API_KEY",
+  "models": [
+    {
+      "name": "MiMo Flash",
+      "provider": "opencode_go",
+      "model": "mimo-v2.6-flash"
+    },
+    {
+      "name": "GLM Flash",
+      "provider": "opencode_go",
+      "model": "glm-5.3-flash"
+    }
+  ]
+}

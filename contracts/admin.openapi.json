@@ -67,6 +67,121 @@
         "title": "AdminStatus",
         "type": "object"
       },
+      "AgentSpecIn": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "prompt_version_id": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Prompt Version Id",
+            "type": "string"
+          },
+          "provider_profile_id": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Provider Profile Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "provider_profile_id",
+          "prompt_version_id"
+        ],
+        "title": "AgentSpecIn",
+        "type": "object"
+      },
+      "CompetitionCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "initial_balance": {
+            "title": "Initial Balance",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "rules_sha256": {
+            "title": "Rules Sha256",
+            "type": "string"
+          },
+          "source_label": {
+            "title": "Source Label",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "state",
+          "profile",
+          "source_label",
+          "rules_sha256",
+          "initial_balance"
+        ],
+        "title": "CompetitionCreated",
+        "type": "object"
+      },
+      "CompetitionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentSpecIn"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Agents",
+            "type": "array"
+          },
+          "inference_budget_usd": {
+            "title": "Inference Budget Usd",
+            "type": "string"
+          },
+          "initial_balance": {
+            "default": "10000",
+            "title": "Initial Balance",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "profile": {
+            "default": "alpha_2025_baseline",
+            "title": "Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "inference_budget_usd",
+          "agents"
+        ],
+        "title": "CompetitionIn",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -116,6 +231,220 @@
           "role"
         ],
         "title": "LoginOut",
+        "type": "object"
+      },
+      "PromptVersionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "template": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Template",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "template"
+        ],
+        "title": "PromptVersionIn",
+        "type": "object"
+      },
+      "PromptVersionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "sha256"
+        ],
+        "title": "PromptVersionOut",
+        "type": "object"
+      },
+      "ProviderProfileIn": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Adapter",
+            "type": "string"
+          },
+          "api_key_env": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Api Key Env",
+            "type": "string"
+          },
+          "input_cost_per_million": {
+            "title": "Input Cost Per Million",
+            "type": "string"
+          },
+          "max_cost_per_request_usd": {
+            "title": "Max Cost Per Request Usd",
+            "type": "string"
+          },
+          "max_input_body_bytes": {
+            "default": 250000,
+            "maximum": 250000.0,
+            "minimum": 1.0,
+            "title": "Max Input Body Bytes",
+            "type": "integer"
+          },
+          "max_output_tokens": {
+            "default": 512,
+            "maximum": 2000.0,
+            "minimum": 1.0,
+            "title": "Max Output Tokens",
+            "type": "integer"
+          },
+          "model": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "output_cost_per_million": {
+            "title": "Output Cost Per Million",
+            "type": "string"
+          },
+          "temperature": {
+            "default": "0",
+            "title": "Temperature",
+            "type": "string"
+          },
+          "version": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "adapter",
+          "model",
+          "api_key_env",
+          "input_cost_per_million",
+          "output_cost_per_million",
+          "max_cost_per_request_usd"
+        ],
+        "title": "ProviderProfileIn",
+        "type": "object"
+      },
+      "ProviderProfileOut": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "adapter": {
+            "title": "Adapter",
+            "type": "string"
+          },
+          "api_key_env": {
+            "title": "Api Key Env",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input_cost_per_million": {
+            "title": "Input Cost Per Million",
+            "type": "string"
+          },
+          "max_cost_per_request_usd": {
+            "title": "Max Cost Per Request Usd",
+            "type": "string"
+          },
+          "max_input_body_bytes": {
+            "title": "Max Input Body Bytes",
+            "type": "integer"
+          },
+          "max_output_tokens": {
+            "title": "Max Output Tokens",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "output_cost_per_million": {
+            "title": "Output Cost Per Million",
+            "type": "string"
+          },
+          "settings_sha256": {
+            "title": "Settings Sha256",
+            "type": "string"
+          },
+          "temperature": {
+            "title": "Temperature",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "adapter",
+          "model",
+          "api_key_env",
+          "input_cost_per_million",
+          "output_cost_per_million",
+          "max_cost_per_request_usd",
+          "max_input_body_bytes",
+          "max_output_tokens",
+          "temperature",
+          "settings_sha256",
+          "active"
+        ],
+        "title": "ProviderProfileOut",
         "type": "object"
       },
       "ValidationError": {
@@ -186,6 +515,42 @@
           }
         },
         "summary": "List Competitions"
+      },
+      "post": {
+        "operationId": "add_competition_competitions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompetitionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Competition"
       }
     },
     "/competitions/{competition_id}/{action}": {
@@ -298,6 +663,166 @@
           }
         },
         "summary": "Logout"
+      }
+    },
+    "/prompts": {
+      "get": {
+        "operationId": "list_prompts_prompts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PromptVersionOut"
+                  },
+                  "title": "Response List Prompts Prompts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Prompts"
+      },
+      "post": {
+        "operationId": "add_prompt_prompts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptVersionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptVersionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Prompt"
+      }
+    },
+    "/providers": {
+      "get": {
+        "operationId": "list_provider_profiles_providers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderProfileOut"
+                  },
+                  "title": "Response List Provider Profiles Providers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Provider Profiles"
+      },
+      "post": {
+        "operationId": "add_provider_profile_providers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderProfileIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Provider Profile"
+      }
+    },
+    "/providers/{provider_id}/test": {
+      "post": {
+        "description": "Validate stored metadata and key presence without making a paid provider call.",
+        "operationId": "validate_provider_profile_providers__provider_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "title": "Provider Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Validate Provider Profile Providers  Provider Id  Test Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Provider Profile"
       }
     },
     "/status": {

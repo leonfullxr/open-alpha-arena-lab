@@ -6,7 +6,7 @@ const ID = "[A-Za-z0-9_-]{1,128}";
 const PUBLIC_PATHS = [
   new RegExp(`^${PUBLIC_ROOT}/competitions$`),
   new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}$`),
-  new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}/(?:equity|leaderboard|events|decisions|positions|trades|export|stream)$`),
+  new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}/(?:equity|chart|leaderboard|metrics|events|decisions|positions|trades|export|stream)$`),
   new RegExp(`^${PUBLIC_ROOT}/models/${ID}$`),
   new RegExp(`^${PUBLIC_ROOT}/decisions/${ID}/artifact$`),
   new RegExp(`^${PUBLIC_ROOT}/ticker$`),
@@ -23,9 +23,10 @@ const ADMIN_WRITE_PATHS = [
   /^\/api\/v1\/admin\/competitions$/,
   new RegExp(`^/api/v1/admin/competitions/${ID}/(?:start|pause|resume|finish)$`),
   /^\/api\/v1\/admin\/providers$/,
-  /^\/api\/v1\/admin\/providers\/test$/,
+  new RegExp(`^/api/v1/admin/providers/${ID}/test$`),
   /^\/api\/v1\/admin\/prompts$/,
 ];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const FORWARDED_REQUEST_HEADERS = ["accept", "accept-language", "content-type", "origin", "if-none-match", "if-modified-since", "range", "last-event-id"];
 const FORWARDED_RESPONSE_HEADERS = ["accept-ranges", "cache-control", "content-disposition", "content-length", "content-range", "content-type", "etag", "last-modified", "retry-after", "vary"];
 
@@ -43,6 +44,41 @@ function validPublicPath(pathname: string): boolean {
 }
 
 function boundedQuery(url: URL): boolean {
+  const pathname = url.pathname;
+  const allowed = pathname === `${PUBLIC_ROOT}/ticker`
+    ? new Set(["competition_id"])
+    : pathname === `${PUBLIC_ROOT}/competitions`
+      ? new Set(["limit", "offset"])
+    : pathname.endsWith("/events")
+      ? new Set(["after", "limit"])
+      : pathname.endsWith("/export")
+        ? new Set(["limit", "offset"])
+      : pathname.endsWith("/chart")
+        ? new Set(["range", "points"])
+        : /\/(?:equity|trades|positions|decisions)$/.test(pathname)
+          ? new Set(["limit", "offset", "agent_id", "symbol", ...(pathname.endsWith("/positions") ? ["include_closed"] : [])])
+          : new Set<string>();
+  const queryKeys: string[] = [];
+  url.searchParams.forEach((_value, key) => queryKeys.push(key));
+  for (const key of queryKeys) {
+    if (!allowed.has(key) || url.searchParams.getAll(key).length !== 1) return false;
+  }
+  if (pathname === `${PUBLIC_ROOT}/ticker`) {
+    const competitionId = url.searchParams.get("competition_id");
+    return competitionId === null || UUID.test(competitionId);
+  }
+  if (pathname.endsWith("/chart")) {
+    const range = url.searchParams.get("range");
+    const points = url.searchParams.get("points");
+    if (range !== null && range !== "ALL" && range !== "72H" && range !== "24H") return false;
+    if (points !== null && (!/^\d{1,3}$/.test(points) || Number(points) < 2 || Number(points) > 400)) return false;
+  }
+  for (const key of ["agent_id", "symbol"] as const) {
+    const value = url.searchParams.get(key);
+    if (value !== null && !(key === "agent_id" ? new RegExp(`^${ID}$`).test(value) : /^[A-Z0-9._-]{1,24}$/.test(value))) return false;
+  }
+  const includeClosed = url.searchParams.get("include_closed");
+  if (includeClosed !== null && includeClosed !== "true" && includeClosed !== "false") return false;
   const limitMaximum = url.pathname.endsWith("/export") ? 2000 : 200;
   for (const [key, maximum] of [["limit", limitMaximum], ["offset", 100000]] as const) {
     const values = url.searchParams.getAll(key);
@@ -53,6 +89,8 @@ function boundedQuery(url: URL): boolean {
       if (!value || !/^\d{1,7}$/.test(value) || Number(value) < minimum || Number(value) > maximum) return false;
     }
   }
+  const afterValues = url.searchParams.getAll("after");
+  if (afterValues.length === 1 && (!/^\d{1,16}$/.test(afterValues[0] ?? "") || Number(afterValues[0]) > Number.MAX_SAFE_INTEGER)) return false;
   return true;
 }
 

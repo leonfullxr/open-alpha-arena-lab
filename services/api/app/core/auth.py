@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
+import threading
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -24,6 +25,8 @@ COOKIE = "__Host-arena_session" if get_settings().cookie_secure else "arena_sess
 _password_hasher = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
 _dummy_hash = _password_hasher.hash("codex-dummy-auth-check")
 _attempts: dict[str, list[float]] = {}
+_attempts_lock = threading.Lock()
+_MAX_LOGIN_RATE_KEYS = 4096
 _jwks_clients: dict[str, PyJWKClient] = {}
 
 
@@ -57,11 +60,20 @@ def local_login(
     require_origin(request)
     key = request.client.host if request.client else "unknown"
     now = time.monotonic()
-    recent = [at for at in _attempts.get(key, []) if now - at < 60]
-    if len(recent) >= 10:
-        raise HTTPException(status_code=429, detail="Too many login attempts")
-    recent.append(now)
-    _attempts[key] = recent
+    with _attempts_lock:
+        for host, timestamps in tuple(_attempts.items()):
+            live = [at for at in timestamps if now - at < 60]
+            if live:
+                _attempts[host] = live
+            else:
+                del _attempts[host]
+        recent = _attempts.get(key, [])
+        if len(recent) >= 10:
+            raise HTTPException(status_code=429, detail="Too many login attempts")
+        if key not in _attempts and len(_attempts) >= _MAX_LOGIN_RATE_KEYS:
+            oldest_host = min(_attempts, key=lambda host: _attempts[host][-1])
+            del _attempts[oldest_host]
+        _attempts[key] = [*recent, now]
     user = db.scalar(select(User).where(User.username == username))
     encoded = user.password_hash if user else _dummy_hash
     valid = verify_password(encoded, password)

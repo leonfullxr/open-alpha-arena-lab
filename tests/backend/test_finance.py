@@ -12,8 +12,12 @@ from app.engine.finance import (
     apply_action,
     apply_funding,
     equity,
+    estimated_liquidation_required,
+    evaluate_risk,
+    liquidate_cross_margin_estimate,
     protective_exit,
     quote_set_is_trusted,
+    rules_from_config,
     unrealized_pnl,
 )
 from app.engine.finance import (
@@ -98,9 +102,23 @@ def test_fees_funding_and_reserved_margin_do_not_reduce_equity() -> None:
     assert result.account.cash == D("9997.999000000000000000")
     assert result.account.reserved_margin == D("1000.500000000000000000")
     assert result.equity == D("9996.999000000000000000")  # spread mark plus the opening fee
-    funded = apply_funding(result.account, {"ETH": quote}, {"ETH": instrument}, D("0.001"))
+    funded = apply_funding(
+        result.account,
+        {"ETH": quote},
+        {"ETH": instrument},
+        D("0.001"),
+        funding_prices={"ETH": D("2000")},
+    )
     assert funded.account.funding == D("-2.000000000000000000")
     assert funded.account.cash == D("9995.999000000000000000")
+    reversed_funding = apply_funding(
+        result.account,
+        {"ETH": quote},
+        {"ETH": instrument},
+        D("-0.001"),
+        funding_prices={"ETH": D("2000")},
+    )
+    assert reversed_funding.account.funding == D("2.000000000000000000")
     assert sum(p.amount for p in result.postings) == 0
     assert sum(p.amount for p in funded.postings) == 0
 
@@ -317,3 +335,149 @@ def test_quote_set_rejects_duplicate_future_and_nonfinite_values() -> None:
             rules=rules,
             idempotency_key="off-step",
         )
+
+
+def test_frozen_rules_apply_entry_limits_and_risk_halt_keeps_closes_available() -> None:
+    cfg = {
+        "commission_rate": "0",
+        "slippage_bps": "0",
+        "leverage_max": "2",
+        "max_notional": "500",
+        "max_gross_exposure": "150",
+        "maintenance_margin_rate": "0.01",
+        "max_positions": 6,
+        "quote_max_age_seconds": "10",
+        "quote_set_max_skew_seconds": "5",
+        "max_daily_loss": "100",
+        "max_drawdown_fraction": "0.1",
+        "allow_pyramiding": False,
+        "liquidation_fee_rate": "0.005",
+        "funding_mode": "hourly_historical_rate",
+        "funding_interval_hours": 1,
+        "funding_rate_basis": "funding_history",
+        "funding_price_basis": "oracle_px",
+        "fixture_funding_rate_per_hour": "0",
+        "risk_policy_version": "risk-v1",
+    }
+    rules = rules_from_config(cfg)
+    quote = Quote("BTC", D("99"), D("100"), D("100"))
+    with pytest.raises(FinanceError, match="leverage"):
+        apply_action(
+            Account.create(D("1000")),
+            action=Action.OPEN_LONG,
+            symbol="BTC",
+            quantity=D("1"),
+            leverage=D("3"),
+            quote=quote,
+            instrument=Instrument("BTC"),
+            rules=rules,
+            idempotency_key="too-much-leverage",
+        )
+    with pytest.raises(FinanceError, match="collateral"):
+        apply_action(
+            Account.create(D("40")),
+            action=Action.OPEN_LONG,
+            symbol="BTC",
+            quantity=D("1"),
+            leverage=D("1"),
+            quote=quote,
+            instrument=Instrument("BTC"),
+            rules=rules,
+            idempotency_key="insufficient-collateral",
+        )
+    account = Account.create(D("1000"))
+    first = apply_action(
+        account,
+        action=Action.OPEN_LONG,
+        symbol="BTC",
+        quantity=D("1"),
+        leverage=D("2"),
+        quote=quote,
+        instrument=Instrument("BTC"),
+        rules=rules,
+        idempotency_key="first-entry",
+    )
+    eth_quote = Quote("ETH", D("99"), D("100"), D("100"))
+    with pytest.raises(FinanceError, match="gross exposure"):
+        apply_action(
+            first.account,
+            action=Action.OPEN_LONG,
+            symbol="ETH",
+            quantity=D("1"),
+            leverage=D("2"),
+            quote=eth_quote,
+            instrument=Instrument("ETH"),
+            rules=rules,
+            idempotency_key="gross-limit",
+            current_quotes={"BTC": quote},
+            current_instruments={"BTC": Instrument("BTC")},
+        )
+
+    assert first.account.risk_day is not None
+    halted, reasons = evaluate_risk(first.account, D("800"), rules, as_of=first.account.risk_day)
+    assert reasons == ("MAX_DAILY_LOSS", "MAX_DRAWDOWN")
+    assert halted.halted
+    with pytest.raises(FinanceError, match="halted"):
+        apply_action(
+            halted,
+            action=Action.OPEN_LONG,
+            symbol="ETH",
+            quantity=D("1"),
+            leverage=D("2"),
+            quote=eth_quote,
+            instrument=Instrument("ETH"),
+            rules=rules,
+            idempotency_key="halted-entry",
+        )
+    closed = apply_action(
+        halted,
+        action=Action.CLOSE_POSITION,
+        symbol="BTC",
+        quantity=D("0"),
+        leverage=D("1"),
+        quote=Quote("BTC", D("99"), D("100"), D("99")),
+        instrument=Instrument("BTC"),
+        rules=rules,
+        idempotency_key="risk-exit",
+    )
+    assert not closed.account.positions
+
+
+def test_protective_close_allows_missing_other_mark_and_estimated_liquidation_is_explicit():
+    rules = Rules(commission_rate=D("0"), slippage_bps=D("0"))
+    account = Account.create(D("1000"))
+    account.positions["BTC"] = EnginePosition(
+        "BTC", Side.LONG, D("1"), D("100"), D("50"), stop_loss=D("95")
+    )
+    account.positions["ETH"] = EnginePosition("ETH", Side.SHORT, D("1"), D("50"), D("25"))
+    exit_result = protective_exit(
+        account,
+        "BTC",
+        Quote("BTC", D("90"), D("92"), D("91")),
+        Instrument("BTC"),
+        rules,
+        idempotency_key="protective:position-1:quote-set-1",
+    )
+    assert exit_result is not None
+    assert exit_result.equity is None
+    assert set(exit_result.account.positions) == {"ETH"}
+    assert exit_result.fills[0].price == D("90")
+
+    distressed = Account.create(D("20"))
+    distressed.positions["BTC"] = EnginePosition("BTC", Side.LONG, D("1"), D("100"), D("50"))
+    distress_quotes = {"BTC": Quote("BTC", D("0.9"), D("1"), D("1"))}
+    instruments = {"BTC": Instrument("BTC")}
+    liquidation_rules = Rules(commission_rate=D("0"), slippage_bps=D("0"))
+    assert estimated_liquidation_required(
+        distressed, distress_quotes, instruments, liquidation_rules
+    )
+    result = liquidate_cross_margin_estimate(
+        distressed,
+        distress_quotes,
+        instruments,
+        liquidation_rules,
+        idempotency_prefix="risk:quote-set-1",
+    )
+    assert result is not None
+    assert not result.account.positions
+    assert result.events[0][0] == "ESTIMATED_CROSS_MARGIN_LIQUIDATION"

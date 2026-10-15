@@ -91,6 +91,89 @@ describe("edge request boundaries", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("allows competition metrics and validates the optional ticker competition UUID", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(String(input), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const env = makeEnv();
+    const metrics = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/metrics"),
+      env,
+    );
+    const scopedTicker = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/ticker?competition_id=2d5cb149-9597-4ae2-88cb-7a37e28a8841"),
+      env,
+    );
+    const invalidTicker = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/ticker?competition_id=not-a-uuid"),
+      env,
+    );
+    const repeatedTicker = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/ticker?competition_id=2d5cb149-9597-4ae2-88cb-7a37e28a8841&competition_id=2d5cb149-9597-4ae2-88cb-7a37e28a8841"),
+      env,
+    );
+
+    expect(metrics.status).toBe(200);
+    expect(scopedTicker.status).toBe(200);
+    expect(invalidTicker.status).toBe(400);
+    expect(repeatedTicker.status).toBe(400);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(`${apiOrigin}/api/v1/public/ticker?competition_id=2d5cb149-9597-4ae2-88cb-7a37e28a8841`);
+  });
+
+  it("forwards chart ranges and enforces the requested sampling bounds", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(String(input), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const env = makeEnv();
+    const accepted = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/chart?range=72H&points=400"),
+      env,
+    );
+    const invalidRange = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/chart?range=7D"),
+      env,
+    );
+    const tooFewPoints = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/chart?points=1"),
+      env,
+    );
+    const tooManyPoints = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/chart?points=401"),
+      env,
+    );
+    const duplicateRange = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/chart?range=ALL&range=24H"),
+      env,
+    );
+
+    expect(accepted.status).toBe(200);
+    expect(invalidRange.status).toBe(400);
+    expect(tooFewPoints.status).toBe(400);
+    expect(tooManyPoints.status).toBe(400);
+    expect(duplicateRange.status).toBe(400);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`${apiOrigin}/api/v1/public/competitions/c1/chart?range=72H&points=400`);
+  });
+
+  it("keeps new admin writes behind Access and rejects wrong verbs or paths", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const env = makeEnv();
+    const writes = [
+      new Request("https://arena.test/api/v1/admin/competitions", { method: "POST", body: "{}" }),
+      new Request("https://arena.test/api/v1/admin/providers", { method: "POST", body: "{}" }),
+      new Request("https://arena.test/api/v1/admin/prompts", { method: "POST", body: "{}" }),
+      new Request("https://arena.test/api/v1/admin/providers/2d5cb149-9597-4ae2-88cb-7a37e28a8841/test", { method: "POST" }),
+    ];
+    const anonymous = await Promise.all(writes.map((request) => worker.fetch(request, env)));
+    const wrongVerb = await worker.fetch(new Request("https://arena.test/api/v1/admin/providers/2d5cb149-9597-4ae2-88cb-7a37e28a8841/test"), env);
+    const unknown = await worker.fetch(new Request("https://arena.test/api/v1/admin/providers/validate", { method: "POST" }), env);
+
+    expect(anonymous.map((response) => response.status)).toEqual([403, 403, 403, 403]);
+    expect(wrongVerb.status).toBe(404);
+    expect(unknown.status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("permits export limits through 2000 and requires a real rate-limit binding", async () => {
     const fetchMock = vi.fn(async () => new Response("ok", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -224,16 +307,21 @@ describe("edge request boundaries", () => {
       ADMIN_SUBJECTS: "admin-user-1",
       ARENA_RATE_LIMITER: { limit: adminLimiter },
     });
-    const request = new Request("https://arena.test/api/v1/admin/status", {
+    const request = new Request("https://arena.test/api/v1/admin/providers", {
+      method: "POST",
       headers: {
         "cf-access-jwt-assertion": token,
         "x-arena-user-jwt": "forged-backend-token",
         origin: "https://arena.test",
+        "content-type": "application/json",
       },
+      body: JSON.stringify({ name: "reviewed-profile", api_key_env: "TEST_KEY" }),
     });
     const denied = await Promise.all(invalidTokens.map((invalidToken) => worker.fetch(
-      new Request("https://arena.test/api/v1/admin/status", {
-        headers: { "cf-access-jwt-assertion": invalidToken },
+      new Request("https://arena.test/api/v1/admin/providers", {
+        method: "POST",
+        headers: { "cf-access-jwt-assertion": invalidToken, "content-type": "application/json" },
+        body: "{}",
       }),
       env,
     )));
@@ -245,6 +333,10 @@ describe("edge request boundaries", () => {
 
     expect(response.status).toBe(200);
     const forwarded = new Headers(originFetch.mock.calls[0]?.[1]?.headers);
+    expect(String(fetchMockCallUrl(originFetch.mock.calls[0]?.[0]))).toBe(`${apiOrigin}/api/v1/admin/providers`);
+    expect(originFetch.mock.calls[0]?.[1]?.method).toBe("POST");
+    expect(originFetch.mock.calls[0]?.[1]?.body).toBeTruthy();
+    expect(forwarded.get("content-type")).toBe("application/json");
     expect(forwarded.get("x-arena-user-jwt")).toBe(token);
     expect(forwarded.get("x-arena-origin-token")).toBe("origin-secret");
     expect(forwarded.get("origin")).toBe("https://arena.test");
@@ -280,3 +372,8 @@ describe("edge request boundaries", () => {
     expect(await failure.text()).not.toContain("database password leaked");
   });
 });
+
+function fetchMockCallUrl(input: RequestInfo | URL | undefined): string {
+  if (input instanceof Request) return input.url;
+  return input === undefined ? "" : String(input);
+}

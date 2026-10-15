@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -9,6 +9,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -18,6 +19,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -65,6 +67,35 @@ class PromptVersion(Base):
     __table_args__ = (UniqueConstraint("name", "version"),)
 
 
+class ProviderProfile(Base):
+    __tablename__ = "provider_profiles"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    adapter: Mapped[str] = mapped_column(String(32), nullable=False)
+    model: Mapped[str] = mapped_column(String(120), nullable=False)
+    endpoint: Mapped[str] = mapped_column(String(300), nullable=False)
+    api_key_env: Mapped[str] = mapped_column(String(80), nullable=False)
+    input_cost_per_million: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    output_cost_per_million: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    max_cost_per_request_usd: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    max_input_body_bytes: Mapped[int] = mapped_column("max_input_bytes", Integer, nullable=False)
+    max_output_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
+    temperature: Mapped[Decimal] = mapped_column(Numeric(8, 4, asdecimal=True), nullable=False)
+    settings_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (
+        UniqueConstraint("name", "version"),
+        CheckConstraint("version > 0"),
+        CheckConstraint("input_cost_per_million > 0"),
+        CheckConstraint("output_cost_per_million > 0"),
+        CheckConstraint("max_input_bytes between 1 and 250000"),
+        CheckConstraint("max_output_tokens between 1 and 2000"),
+        CheckConstraint("temperature between 0 and 2"),
+    )
+
+
 class AgentRun(Base):
     __tablename__ = "agent_runs"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -75,6 +106,7 @@ class AgentRun(Base):
     name: Mapped[str] = mapped_column(String(80), nullable=False)
     provider: Mapped[str] = mapped_column(String(40), nullable=False)
     model: Mapped[str] = mapped_column(String(100), nullable=False)
+    provider_profile_id: Mapped[str | None] = mapped_column(ForeignKey("provider_profiles.id"))
     model_settings_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     settings_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     prompt_version_id: Mapped[str] = mapped_column(ForeignKey("prompt_versions.id"), nullable=False)
@@ -95,6 +127,9 @@ class Account(Base):
     funding: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=0)
     reserved_margin: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=0)
     halted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    peak_equity: Mapped[Decimal | None] = mapped_column(MONEY)
+    daily_baseline_equity: Mapped[Decimal | None] = mapped_column(MONEY)
+    risk_day: Mapped[date | None] = mapped_column(Date)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
@@ -115,6 +150,7 @@ class DecisionRound(Base):
     round_index: Mapped[int] = mapped_column(Integer, nullable=False)
     logical_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     snapshot_id: Mapped[str] = mapped_column(ForeignKey("market_snapshots.id"), nullable=False)
+    execution_quote_set_id: Mapped[str | None] = mapped_column(ForeignKey("quote_sets.id"))
     deadline_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     __table_args__ = (UniqueConstraint("competition_id", "round_index"),)
 
@@ -183,6 +219,34 @@ class RoundAgentJob(Base):
     )
 
 
+class DailyBudget(Base):
+    __tablename__ = "daily_budgets"
+    budget_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    cap_usd: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    reserved_usd: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=0)
+    __table_args__ = (
+        CheckConstraint("cap_usd > 0"),
+        CheckConstraint("reserved_usd >= 0"),
+        CheckConstraint("reserved_usd <= cap_usd"),
+    )
+
+
+class SpendReservation(Base):
+    __tablename__ = "spend_reservations"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    job_id: Mapped[str] = mapped_column(
+        ForeignKey("round_agent_jobs.id"), nullable=False, unique=True
+    )
+    competition_id: Mapped[str] = mapped_column(ForeignKey("competitions.id"), nullable=False)
+    budget_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    amount_usd: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    reserved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (
+        CheckConstraint("amount_usd > 0"),
+        Index("ix_spend_reservations_competition_day", "competition_id", "budget_date"),
+    )
+
+
 class InvocationAttempt(Base):
     __tablename__ = "invocation_attempts"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -207,6 +271,7 @@ class InvocationResult(Base):
     output_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     output_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     latency_ms: Mapped[int | None] = mapped_column(Integer)
+    estimated_cost_usd: Mapped[Decimal | None] = mapped_column(MONEY)
     usage: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     error_code: Mapped[str | None] = mapped_column(String(80))
     late: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -270,7 +335,19 @@ class Position(Base):
     stop_loss: Mapped[Decimal | None] = mapped_column(MONEY)
     take_profit: Mapped[Decimal | None] = mapped_column(MONEY)
     state: Mapped[str] = mapped_column(String(16), nullable=False, default="OPEN")
-    __table_args__ = (UniqueConstraint("account_id", "symbol"),)
+    opened_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    __table_args__ = (
+        Index(
+            "uq_positions_open_account_symbol",
+            "account_id",
+            "symbol",
+            unique=True,
+            postgresql_where=text("state = 'OPEN'"),
+            sqlite_where=text("state = 'OPEN'"),
+        ),
+    )
 
 
 class ProtectiveOrder(Base):
@@ -310,6 +387,7 @@ class FundingPayment(Base):
     amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     event_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     source: Mapped[str] = mapped_column(String(60), nullable=False)
+    __table_args__ = (UniqueConstraint("position_id", "event_at"),)
 
 
 class EquitySample(Base):
