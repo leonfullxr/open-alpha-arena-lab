@@ -1,0 +1,807 @@
+{
+  "sourceUrl": "http://localhost:4173/",
+  "generatedAt": "2026-10-15T17:56:54.677Z",
+  "note": "Geometry and content checks only; these captures do not establish visual fidelity.",
+  "captures": [
+    {
+      "name": "1363x936-hero",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "clientWidth": 1363,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url": "http://localhost:4173/",
+      "heading": "An open research lab for AI trading\nin financial markets.",
+      "section": {
+        "x": 0,
+        "y": 92.3,
+        "width": 1363,
+        "height": 593.6,
+        "documentY": 92.3
+      },
+      "art": {
+        "x": 612.5,
+        "y": 140.3,
+        "width": 750.5,
+        "height": 545.6,
+        "documentY": 140.3
+      },
+      "screenshot": "1363x936-hero.png"
+    },
+    {
+      "name": "1363x936-grid",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "clientWidth": 1363,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 603
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Shared conditions",
+      "section": {
+        "x": 0,
+        "y": 82.9,
+        "width": 1363,
+        "height": 544,
+        "documentY": 685.9
+      },
+      "art": {
+        "x": 825.8,
+        "y": 179.9,
+        "width": 497.3,
+        "height": 351,
+        "documentY": 782.9
+      },
+      "screenshot": "1363x936-grid.png"
+    },
+    {
+      "name": "1363x936-chart",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "clientWidth": 1363,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 1050
+      },
+      "url": "http://localhost:4173/",
+      "heading": "A traceable record",
+      "section": {
+        "x": 0,
+        "y": 179.8,
+        "width": 1363,
+        "height": 636.1,
+        "documentY": 1229.8
+      },
+      "art": {
+        "x": 40,
+        "y": 276.8,
+        "width": 609.5,
+        "height": 443.1,
+        "documentY": 1326.8
+      },
+      "screenshot": "1363x936-chart.png"
+    },
+    {
+      "name": "1363x936-lattice",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "clientWidth": 1363,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 1842
+      },
+      "url": "http://localhost:4173/",
+      "heading": "One accountable arena",
+      "section": {
+        "x": 0,
+        "y": 23.9,
+        "width": 1363,
+        "height": 871.2,
+        "documentY": 1865.9
+      },
+      "art": {
+        "x": 713.5,
+        "y": 119.9,
+        "width": 609.5,
+        "height": 609.5,
+        "documentY": 1961.9
+      },
+      "screenshot": "1363x936-lattice.png"
+    },
+    {
+      "name": "1363x936-team",
+      "viewport": {
+        "width": 1363,
+        "height": 936
+      },
+      "clientWidth": 1363,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 2503
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Open research",
+      "section": {
+        "x": 0,
+        "y": 234.1,
+        "width": 1363,
+        "height": 578,
+        "documentY": 2737.1
+      },
+      "art": {
+        "x": 938,
+        "y": 331.1,
+        "width": 385,
+        "height": 385,
+        "documentY": 2834.1
+      },
+      "screenshot": "1363x936-team.png"
+    },
+    {
+      "name": "1440x900-hero",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "clientWidth": 1440,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url": "http://localhost:4173/",
+      "heading": "An open research lab for AI trading\nin financial markets.",
+      "section": {
+        "x": 0,
+        "y": 92.3,
+        "width": 1440,
+        "height": 626.4,
+        "documentY": 92.3
+      },
+      "art": {
+        "x": 644.4,
+        "y": 140.3,
+        "width": 795.6,
+        "height": 578.4,
+        "documentY": 140.3
+      },
+      "screenshot": "1440x900-hero.png"
+    },
+    {
+      "name": "1440x900-grid",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "clientWidth": 1440,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 636
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Shared conditions",
+      "section": {
+        "x": 0,
+        "y": 82.6,
+        "width": 1440,
+        "height": 566.6,
+        "documentY": 718.6
+      },
+      "art": {
+        "x": 870.7,
+        "y": 179.6,
+        "width": 529.3,
+        "height": 373.6,
+        "documentY": 815.6
+      },
+      "screenshot": "1440x900-grid.png"
+    },
+    {
+      "name": "1440x900-chart",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "clientWidth": 1440,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 1105
+      },
+      "url": "http://localhost:4173/",
+      "heading": "A traceable record",
+      "section": {
+        "x": 0,
+        "y": 180.2,
+        "width": 1440,
+        "height": 664.1,
+        "documentY": 1285.2
+      },
+      "art": {
+        "x": 40,
+        "y": 277.2,
+        "width": 648,
+        "height": 471.1,
+        "documentY": 1382.2
+      },
+      "screenshot": "1440x900-chart.png"
+    },
+    {
+      "name": "1440x900-lattice",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "clientWidth": 1440,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 1925
+      },
+      "url": "http://localhost:4173/",
+      "heading": "One accountable arena",
+      "section": {
+        "x": 0,
+        "y": 24.3,
+        "width": 1440,
+        "height": 909.7,
+        "documentY": 1949.3
+      },
+      "art": {
+        "x": 752,
+        "y": 120.3,
+        "width": 648,
+        "height": 648,
+        "documentY": 2045.3
+      },
+      "screenshot": "1440x900-lattice.png"
+    },
+    {
+      "name": "1440x900-team",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "clientWidth": 1440,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 2656
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Open research",
+      "section": {
+        "x": 0,
+        "y": 203,
+        "width": 1440,
+        "height": 603.7,
+        "documentY": 2859
+      },
+      "art": {
+        "x": 989.3,
+        "y": 300,
+        "width": 410.7,
+        "height": 410.7,
+        "documentY": 2956
+      },
+      "screenshot": "1440x900-team.png"
+    },
+    {
+      "name": "1024x768-hero",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "clientWidth": 1024,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url": "http://localhost:4173/",
+      "heading": "An open research lab for AI trading\nin financial markets.",
+      "section": {
+        "x": 0,
+        "y": 92.3,
+        "width": 1024,
+        "height": 449.4,
+        "documentY": 92.3
+      },
+      "art": {
+        "x": 471.8,
+        "y": 140.3,
+        "width": 552.2,
+        "height": 401.4,
+        "documentY": 140.3
+      },
+      "screenshot": "1024x768-hero.png"
+    },
+    {
+      "name": "1024x768-grid",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "clientWidth": 1024,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 459
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Shared conditions",
+      "section": {
+        "x": 0,
+        "y": 82.7,
+        "width": 1024,
+        "height": 444.3,
+        "documentY": 541.7
+      },
+      "art": {
+        "x": 628,
+        "y": 179.7,
+        "width": 356,
+        "height": 251.3,
+        "documentY": 638.7
+      },
+      "screenshot": "1024x768-grid.png"
+    },
+    {
+      "name": "1024x768-chart",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "clientWidth": 1024,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 806
+      },
+      "url": "http://localhost:4173/",
+      "heading": "A traceable record",
+      "section": {
+        "x": 0,
+        "y": 180,
+        "width": 1024,
+        "height": 653.9,
+        "documentY": 986
+      },
+      "art": {
+        "x": 40,
+        "y": 277,
+        "width": 415.1,
+        "height": 301.8,
+        "documentY": 1083
+      },
+      "screenshot": "1024x768-chart.png"
+    },
+    {
+      "name": "1024x768-lattice",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "clientWidth": 1024,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 1616
+      },
+      "url": "http://localhost:4173/",
+      "heading": "One accountable arena",
+      "section": {
+        "x": 0,
+        "y": 23.8,
+        "width": 1024,
+        "height": 755.9,
+        "documentY": 1639.8
+      },
+      "art": {
+        "x": 544,
+        "y": 119.8,
+        "width": 440,
+        "height": 440,
+        "documentY": 1735.8
+      },
+      "screenshot": "1024x768-lattice.png"
+    },
+    {
+      "name": "1024x768-team",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "clientWidth": 1024,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 2193
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Open research",
+      "section": {
+        "x": 0,
+        "y": 202.7,
+        "width": 1024,
+        "height": 477.8,
+        "documentY": 2395.7
+      },
+      "art": {
+        "x": 712,
+        "y": 306.1,
+        "width": 272,
+        "height": 272,
+        "documentY": 2499.1
+      },
+      "screenshot": "1024x768-team.png"
+    },
+    {
+      "name": "768x1024-hero",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "clientWidth": 768,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url": "http://localhost:4173/",
+      "heading": "An open research lab for AI trading in financial markets.",
+      "section": {
+        "x": 0,
+        "y": 64,
+        "width": 768,
+        "height": 944,
+        "documentY": 64
+      },
+      "art": {
+        "x": -105.4,
+        "y": 338,
+        "width": 921.6,
+        "height": 670,
+        "documentY": 338
+      },
+      "screenshot": "768x1024-hero.png"
+    },
+    {
+      "name": "768x1024-grid",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "clientWidth": 768,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 969
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Shared conditions",
+      "section": {
+        "x": 0,
+        "y": 39,
+        "width": 768,
+        "height": 780.2,
+        "documentY": 1008
+      },
+      "art": {
+        "x": 40,
+        "y": 80,
+        "width": 688,
+        "height": 485.6,
+        "documentY": 1049
+      },
+      "screenshot": "768x1024-grid.png"
+    },
+    {
+      "name": "768x1024-chart",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "clientWidth": 768,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 1749
+      },
+      "url": "http://localhost:4173/",
+      "heading": "A traceable record",
+      "section": {
+        "x": 0,
+        "y": 39.2,
+        "width": 768,
+        "height": 952.8,
+        "documentY": 1788.2
+      },
+      "art": {
+        "x": 40,
+        "y": 80.2,
+        "width": 649,
+        "height": 471.8,
+        "documentY": 1829.2
+      },
+      "screenshot": "768x1024-chart.png"
+    },
+    {
+      "name": "768x1024-lattice",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "clientWidth": 768,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 2709
+      },
+      "url": "http://localhost:4173/",
+      "heading": "One accountable arena",
+      "section": {
+        "x": 0,
+        "y": 32,
+        "width": 768,
+        "height": 1202.3,
+        "documentY": 2741
+      },
+      "art": {
+        "x": 40,
+        "y": 80,
+        "width": 688,
+        "height": 688,
+        "documentY": 2789
+      },
+      "screenshot": "768x1024-lattice.png"
+    },
+    {
+      "name": "768x1024-team",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "clientWidth": 768,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 3843
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Open research",
+      "section": {
+        "x": 0,
+        "y": 100.2,
+        "width": 768,
+        "height": 799.5,
+        "documentY": 3943.2
+      },
+      "art": {
+        "x": 154.7,
+        "y": 141.2,
+        "width": 458.7,
+        "height": 458.7,
+        "documentY": 3984.2
+      },
+      "screenshot": "768x1024-team.png"
+    },
+    {
+      "name": "390x844-hero",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "clientWidth": 390,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 0
+      },
+      "url": "http://localhost:4173/",
+      "heading": "An open research lab for AI trading in financial markets.",
+      "section": {
+        "x": 0,
+        "y": 64,
+        "width": 390,
+        "height": 764,
+        "documentY": 64
+      },
+      "art": {
+        "x": -53.5,
+        "y": 487.8,
+        "width": 468,
+        "height": 340.2,
+        "documentY": 487.8
+      },
+      "screenshot": "390x844-hero.png"
+    },
+    {
+      "name": "390x844-grid",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "clientWidth": 390,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 789
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Shared conditions",
+      "section": {
+        "x": 0,
+        "y": 39,
+        "width": 390,
+        "height": 640.8,
+        "documentY": 828
+      },
+      "art": {
+        "x": 24,
+        "y": 80,
+        "width": 342,
+        "height": 241.4,
+        "documentY": 869
+      },
+      "screenshot": "390x844-grid.png"
+    },
+    {
+      "name": "390x844-chart",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "clientWidth": 390,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 1430
+      },
+      "url": "http://localhost:4173/",
+      "heading": "A traceable record",
+      "section": {
+        "x": 0,
+        "y": 38.8,
+        "width": 390,
+        "height": 836.5,
+        "documentY": 1468.8
+      },
+      "art": {
+        "x": 24,
+        "y": 79.8,
+        "width": 322.6,
+        "height": 234.5,
+        "documentY": 1509.8
+      },
+      "screenshot": "390x844-chart.png"
+    },
+    {
+      "name": "390x844-lattice",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "clientWidth": 390,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 2273
+      },
+      "url": "http://localhost:4173/",
+      "heading": "One accountable arena",
+      "section": {
+        "x": 0,
+        "y": 32.3,
+        "width": 390,
+        "height": 1123.9,
+        "documentY": 2305.3
+      },
+      "art": {
+        "x": 24,
+        "y": 80.3,
+        "width": 342,
+        "height": 342,
+        "documentY": 2353.3
+      },
+      "screenshot": "390x844-lattice.png"
+    },
+    {
+      "name": "390x844-team",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "clientWidth": 390,
+      "font": "Signifier, Georgia, \"Times New Roman\", serif",
+      "fontReady": true,
+      "renderer": "webgl2+canvas2d",
+      "scroll": {
+        "x": 0,
+        "y": 3383
+      },
+      "url": "http://localhost:4173/",
+      "heading": "Open research",
+      "section": {
+        "x": 0,
+        "y": 46.2,
+        "width": 390,
+        "height": 673.6,
+        "documentY": 3429.2
+      },
+      "art": {
+        "x": 81,
+        "y": 87.2,
+        "width": 228,
+        "height": 228,
+        "documentY": 3470.2
+      },
+      "screenshot": "390x844-team.png"
+    }
+  ]
+}

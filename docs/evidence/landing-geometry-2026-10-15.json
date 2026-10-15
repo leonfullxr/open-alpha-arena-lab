@@ -1,0 +1,34 @@
+{
+  "results": {
+    "profiles": {
+      "count": 220,
+      "samplesEach": 721,
+      "maxDifference": 2.8421709430404007e-12,
+      "errors": []
+    },
+    "chart": {
+      "samples": 721,
+      "maxDifference": 1.2505552149377763e-12,
+      "errors": []
+    },
+    "grid": {
+      "cells": 220,
+      "maxDifference": 0,
+      "errors": []
+    },
+    "lattice": {
+      "cubes": 512,
+      "maxDifference": 0,
+      "errors": []
+    }
+  },
+  "failureCount": 0,
+  "failures": [],
+  "reference": {
+    "url": "https://www.nof1.ai/",
+    "inspected": "2026-10-15",
+    "rendererChunkSHA256": "fe3a8eec9144bc31bdd60c62ddd5345a9470e2eecbfc856b0ebab9492be9fd02",
+    "sharedChunkSHA256": "fe9ae6fdddf18a8ab3fe8014bd07eb9b9dad183880d2487d50ebbc3f4ef07b88"
+  },
+  "scope": "Pure canonical geometry comparison, not shader, motion or screenshot parity. The public source and VM comparison harness are retained locally in .review/reference-20261015/."
+}
