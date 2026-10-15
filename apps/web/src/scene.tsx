@@ -356,54 +356,19 @@ function drawMark(ctx: CanvasRenderingContext2D, box: Box, alpha = 1): void {
   ctx.save(); ctx.globalAlpha = alpha; ctx.drawImage(getMarkBitmap(), box.left + (box.width - side) / 2, box.top + (box.height - side) / 2, side, side); ctx.restore();
 }
 
-function drawMountainGrid(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number, reverse = false): void {
-  const sourceFrame = reverse ? source : screenFrame(source);
-  const targetFrame = reverse ? screenFrame(target) : target;
-  const amountFor = (index: number): number => {
-    const stagger = reverse ? (slices.length - 1 - index) / Math.max(1, slices.length - 1) : index / Math.max(1, slices.length - 1);
-    return cubicOut(clamp((progress * (GRID_DURATION + GRID_STAGGER) - stagger * GRID_STAGGER) / GRID_DURATION));
-  };
-  for (const slice of slices) {
-    const index = slices.length - 1 - slice.id;
-    const amount = amountFor(index); const sourcePoints = profilePolygon(slice); const targetPoints = gridPolygons[slice.id]!;
-    const fromPoints = reverse
-      ? projectPoints(targetPoints, sourceFrame, GRID_FRAME.width, GRID_FRAME.height)
-      : projectPoints(sourcePoints, sourceFrame, GRID_FRAME.width, SOURCE_SIZE);
-    const toPoints = reverse
-      ? projectPoints(sourcePoints, targetFrame, GRID_FRAME.width, SOURCE_SIZE)
-      : projectPoints(targetPoints, targetFrame, GRID_FRAME.width, GRID_FRAME.height);
-    const polygon = sampleLine(fromPoints, toPoints, amount);
-    const tone = slice.color ?? `rgb(${Math.round(52 + slice.depth * 6)},${Math.round(53 + slice.depth * 6)},${Math.round(49 + slice.depth * 6)})`;
-    const blendToGrid = reverse ? 1 - amount : clamp((amount - .15) / .85);
-    const color = blendToGrid > .99 ? (slice.id === selectedSlice.id ? mixColor(SELECTED_TONE, .13) : 'rgba(33,32,28,.035)') : tone;
-    ctx.save(); ctx.globalAlpha = slice.alpha;
-    drawScreenPolygon(ctx, polygon, color, 'rgba(190,193,185,.21)', .6 * (sourceFrame.width / GRID_FRAME.width + (targetFrame.width / GRID_FRAME.width - sourceFrame.width / GRID_FRAME.width) * amount));
-    ctx.restore();
-    if (slice.id === selectedSlice.id && blendToGrid > 0) {
-      ctx.save(); ctx.globalAlpha = blendToGrid;
-      drawScreenPolygon(ctx, polygon, mixColor(SELECTED_TONE, .13), SELECTED_TONE, 1.75 * targetFrame.width / GRID_FRAME.width);
-      ctx.restore();
-    }
-  }
-}
-
-function drawSelectedMorph(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number, fromGrid: boolean, includeGridRemainder = true): void {
+function drawSelectedMorph(ctx: CanvasRenderingContext2D, source: Box, target: Box, progress: number, fromGrid: boolean): void {
   const targetProfile = chartContourPolygon;
   const sourcePoints = fromGrid ? gridPolygons[selectedSlice.id]! : targetProfile;
   const targetPoints = fromGrid ? targetProfile : gridPolygons[selectedSlice.id]!;
   const count = Math.min(sourcePoints.length, targetPoints.length);
-  const alignedSource = sourcePoints.length === count ? sourcePoints : sampleLine(sourcePoints, sourcePoints, 1).slice(0, count);
-  const alignedTarget = targetPoints.length === count ? targetPoints : sampleLine(targetPoints, targetPoints, 1).slice(0, count);
+  const alignedSource = sourcePoints.slice(0, count);
+  const alignedTarget = targetPoints.slice(0, count);
   const amount = cubicOut(progress);
   const sourceFrame = fromGrid ? source : screenFrame(source);
   const targetFrame = fromGrid ? screenFrame(target) : target;
   const fromScreen = projectPoints(alignedSource, sourceFrame, fromGrid ? GRID_FRAME.width : GRID_FRAME.width, fromGrid ? GRID_FRAME.height : SOURCE_SIZE);
   const toScreen = projectPoints(alignedTarget, targetFrame, GRID_FRAME.width, fromGrid ? SOURCE_SIZE : GRID_FRAME.height);
   drawScreenPolygon(ctx, sampleLine(fromScreen, toScreen, amount), mixColor(SELECTED_TONE, .16), SELECTED_TONE, 1.75 * targetFrame.width / GRID_FRAME.width);
-  if (fromGrid && includeGridRemainder) {
-    const rest = 1 - amount;
-    for (const slice of slices) if (slice.id !== selectedSlice.id) paintGridSlice(ctx, slice.id, source, .09 + .56 * rest, false);
-  }
 }
 
 function legProgress(leg: Leg, now: number): number {
@@ -552,7 +517,7 @@ function drawLatticeMark(ctx: CanvasRenderingContext2D, lattice: Box, mark: Box,
   if (fullImage > 0) drawMark(ctx, mark, fullImage);
 }
 
-function paintLocal(anchor: Anchor, box: Box, ratio: number, split: number, settled: Stage, formation = 1, fallbackPhase?: number): void {
+function paintLocal(anchor: Anchor, ratio: number, split: number, settled: Stage, formation = 1, fallbackPhase?: number): void {
   const canvas = anchor.canvas;
   const width = anchor.width; const height = anchor.height;
   const bleed = anchor.stage === 2 ? 1.06 : 1;
@@ -571,7 +536,6 @@ function paintLocal(anchor: Anchor, box: Box, ratio: number, split: number, sett
     case 3: drawLattice(context, local, fallbackPhase ?? (settled === 3 ? 1 : 0)); break;
     case 4: drawMark(context, local); break;
   }
-  void box;
 }
 
 export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement | null>, hostRef: React.RefObject<HTMLDivElement | null>, panelRef?: React.RefObject<HTMLCanvasElement | null>): void {
@@ -634,7 +598,7 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
     };
     const boxes = new Map<Stage, Box>();
     let width = 0; let height = 0; let dpr = 1; let raf = 0; let disposed = false;
-    let settled: Stage = 0; let leg: Leg | null = null; let lastY = window.scrollY; let lastFlagY = window.scrollY; let lastScrollAt = performance.now(); let direction = 1; let chartLandedAt = 0; let gridLandedAt = 0; let initialized = false;
+    let settled: Stage = 0; let leg: Leg | null = null; let lastY = window.scrollY; let lastFlagY = window.scrollY; let lastScrollAt = performance.now(); let direction = 1; let chartLandedAt = 0; let gridLandedAt = 0;
     let thresholds = [0, 0, 0, 0]; let heroHold = 0;
     const chartWrap = byStage.get(2)?.element.closest<HTMLElement>('.chart-wrap');
     const chartAnchor = byStage.get(2)?.element;
@@ -791,11 +755,11 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
           if (stillActive && anchor.stage === 0) {
             const inner = { left: 16, top: 16, width: anchor.width, height: anchor.height };
             const poses = panelPoses(inner, 'mountain');
-            if (!renderStill(anchor.canvas, anchor.width + 32, anchor.height + 32, poses, 'mountain', -16, -16)) paintLocal(anchor, box, dpr, split, localStage, formation, fallbackPhase);
+            if (!renderStill(anchor.canvas, anchor.width + 32, anchor.height + 32, poses, 'mountain', -16, -16)) paintLocal(anchor, dpr, split, localStage, formation, fallbackPhase);
           } else if (stillActive && anchor.stage === 1) {
             const inner = { left: 16, top: 16, width: anchor.width, height: anchor.height };
             const base = sourceRenderOrderSlices.map((slice) => gridPanelPose(slice, inner, slice.isSelected ? 0 : 1));
-            if (!renderStill(anchor.canvas, anchor.width + 32, anchor.height + 32, base, 'grid-base', -16, -16)) paintLocal(anchor, box, dpr, split, localStage, formation, fallbackPhase);
+            if (!renderStill(anchor.canvas, anchor.width + 32, anchor.height + 32, base, 'grid-base', -16, -16)) paintLocal(anchor, dpr, split, localStage, formation, fallbackPhase);
             const layers = selectedGridLayers.get(1);
             if (layers) {
               const cell = gridCellBounds(selectedSlice.id, inner);
@@ -807,7 +771,7 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
             }
           } else {
             if (anchor.stage <= 1) stillKeys.delete(anchor.canvas);
-            paintLocal(anchor, box, dpr, split, localStage, formation, fallbackPhase);
+            paintLocal(anchor, dpr, split, localStage, formation, fallbackPhase);
           }
         }
       }
@@ -821,16 +785,14 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
           const empty = gridBox ? panelPoses(gridBox, 'grid', 0) : sourceRenderOrderSlices.map((slice) => mountainPanelPose(slice, { left: 0, top: 0, width: 1, height: 1 }, 0));
           panelRenderer?.draw(empty, true);
         }
-        if (panelActive && !updateRendererLabel()) schedule();
+        if (!updateRendererLabel()) schedule();
       }
       if (leg) {
         const amount = legProgress(leg, now);
         const source = localBoxes.get(leg.from); const target = localBoxes.get(leg.to);
         if (source && target && panelActive) {
-          if (leg.from === 0 && leg.to === 1 && !panelActive) drawMountainGrid(ctx, source, target, amount, false);
-          else if (leg.from === 1 && leg.to === 0 && !panelActive) drawMountainGrid(ctx, source, target, amount, true);
-          else if (leg.from === 1 && leg.to === 2) drawSelectedMorph(ctx, source, target, amount, true, false);
-          else if (leg.from === 2 && leg.to === 1) drawSelectedMorph(ctx, source, target, amount, false, false);
+          if (leg.from === 1 && leg.to === 2) drawSelectedMorph(ctx, source, target, amount, true);
+          else if (leg.from === 2 && leg.to === 1) drawSelectedMorph(ctx, source, target, amount, false);
           else if (leg.from === 2 && leg.to === 3) drawChartLattice(ctx, source, target, amount, split, dpr);
           else if (leg.from === 3 && leg.to === 2) drawChartLattice(ctx, target, source, 1 - amount, split, dpr);
           else if (leg.from === 3 && leg.to === 4) drawLatticeMark(ctx, source, target, amount, false, 1 / dpr);
@@ -866,18 +828,17 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
       schedule();
     };
     const onResize = (): void => {
+      const previousWidth = width;
       measure();
-      const target = absoluteStage(window.scrollY);
-      if (target !== settled) { settled = target; leg = null; }
-      gridLandedAt = settled >= 1 ? performance.now() - GRID_SELECTION_SETTLE_MS : 0;
-      if (media.matches || settled >= 2) { chartLandedAt = performance.now() - 1050; setLanded(true); }
-      else { chartLandedAt = 0; setLanded(false); }
-      lastY = window.scrollY; lastFlagY = window.scrollY; lastScrollAt = performance.now(); schedule();
+      if (width !== previousWidth) {
+        const target = absoluteStage(window.scrollY);
+        if (target !== settled) snapTo(target);
+        lastFlagY = window.scrollY;
+      }
+      lastY = window.scrollY; lastScrollAt = performance.now(); schedule();
     };
     const initializeAtCurrentScroll = (): void => {
-      if (!initialized) {
-        settled = absoluteStage(window.scrollY); leg = null; initialized = true;
-      }
+      settled = absoluteStage(window.scrollY); leg = null;
       chartLandedAt = settled >= 2 ? performance.now() - 1050 : 0;
       gridLandedAt = settled >= 1 ? performance.now() - GRID_SELECTION_SETTLE_MS : 0;
       setLanded(media.matches || settled >= 2); lastY = window.scrollY; schedule();
@@ -900,7 +861,7 @@ export function useSceneCoordinator(globalRef: React.RefObject<HTMLCanvasElement
     stillCanvas.addEventListener('webglcontextlost', onStillContextChange);
     stillCanvas.addEventListener('webglcontextrestored', onStillContextChange);
     measure(); initializeAtCurrentScroll();
-    void document.fonts.ready.then(() => { if (!disposed) { measure(); if (!initialized) initializeAtCurrentScroll(); } });
+    void document.fonts.ready.then(() => { if (!disposed) measure(); });
     return () => {
       disposed = true; document.documentElement.classList.remove('canvas-unavailable');
       panelCanvas?.removeEventListener('webglcontextlost', onPanelContextChange);

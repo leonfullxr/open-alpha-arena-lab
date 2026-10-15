@@ -47,6 +47,14 @@ node scripts/capture-landing-motion.mjs http://localhost:4173 /tmp/arena-motion-
 
 This tool copies actual Canvas layers inside animation callbacks and records elapsed times at nominal 0/100/200/300/450/600/900/1200/1800/2400 ms checkpoints. It saves 40 PNGs plus a manifest. The images exclude DOM text and chart scaffolding; the static capture tool covers those. Sampling adds overhead, and this is not a frame-rate benchmark or a calibrated 60 fps recording.
 
+To check resize behaviour during a selected-profile flight, during the chart split, after a height-only (mobile URL bar) resize at 390x844, and after a 844x390 orientation change:
+
+```sh
+node scripts/check-landing-resize.mjs http://localhost:4173
+```
+
+It exits non-zero if a resize marks the chart landed early, restarts the split, drops a settled stage on a height-only resize, or leaves an incoherent stage after a width change.
+
 ## Current verification
 
 `npm run check` passed TypeScript checking and the production build. Reference and replica capture matrices cover all five scenes at the five requested viewports, with fonts ready and no horizontal document overflow.
