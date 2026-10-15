@@ -21,6 +21,7 @@ from app.market.types import (
 
 INFO_URL = "https://api.hyperliquid.xyz/info"
 MAX_RESPONSE_BYTES = 2_000_000
+MAX_FUNDING_EVIDENCE_BYTES = 64_000
 RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 
 
@@ -135,6 +136,9 @@ class HyperliquidClient:
         self.close()
 
     def _request_json(self, payload: dict[str, object]) -> object:
+        return _parse_json(self._request_bytes(payload))
+
+    def _request_bytes(self, payload: dict[str, object]) -> bytes:
         last_code = "market_transport_error"
         for attempt in range(self.attempts):
             remaining = self._deadline - self._monotonic()
@@ -177,7 +181,7 @@ class HyperliquidClient:
                         body.extend(chunk)
                         if len(body) > self.max_response_bytes:
                             raise MarketDataError("market_response_too_large")
-                    return _parse_json(bytes(body))
+                    return bytes(body)
             except MarketDataError:
                 raise
             except (httpx.TimeoutException, httpx.ConnectError) as exc:
@@ -240,6 +244,7 @@ class HyperliquidClient:
                         mark=_decimal(market_context.get("markPx"), "mark", positive=True),
                         funding_rate=_optional_decimal(market_context.get("funding")),
                         open_interest=_optional_decimal(market_context.get("openInterest")),
+                        oracle_px=_optional_decimal(market_context.get("oraclePx")),
                         source_at=source_at,
                         received_at=received_at,
                         context_received_at=context_received_at,
@@ -308,16 +313,17 @@ class HyperliquidClient:
         if start_at >= end_at or end_at - start_at > timedelta(hours=2):
             raise ValueError("funding history window must be positive and at most two hours")
         self._deadline = self._monotonic() + self.total_timeout_seconds
-        rows = _sequence(
-            self._request_json(
-                {
-                    "type": "fundingHistory",
-                    "coin": symbol,
-                    "startTime": _epoch_millis(start_at),
-                    "endTime": _epoch_millis(end_at),
-                }
-            )
+        response_bytes = self._request_bytes(
+            {
+                "type": "fundingHistory",
+                "coin": symbol,
+                "startTime": _epoch_millis(start_at),
+                "endTime": _epoch_millis(end_at),
+            }
         )
+        if len(response_bytes) > MAX_FUNDING_EVIDENCE_BYTES:
+            raise MarketDataError("funding_history_too_large")
+        rows = _sequence(_parse_json(response_bytes))
         if len(rows) > 4:
             raise MarketDataError("funding_history_too_large")
         records: list[FundingRateRecord] = []
@@ -329,9 +335,7 @@ class HyperliquidClient:
             if event_at < start_at or event_at > end_at:
                 raise MarketDataError("funding_event_outside_window")
             premium = (
-                _decimal(item["premium"], "premium")
-                if item.get("premium") is not None
-                else None
+                _decimal(item["premium"], "premium") if item.get("premium") is not None else None
             )
             records.append(
                 FundingRateRecord(
@@ -339,6 +343,7 @@ class HyperliquidClient:
                     _decimal(item.get("fundingRate"), "funding_rate"),
                     event_at,
                     premium,
+                    response_bytes,
                 )
             )
         if any(

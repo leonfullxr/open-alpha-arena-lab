@@ -78,6 +78,49 @@ def test_admin_profiles_freeze_rules_and_never_store_provider_secret(monkeypatch
         assert stored is not None
         assert "secret-canary-not-persisted" not in str(stored.api_key_env)
         assert db.get(PromptVersion, prompt.id) is not None
+        second_prompt = create_prompt_version(
+            db,
+            name=f"prompt-{suffix}-second",
+            version=1,
+            template="Use only the second prompt's evidence.",
+        )
+        agents = [
+            {
+                "name": "Atlas",
+                "provider_profile_id": provider.id,
+                "prompt_version_id": prompt.id,
+            },
+            {
+                "name": "Vector",
+                "provider_profile_id": provider.id,
+                "prompt_version_id": second_prompt.id,
+            },
+        ]
+        with pytest.raises(AdminInputError, match="shared prompt"):
+            create_competition(
+                db,
+                {
+                    "name": f"Invalid baseline {suffix}",
+                    "profile": "alpha_2025_baseline",
+                    "inference_budget_usd": "1",
+                    "agents": agents,
+                },
+            )
+        research = create_competition(
+            db,
+            {
+                "name": f"Research prompts {suffix}",
+                "profile": "research_extended",
+                "inference_budget_usd": "1",
+                "agents": agents,
+            },
+        )
+        research_agent_prompts = db.scalars(
+            select(AgentRun.prompt_version_id)
+            .where(AgentRun.competition_id == research.id)
+            .order_by(AgentRun.manifest_order)
+        ).all()
+        assert research_agent_prompts == [prompt.id, second_prompt.id]
     engine.dispose()
 
 

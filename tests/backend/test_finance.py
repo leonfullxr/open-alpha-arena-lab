@@ -14,7 +14,9 @@ from app.engine.finance import (
     equity,
     estimated_liquidation_required,
     evaluate_risk,
+    funding_payment_amount,
     liquidate_cross_margin_estimate,
+    money,
     protective_exit,
     quote_set_is_trusted,
     rules_from_config,
@@ -106,7 +108,7 @@ def test_fees_funding_and_reserved_margin_do_not_reduce_equity() -> None:
         result.account,
         {"ETH": quote},
         {"ETH": instrument},
-        D("0.001"),
+        {"ETH": D("0.001")},
         funding_prices={"ETH": D("2000")},
     )
     assert funded.account.funding == D("-2.000000000000000000")
@@ -115,12 +117,52 @@ def test_fees_funding_and_reserved_margin_do_not_reduce_equity() -> None:
         result.account,
         {"ETH": quote},
         {"ETH": instrument},
-        D("-0.001"),
+        {"ETH": D("-0.001")},
         funding_prices={"ETH": D("2000")},
     )
     assert reversed_funding.account.funding == D("2.000000000000000000")
     assert sum(p.amount for p in result.postings) == 0
     assert sum(p.amount for p in funded.postings) == 0
+
+
+def test_historical_funding_accepts_subset_rates_and_signed_per_symbol_payments() -> None:
+    account = Account.create(D("10000"))
+    account.positions = {
+        "BTC": EnginePosition("BTC", Side.LONG, D("2"), D("100"), D("40")),
+        "ETH": EnginePosition("ETH", Side.SHORT, D("1.5"), D("50"), D("20")),
+        "SOL": EnginePosition("SOL", Side.LONG, D("3"), D("10"), D("6")),
+    }
+    result = apply_funding(
+        account,
+        {},
+        {"BTC": Instrument("BTC"), "ETH": Instrument("ETH", contract_multiplier=D("0.1"))},
+        {"BTC": D("0.01"), "ETH": D("-0.02")},
+        funding_prices={"BTC": D("100"), "ETH": D("200")},
+    )
+    assert result.account.funding == D("-2.600000000000000000")
+    assert result.account.cash == D("9997.400000000000000000")
+    assert result.account.positions["SOL"].quantity == D("3")
+    assert result.equity is None
+    assert sum(posting.amount for posting in result.postings) == D("0")
+    assert account.funding == D("0")
+    assert funding_payment_amount(
+        account.positions["ETH"], D("-0.02"), D("200"), D("0.1")
+    ) == D("-0.600000000000000000")
+    with pytest.raises(FinanceError, match="matching symbols"):
+        apply_funding(
+            account,
+            {},
+            {"BTC": Instrument("BTC")},
+            {"BTC": D("0.01")},
+            funding_prices={"ETH": D("100")},
+        )
+
+
+def test_decimal_money_accepts_numeric_boundary_and_rejects_overflow() -> None:
+    maximum = D("99999999999999999999.999999999999999999")
+    assert money(maximum) == maximum
+    with pytest.raises(FinanceError, match=r"numeric\(38,18\)"):
+        money(D("100000000000000000000"))
 
 
 def test_rejects_unsafe_size_precision_stop_and_duplicate_baseline_entry() -> None:
@@ -354,12 +396,20 @@ def test_frozen_rules_apply_entry_limits_and_risk_halt_keeps_closes_available() 
         "liquidation_fee_rate": "0.005",
         "funding_mode": "hourly_historical_rate",
         "funding_interval_hours": 1,
+        "funding_history_max_offset_seconds": 5,
         "funding_rate_basis": "funding_history",
         "funding_price_basis": "oracle_px",
         "fixture_funding_rate_per_hour": "0",
         "risk_policy_version": "risk-v1",
+        "snapshot_schema_version": 1,
+        "proposal_schema_version": 1,
+        "public_evidence_schema_version": 1,
+        "market_window_candles": 12,
     }
     rules = rules_from_config(cfg)
+    future_schema = dict(cfg, proposal_schema_version=2)
+    with pytest.raises(FinanceError, match="schema"):
+        rules_from_config(future_schema)
     quote = Quote("BTC", D("99"), D("100"), D("100"))
     with pytest.raises(FinanceError, match="leverage"):
         apply_action(
@@ -481,3 +531,17 @@ def test_protective_close_allows_missing_other_mark_and_estimated_liquidation_is
     assert result is not None
     assert not result.account.positions
     assert result.events[0][0] == "ESTIMATED_CROSS_MARGIN_LIQUIDATION"
+
+
+def test_reserved_margin_aggregation_rejects_numeric_38_18_overflow() -> None:
+    largest = D("99999999999999999999.999999999999999999")
+    account = Account(
+        initial_balance=D("1000"),
+        cash=D("1000"),
+        positions={
+            "BTC": EnginePosition("BTC", Side.LONG, D("1"), D("1"), largest),
+            "ETH": EnginePosition("ETH", Side.SHORT, D("1"), D("1"), largest),
+        },
+    )
+    with pytest.raises(FinanceError, match=r"numeric\(38,18\)"):
+        _ = account.reserved_margin

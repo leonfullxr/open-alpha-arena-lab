@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation, localcontext
 from enum import StrEnum
+from typing import cast
 
 ZERO = Decimal("0")
 MONEY_QUANTUM = Decimal("0.000000000000000001")
@@ -66,9 +67,14 @@ class Rules:
     liquidation_fee_rate: Decimal = Decimal("0.005")
     funding_mode: str = "hourly_historical_rate"
     funding_interval_hours: int = 1
+    funding_history_max_offset_seconds: int = 5
     funding_rate_basis: str = "funding_history"
-    funding_price_basis: str = "oracle_px"
+    funding_price_basis: str = "oracle_px_paper_approximation"
     risk_policy_version: str = "risk-v1"
+    snapshot_schema_version: int = 1
+    proposal_schema_version: int = 1
+    public_evidence_schema_version: int = 1
+    market_window_candles: int = 12
 
 
 @dataclass(slots=True)
@@ -108,7 +114,9 @@ class Account:
 
     @property
     def reserved_margin(self) -> Decimal:
-        return sum((p.reserved_margin for p in self.positions.values()), ZERO)
+        with localcontext() as ctx:
+            ctx.prec = 60
+            return money(sum((p.reserved_margin for p in self.positions.values()), ZERO))
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,7 +163,7 @@ def money(value: Decimal) -> Decimal:
             rounded = value.quantize(MONEY_QUANTUM)
     except InvalidOperation as exc:
         raise FinanceError("money exceeds numeric(38,18) range") from exc
-    if len(rounded.as_tuple().digits) > 38 or abs(rounded) >= Decimal("1e20"):
+    if len(rounded.as_tuple().digits) > 38 or rounded.copy_abs().adjusted() >= 20:
         raise FinanceError("money exceeds numeric(38,18) range")
     return rounded
 
@@ -172,6 +180,22 @@ def unrealized_pnl(
         return money(position.quantity * delta * multiplier)
 
 
+def funding_payment_amount(
+    position: Position,
+    rate: Decimal,
+    oracle_px: Decimal,
+    contract_multiplier: Decimal = Decimal("1"),
+) -> Decimal:
+    """Return signed account cash change: positive credits the account."""
+    _decimal(rate, "funding rate")
+    _positive(oracle_px, "funding oracle price")
+    _positive(contract_multiplier, "contract multiplier")
+    with localcontext() as ctx:
+        ctx.prec = 60
+        notional_rate = position.quantity * oracle_px * contract_multiplier * rate
+        return money(-notional_rate if position.side is Side.LONG else notional_rate)
+
+
 def evaluate_risk(
     account: Account,
     current_equity: Decimal,
@@ -182,17 +206,19 @@ def evaluate_risk(
     """Update the persisted risk baseline and latch a breach without blocking exits."""
     _decimal(current_equity, "equity")
     account = deepcopy(account)
-    risk_day = as_of or datetime.now(UTC).date()
-    if account.risk_day != risk_day or account.daily_baseline_equity is None:
-        account.risk_day = risk_day
-        account.daily_baseline_equity = current_equity
-    peak = account.peak_equity or account.initial_balance
-    reasons: list[str] = []
-    if account.daily_baseline_equity - current_equity >= rules.max_daily_loss:
-        reasons.append("MAX_DAILY_LOSS")
-    if peak > ZERO and (peak - current_equity) / peak >= rules.max_drawdown_fraction:
-        reasons.append("MAX_DRAWDOWN")
-    account.peak_equity = max(peak, current_equity)
+    with localcontext() as ctx:
+        ctx.prec = 60
+        risk_day = as_of or datetime.now(UTC).date()
+        if account.risk_day != risk_day or account.daily_baseline_equity is None:
+            account.risk_day = risk_day
+            account.daily_baseline_equity = current_equity
+        peak = account.peak_equity or account.initial_balance
+        reasons: list[str] = []
+        if account.daily_baseline_equity - current_equity >= rules.max_daily_loss:
+            reasons.append("MAX_DAILY_LOSS")
+        if peak > ZERO and (peak - current_equity) / peak >= rules.max_drawdown_fraction:
+            reasons.append("MAX_DRAWDOWN")
+        account.peak_equity = max(peak, current_equity)
     if reasons:
         account.halted = True
     return account, tuple(reasons)
@@ -238,12 +264,21 @@ def validate_rules(rules: Rules) -> None:
         raise FinanceError("unsupported funding mode")
     if rules.funding_interval_hours != 1:
         raise FinanceError("only the documented hourly funding interval is supported")
+    if rules.funding_history_max_offset_seconds != 5:
+        raise FinanceError("unsupported funding history event-time offset")
     if rules.funding_rate_basis != "funding_history":
         raise FinanceError("funding rate must come from historical funding evidence")
-    if rules.funding_price_basis != "oracle_px":
-        raise FinanceError("funding notional must use the captured oracle price")
+    if rules.funding_price_basis not in {"oracle_px", "oracle_px_paper_approximation"}:
+        raise FinanceError("funding notional must use the captured paper oracle price")
     if rules.risk_policy_version != "risk-v1":
         raise FinanceError("unsupported risk policy version")
+    if (
+        rules.snapshot_schema_version != 1
+        or rules.proposal_schema_version != 1
+        or rules.public_evidence_schema_version != 1
+        or rules.market_window_candles != 12
+    ):
+        raise FinanceError("unsupported frozen evidence schema or market window")
     if (
         not isinstance(rules.max_positions, int)
         or isinstance(rules.max_positions, bool)
@@ -269,16 +304,25 @@ def rules_from_config(data: Mapping[str, object]) -> Rules:
     max_positions = data.get("max_positions")
     allow_pyramiding = data.get("allow_pyramiding")
     interval = data.get("funding_interval_hours")
+    funding_history_max_offset = data.get("funding_history_max_offset_seconds")
     funding_mode = data.get("funding_mode")
     funding_rate_basis = data.get("funding_rate_basis")
     funding_price_basis = data.get("funding_price_basis")
     policy_version = data.get("risk_policy_version")
+    snapshot_schema_version = data.get("snapshot_schema_version")
+    proposal_schema_version = data.get("proposal_schema_version")
+    public_evidence_schema_version = data.get("public_evidence_schema_version")
+    market_window_candles = data.get("market_window_candles")
     if not isinstance(max_positions, int) or isinstance(max_positions, bool):
         raise FinanceError("frozen rule max_positions must be an integer")
     if not isinstance(allow_pyramiding, bool):
         raise FinanceError("frozen rule allow_pyramiding must be boolean")
     if not isinstance(interval, int) or isinstance(interval, bool):
         raise FinanceError("frozen rule funding_interval_hours must be an integer")
+    if not isinstance(funding_history_max_offset, int) or isinstance(
+        funding_history_max_offset, bool
+    ):
+        raise FinanceError("frozen rule funding_history_max_offset_seconds must be an integer")
     if not isinstance(funding_mode, str):
         raise FinanceError("frozen funding and risk policy identifiers are required")
     if not isinstance(funding_rate_basis, str):
@@ -287,6 +331,14 @@ def rules_from_config(data: Mapping[str, object]) -> Rules:
         raise FinanceError("frozen funding and risk policy identifiers are required")
     if not isinstance(policy_version, str):
         raise FinanceError("frozen funding and risk policy identifiers are required")
+    for name, value in (
+        ("snapshot_schema_version", snapshot_schema_version),
+        ("proposal_schema_version", proposal_schema_version),
+        ("public_evidence_schema_version", public_evidence_schema_version),
+        ("market_window_candles", market_window_candles),
+    ):
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise FinanceError(f"frozen rule {name} must be an integer")
     rules = Rules(
         commission_rate=decimal("commission_rate"),
         slippage_bps=decimal("slippage_bps"),
@@ -303,9 +355,14 @@ def rules_from_config(data: Mapping[str, object]) -> Rules:
         liquidation_fee_rate=decimal("liquidation_fee_rate"),
         funding_mode=funding_mode,
         funding_interval_hours=interval,
+        funding_history_max_offset_seconds=funding_history_max_offset,
         funding_rate_basis=funding_rate_basis,
         funding_price_basis=funding_price_basis,
         risk_policy_version=policy_version,
+        snapshot_schema_version=cast(int, snapshot_schema_version),
+        proposal_schema_version=cast(int, proposal_schema_version),
+        public_evidence_schema_version=cast(int, public_evidence_schema_version),
+        market_window_candles=cast(int, market_window_candles),
     )
     decimal("fixture_funding_rate_per_hour")
     validate_rules(rules)
@@ -349,7 +406,9 @@ def available_collateral(
     account: Account, quotes: dict[str, Quote], instruments: dict[str, Instrument]
 ) -> Decimal:
     # Reserved initial margin remains in equity; subtract it once to find free collateral.
-    return money(equity(account, quotes, instruments) - account.reserved_margin)
+    with localcontext() as ctx:
+        ctx.prec = 60
+        return money(equity(account, quotes, instruments) - account.reserved_margin)
 
 
 def quote_set_is_trusted(quotes: Iterable[Quote], required_symbols: set[str], rules: Rules) -> bool:
@@ -618,50 +677,60 @@ def apply_funding(
     account: Account,
     quotes: dict[str, Quote],
     instruments: dict[str, Instrument],
-    rate: Decimal,
+    rates: dict[str, Decimal],
     rules: Rules | None = None,
     *,
     as_of: date | None = None,
     funding_prices: dict[str, Decimal] | None = None,
 ) -> EngineResult:
-    """Apply a positive funding rate (longs pay shorts) to all open positions."""
-    _decimal(rate, "funding rate")
+    """Apply historical per-symbol funding rates using captured oracle prices.
+
+    Funding notional is a paper approximation because the oracle is sampled shortly
+    before the settlement boundary. A positive rate charges longs and credits shorts.
+    """
     rules = rules or Rules()
     validate_rules(rules)
     account = deepcopy(account)
+    rates = dict(rates)
+    prices = dict(funding_prices or {})
+    if set(rates) != set(prices):
+        raise FinanceError("funding rates and oracle prices must have matching symbols")
+    if not set(rates).issubset(account.positions):
+        raise FinanceError("funding evidence includes a symbol not held by the account")
     with localcontext() as ctx:
         ctx.prec = 60
         total = ZERO
         postings: list[Posting] = []
-        if set(account.positions) != set(funding_prices or {}):
-            if account.positions:
-                raise FinanceError("captured oracle funding prices are required for every position")
-        if account.positions and not quote_set_is_trusted(
-            (quotes[symbol] for symbol in account.positions), set(account.positions), rules
-        ):
-            raise FinanceError("fresh trusted held-symbol marks are required for funding")
-        for symbol in sorted(account.positions):
+        for symbol in sorted(rates):
+            rate = rates[symbol]
+            _decimal(rate, f"{symbol} funding rate")
             position = account.positions[symbol]
-            funding_price = (funding_prices or {})[symbol]
+            funding_price = prices[symbol]
             _positive(funding_price, "funding oracle price")
-            base = (
-                position.quantity * funding_price * instruments[symbol].contract_multiplier * rate
+            instrument = instruments.get(symbol)
+            if instrument is None:
+                raise FinanceError(f"funding instrument {symbol} is missing")
+            payment = funding_payment_amount(
+                position, rate, funding_price, instrument.contract_multiplier
             )
-            payment = -base if position.side is Side.LONG else base
-            payment = money(payment)
             total = money(total + payment)
             postings.extend((Posting("cash", payment), Posting("funding_income", money(-payment))))
         account.cash = money(account.cash + total)
         account.funding = money(account.funding + total)
         if sum((p.amount for p in postings), ZERO) != ZERO:
             raise FinanceError("funding postings do not balance")
-        value = equity(account, quotes, instruments)
-        account, _ = evaluate_risk(account, value, rules, as_of=as_of)
+        held_quotes = (quotes[symbol] for symbol in account.positions if symbol in quotes)
+        complete_marks = set(account.positions).issubset(quotes) and quote_set_is_trusted(
+            held_quotes, set(account.positions), rules
+        )
+        value = equity(account, quotes, instruments) if complete_marks else None
+        if value is not None:
+            account, _ = evaluate_risk(account, value, rules, as_of=as_of)
         return EngineResult(
             account,
             (),
             tuple(postings),
-            (("FUNDING", {"amount": str(total), "rate": str(rate)}),),
+            (("FUNDING", {"amount": str(total), "symbols": str(len(rates))}),),
             value,
         )
 

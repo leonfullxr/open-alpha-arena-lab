@@ -18,7 +18,6 @@ from typing import Any, Protocol
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.canonical import canonical_json_bytes
 from app.db.models import (
     Account as AccountRow,
 )
@@ -36,6 +35,7 @@ from app.db.models import (
     Position as PositionRow,
 )
 from app.db.session import SessionLocal
+from app.llm.inputs import build_agent_request_bytes, build_user_input
 from app.llm.providers import (
     OPENAI_CHAT_URL,
     OPENAI_RESPONSES_URL,
@@ -44,8 +44,8 @@ from app.llm.providers import (
     ProviderConfig,
     ProviderError,
     ProviderResult,
-    build_request_bytes,
 )
+from app.market.funding import capture_due_oracle, poll_due_rates, settle_ready_boundaries
 from app.market.hyperliquid import HyperliquidClient, MarketDataError
 from app.market.persistence import (
     SnapshotReceipt,
@@ -69,6 +69,7 @@ from app.services.invocation import (
     prepare_invocation_dispatch,
     terminalize_undispatched,
 )
+from app.services.reconciliation import reconcile_ledger
 
 LOGGER = logging.getLogger("arena.worker")
 _ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]{0,79}$")
@@ -105,6 +106,19 @@ class WorkerReport:
     detail: str = ""
 
 
+@dataclass(frozen=True, slots=True)
+class _DispatchInput:
+    provider: str
+    model: str
+    settings: dict[str, Any]
+    api_key: str
+    is_demo_replay: bool
+    manifest_order: int
+    round_index: int
+    system_prompt: bytes
+    user_prompt: bytes
+
+
 def run_once(
     worker: str,
     *,
@@ -136,13 +150,25 @@ def _collect_once(
     factory = client_factory or HyperliquidClient
     try:
         with factory() as client:
+            oracle_captured = capture_due_oracle(
+                session_factory,
+                client,
+                now=datetime.now(UTC),
+                worker_name=f"collector-{_WORKER_INSTANCE[:8]}",
+            )
             receipt, candle_changes = capture_market_snapshot(client, session_factory)
+            funding_records = poll_due_rates(
+                session_factory,
+                client,
+                now=datetime.now(UTC),
+                worker_name=f"collector-{_WORKER_INSTANCE[:8]}",
+            )
         state = "READY" if receipt.trusted else "DEGRADED"
         return WorkerReport(
             "collector",
             state,
-            handled=1 + candle_changes,
-            detail="quote set and bounded candle backfill stored",
+            handled=1 + candle_changes + funding_records + int(oracle_captured),
+            detail="market snapshot and funding evidence cycle completed",
         )
     except MarketDataError as exc:
         LOGGER.warning("market collection failed code=%s", exc.code)
@@ -160,10 +186,13 @@ def _collect_candles(
     changes = 0
     latest_complete = captured_at.replace(second=0, microsecond=0)
     latest_complete -= timedelta(minutes=latest_complete.minute % 3)
+    latest_closed_open = latest_complete - timedelta(minutes=3)
     for symbol in BASELINE_SYMBOLS:
         with session_factory() as db:
             existing = load_candles(db, symbol)
         if existing:
+            if existing[-1].open_at >= latest_closed_open:
+                continue
             start_at = max(
                 existing[-1].open_at - timedelta(minutes=3), latest_complete - timedelta(days=9)
             )
@@ -342,124 +371,44 @@ def _claim_one(session_factory: sessionmaker[Session]) -> ClaimedJob | None:
 def _dispatch_claim(
     session_factory: sessionmaker[Session], claim: ClaimedJob, env: Mapping[str, str]
 ) -> InvocationCompletion | None:
-    with session_factory() as db:
-        competition = db.scalar(
-            select(Competition)
-            .where(Competition.id == claim.competition_id)
-            .with_for_update(of=Competition)
-        )
-        job = db.scalar(
-            select(RoundAgentJob)
-            .where(RoundAgentJob.id == claim.job_id)
-            .with_for_update()
-        )
-        agent = db.get(AgentRun, claim.agent_run_id)
-        round_row = db.get(DecisionRound, claim.round_id)
-        if competition is None or job is None or agent is None or round_row is None:
-            raise RuntimeError("claimed job context is missing")
-        prompt = db.get(PromptVersion, agent.prompt_version_id)
-        snapshot = db.get(MarketSnapshot, claim.snapshot_id)
-        account = db.scalar(
-            select(AccountRow)
-            .where(AccountRow.agent_run_id == agent.id)
-            .with_for_update()
-        )
-        if prompt is None or snapshot is None or account is None:
-            raise RuntimeError("claimed job data is incomplete")
-        positions: tuple[PositionRow, ...] = tuple(
-            db.scalars(
-                select(PositionRow)
-                .where(
-                    PositionRow.account_id == account.id,
-                    PositionRow.state == "OPEN",
-                )
-                .order_by(PositionRow.symbol)
-            ).all()
-        )
-        snapshot_json = _json_object(snapshot.canonical_bytes)
-        system_prompt = prompt.template_bytes
-        user_prompt = canonical_json_bytes(
-            {
-                "schema": {
-                    "proposals": [
-                        "action",
-                        "symbol",
-                        "quantity",
-                        "leverage",
-                        "stop_loss",
-                        "take_profit",
-                        "confidence",
-                        "invalidation",
-                        "justification",
-                    ]
-                },
-                "logical_at": _normalize_timestamp(round_row.logical_at).isoformat(),
-                "snapshot": snapshot_json,
-                "snapshot_sha256": snapshot.sha256,
-                "own_account": {
-                    "version": account.version,
-                    "cash": str(account.cash),
-                    "realized_pnl": str(account.realized_pnl),
-                    "fees": str(account.fees),
-                    "funding": str(account.funding),
-                    "positions": [
-                        {
-                            "symbol": item.symbol,
-                            "side": item.side,
-                            "quantity": str(item.quantity),
-                            "average_entry": str(item.average_entry),
-                            "reserved_margin": str(item.reserved_margin),
-                            "stop_loss": str(item.stop_loss)
-                            if item.stop_loss is not None
-                            else None,
-                            "take_profit": str(item.take_profit)
-                            if item.take_profit is not None
-                            else None,
-                        }
-                        for item in positions
-                    ],
-                },
-            }
-        )
-        settings = _json_object(agent.model_settings_bytes)
-        competition = db.get(Competition, claim.competition_id)
-        if competition is None:
-            raise RuntimeError("claimed competition is missing")
-        # Capture the secret from the explicitly frozen environment name before
-        # committing a billable attempt. Credentials never enter evidence rows.
-        key_name = agent.api_key_env
-        api_key = (env.get(key_name) or "") if key_name and _ENV_NAME.fullmatch(key_name) else ""
+    dispatch = _load_dispatch_input(session_factory, claim, env)
+    if dispatch is None:
+        _terminalize_claim(session_factory, claim, "NOT_DISPATCHED")
+        LOGGER.warning("provider dispatch skipped reason=ledger_reconciliation_failed")
+        return None
     try:
-        mock_mode = agent.provider == "MockLLMAdapter"
+        mock_mode = dispatch.provider == "MockLLMAdapter"
         if mock_mode:
             if (
                 env.get("APP_MODE", "demo") != "demo"
                 or env.get("ENABLE_MOCK_INFERENCE", "false").lower() != "true"
-                or not competition.source_label.startswith("DEMO REPLAY")
+                or not dispatch.is_demo_replay
             ):
                 _terminalize_claim(session_factory, claim, "PROVIDER_NOT_CONFIGURED")
                 return None
             config = ProviderConfig(
                 provider="MockLLMAdapter",
-                model=agent.model,
+                model=dispatch.model,
                 endpoint=OPENAI_CHAT_URL,
                 max_output_tokens=_positive_int(
-                    settings.get("max_output_tokens", 512), "max output tokens", 2000
+                    dispatch.settings.get("max_output_tokens", 512),
+                    "max output tokens",
+                    2000,
                 ),
-                temperature=_optional_decimal(settings, "temperature", "0"),
+                temperature=_optional_decimal(dispatch.settings, "temperature", "0"),
             )
             reservation = None
         else:
-            config = _provider_config(agent.provider, agent.model, settings)
-            if not api_key:
+            config = _provider_config(dispatch.provider, dispatch.model, dispatch.settings)
+            if not dispatch.api_key:
                 _terminalize_claim(session_factory, claim, "PROVIDER_NOT_CONFIGURED")
                 return None
-        request_body = build_request_bytes(
+        request_body = build_agent_request_bytes(
             config,
-            system_prompt_bytes=system_prompt,
-            user_prompt_bytes=user_prompt,
+            system_prompt_bytes=dispatch.system_prompt,
+            user_prompt_bytes=dispatch.user_prompt,
         )
-        configured_max_bytes = settings.get("max_input_body_bytes", _MAX_REQUEST_BYTES)
+        configured_max_bytes = dispatch.settings.get("max_input_body_bytes", _MAX_REQUEST_BYTES)
         max_request_bytes = min(
             _MAX_REQUEST_BYTES,
             _positive_int(configured_max_bytes, "max input body bytes", _MAX_REQUEST_BYTES),
@@ -469,7 +418,7 @@ def _dispatch_claim(
             return None
         if not mock_mode:
             reservation = _worst_case_reservation(config, request_body)
-            max_cost = _required_decimal(settings, "max_cost_per_request_usd")
+            max_cost = _required_decimal(dispatch.settings, "max_cost_per_request_usd")
             if reservation > max_cost:
                 _terminalize_claim(session_factory, claim, "BUDGET_EXCEEDED")
                 return None
@@ -483,23 +432,23 @@ def _dispatch_claim(
         _terminalize_claim(session_factory, claim, code)
         LOGGER.warning("provider dispatch skipped code=%s", code)
         return None
-    prepared = _prepare_dispatch(
-        session_factory, claim, config, request_body, reservation
-    )
+    prepared = _prepare_dispatch(session_factory, claim, config, request_body, reservation)
     if prepared is None:
         return None
     if mock_mode:
-        return _mock_completion(agent, round_row)
+        return _mock_completion(dispatch.manifest_order, dispatch.round_index)
     session_id = hashlib.sha256(
         f"arena-conversation:{claim.competition_id}:{claim.agent_run_id}".encode()
     ).hexdigest()[:32]
-    with OpenAICompatibleProvider(config, api_key=api_key, session_id=session_id) as provider:
+    with OpenAICompatibleProvider(
+        config, api_key=dispatch.api_key, session_id=session_id
+    ) as provider:
         try:
             result = provider.invoke(request_bytes=request_body)
-            return _completion(result, settings)
+            return _completion(result, dispatch.settings)
         except ProviderError as exc:
             metadata: dict[str, str | int] = {
-                "adapter": settings.get("adapter", "openai_chat")
+                "adapter": dispatch.settings.get("adapter", "openai_chat")
             }
             if exc.status_code is not None:
                 metadata["status_code"] = exc.status_code
@@ -508,6 +457,66 @@ def _dispatch_claim(
                 error_code=exc.code,
                 public_metadata=metadata,
             )
+
+
+def _load_dispatch_input(
+    session_factory: sessionmaker[Session], claim: ClaimedJob, env: Mapping[str, str]
+) -> _DispatchInput | None:
+    with session_factory() as db:
+        competition = db.scalar(
+            select(Competition)
+            .where(Competition.id == claim.competition_id)
+            .with_for_update(of=Competition)
+        )
+        job = db.scalar(
+            select(RoundAgentJob).where(RoundAgentJob.id == claim.job_id).with_for_update()
+        )
+        agent = db.get(AgentRun, claim.agent_run_id)
+        round_row = db.get(DecisionRound, claim.round_id)
+        if competition is None or job is None or agent is None or round_row is None:
+            raise RuntimeError("claimed job context is missing")
+        reconciliation = reconcile_ledger(db, competition_id=claim.competition_id)
+        if not reconciliation.balanced:
+            categories = sorted({item.category for item in reconciliation.mismatches})
+            LOGGER.warning(
+                "provider dispatch skipped reason=ledger_reconciliation_failed categories=%s",
+                ",".join(categories),
+            )
+            return None
+        prompt = db.get(PromptVersion, agent.prompt_version_id)
+        snapshot = db.get(MarketSnapshot, claim.snapshot_id)
+        account = db.scalar(
+            select(AccountRow).where(AccountRow.agent_run_id == agent.id).with_for_update()
+        )
+        if prompt is None or snapshot is None or account is None:
+            raise RuntimeError("claimed job data is incomplete")
+        positions = tuple(
+            db.scalars(
+                select(PositionRow)
+                .where(PositionRow.account_id == account.id, PositionRow.state == "OPEN")
+                .order_by(PositionRow.symbol)
+                .with_for_update()
+            ).all()
+        )
+        key_name = agent.api_key_env
+        api_key = (env.get(key_name) or "") if key_name and _ENV_NAME.fullmatch(key_name) else ""
+        return _DispatchInput(
+            provider=agent.provider,
+            model=agent.model,
+            settings=_json_object(agent.model_settings_bytes),
+            api_key=api_key,
+            is_demo_replay=competition.source_label.startswith("DEMO REPLAY"),
+            manifest_order=agent.manifest_order,
+            round_index=round_row.round_index,
+            system_prompt=prompt.template_bytes,
+            user_prompt=build_agent_input(
+                logical_at=round_row.logical_at,
+                competition=competition,
+                snapshot=snapshot,
+                account=account,
+                positions=positions,
+            ),
+        )
 
 
 def _prepare_dispatch(
@@ -537,20 +546,57 @@ def _prepare_dispatch(
         )
 
 
-def _mock_completion(agent: AgentRun, round_row: DecisionRound) -> InvocationCompletion:
-    if round_row.round_index == 1:
-        action = "OPEN_LONG" if agent.manifest_order == 0 else "OPEN_SHORT"
-        symbol = "BTC" if agent.manifest_order == 0 else "ETH"
+def build_agent_input(
+    *,
+    logical_at: datetime,
+    competition: Competition,
+    snapshot: MarketSnapshot,
+    account: AccountRow,
+    positions: tuple[PositionRow, ...],
+) -> bytes:
+    """Build the exact public input envelope sent to one agent for one round."""
+    return build_user_input(
+        logical_at=_normalize_timestamp(logical_at),
+        frozen_rules=_json_object(competition.rules_bytes),
+        frozen_rules_sha256=competition.rules_sha256,
+        snapshot=_json_object(snapshot.canonical_bytes),
+        snapshot_sha256=snapshot.sha256,
+        own_account={
+            "version": account.version,
+            "cash": str(account.cash),
+            "realized_pnl": str(account.realized_pnl),
+            "fees": str(account.fees),
+            "funding": str(account.funding),
+            "positions": [
+                {
+                    "symbol": item.symbol,
+                    "side": item.side,
+                    "quantity": str(item.quantity),
+                    "average_entry": str(item.average_entry),
+                    "reserved_margin": str(item.reserved_margin),
+                    "stop_loss": str(item.stop_loss) if item.stop_loss is not None else None,
+                    "take_profit": str(item.take_profit) if item.take_profit is not None else None,
+                }
+                for item in positions
+            ],
+        },
+    )
+
+
+def _mock_completion(manifest_order: int, round_index: int) -> InvocationCompletion:
+    if round_index == 1:
+        action = "OPEN_LONG" if manifest_order == 0 else "OPEN_SHORT"
+        symbol = "BTC" if manifest_order == 0 else "ETH"
         quantity = "0.01" if symbol == "BTC" else "0.1"
     else:
         action, symbol, quantity = "HOLD", "BTC", "0"
     output = (
-        "{\"proposals\":[{"
-        f'\"action\":\"{action}\",\"symbol\":\"{symbol}\",'
-        f'\"quantity\":{quantity},\"leverage\":2,'
-        '\"stop_loss\":null,\"take_profit\":null,\"confidence\":0.5,'
-        '\"invalidation\":\"The supplied market evidence changes.\",'
-        '\"justification\":\"Deterministic offline fixture response.\"}]}'
+        '{"proposals":[{'
+        f'"action":"{action}","symbol":"{symbol}",'
+        f'"quantity":{quantity},"leverage":2,'
+        '"stop_loss":null,"take_profit":null,"confidence":0.5,'
+        '"invalidation":"The supplied market evidence changes.",'
+        '"justification":"Deterministic offline fixture response."}]}'
     ).encode()
     return InvocationCompletion(
         output_bytes=output,
@@ -629,17 +675,18 @@ def _provider_config(provider: str, model: str, settings: dict[str, Any]) -> Pro
 
 
 def _execute_once(session_factory: sessionmaker[Session], env: Mapping[str, str]) -> WorkerReport:
-    live_enabled = (
-        env.get("APP_MODE", "demo") == "live"
-        and env.get("ENABLE_INFERENCE", "false").lower() == "true"
-    )
+    live_mode = env.get("APP_MODE", "demo") == "live"
     mock_enabled = (
         env.get("APP_MODE", "demo") == "demo"
         and env.get("ENABLE_MOCK_INFERENCE", "false").lower() == "true"
         and _mock_competitions_only(session_factory)
     )
-    if not live_enabled and not mock_enabled:
+    if not live_mode and not mock_enabled:
         return WorkerReport("executor", "DISABLED", detail="live execution is disabled")
+    now_at = datetime.now(UTC)
+    funding_paid, funding_skipped = (
+        settle_ready_boundaries(session_factory, now=now_at) if live_mode else (0, 0)
+    )
     with session_factory() as db:
         now = _db_now(db)
         latest_quote_set = db.scalar(
@@ -677,8 +724,12 @@ def _execute_once(session_factory: sessionmaker[Session], env: Mapping[str, str]
         return WorkerReport(
             "executor",
             "READY" if exits else "IDLE",
-            handled=exits,
-            detail="protective exits checked" if exits else "no due response",
+            handled=exits + funding_paid + funding_skipped,
+            detail=(
+                "protective exits and funding checked"
+                if exits or funding_paid or funding_skipped
+                else "no due response"
+            ),
         )
     if execution_quote_set is None or fence is None:
         return WorkerReport("executor", "IDLE", detail="no fresh market evidence")
@@ -686,7 +737,12 @@ def _execute_once(session_factory: sessionmaker[Session], env: Mapping[str, str]
         with session_factory() as db:
             receipt: ExecutionReceipt = execute_job(db, job_id, fence, execution_quote_set)
         state = "READY" if receipt.state in {"SUCCESS", "RISK_REJECTED"} else receipt.state
-        return WorkerReport("executor", state, handled=1, detail="one response executed")
+        return WorkerReport(
+            "executor",
+            state,
+            handled=1 + funding_paid + funding_skipped,
+            detail="one response executed; funding checked",
+        )
     except Exception as exc:
         LOGGER.error("executor cycle failed error_class=%s", type(exc).__name__)
         return WorkerReport("executor", "ERROR", detail="EXECUTOR_FAILED")

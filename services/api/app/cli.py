@@ -13,6 +13,7 @@ from app.core.auth import password_hash
 from app.db.models import Competition, User
 from app.db.session import SessionLocal
 from app.services.demo import seed_demo
+from app.services.reconciliation import reconcile_ledger
 
 
 def main() -> None:
@@ -25,6 +26,8 @@ def main() -> None:
     seed.add_argument("--rounds", type=int, default=20)
     run = sub.add_parser("run-demo", help="seed or reuse and print the persisted replay")
     run.add_argument("--rounds", type=int, default=20)
+    reconcile = sub.add_parser("reconcile", help="compare account projections with the ledger")
+    reconcile.add_argument("--competition-id")
     args = parser.parse_args()
     if args.command == "migrate":
         command.upgrade(Config("services/api/alembic.ini"), "head")
@@ -62,6 +65,32 @@ def main() -> None:
                     sort_keys=True,
                 )
             )
+    elif args.command == "reconcile":
+        with SessionLocal() as db:
+            report = reconcile_ledger(db, competition_id=args.competition_id)
+            print(
+                json.dumps(
+                    {
+                        "competition_id": report.competition_id,
+                        "accounts_checked": report.accounts_checked,
+                        "journals_checked": report.journals_checked,
+                        "balanced": report.balanced,
+                        "mismatches": [
+                            {
+                                "account_id": mismatch.account_id,
+                                "category": mismatch.category,
+                                "expected": mismatch.expected,
+                                "actual": mismatch.actual,
+                                "delta": mismatch.delta,
+                            }
+                            for mismatch in report.mismatches
+                        ],
+                    },
+                    sort_keys=True,
+                )
+            )
+            if not report.balanced:
+                raise SystemExit(1)
 
 
 if __name__ == "__main__":

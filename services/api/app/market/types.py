@@ -50,6 +50,7 @@ class MarketQuote:
     source_at: datetime
     received_at: datetime
     context_received_at: datetime
+    oracle_px: Decimal | None = None
     source_at_basis: str = "hyperliquid_l2_book_time"
 
     def __post_init__(self) -> None:
@@ -59,6 +60,8 @@ class MarketQuote:
             raise ValueError("bid must not exceed ask")
         if self.funding_rate is not None:
             _finite(self.funding_rate, "funding_rate")
+        if self.oracle_px is not None:
+            _finite(self.oracle_px, "oracle_px", positive=True)
         if self.open_interest is not None:
             _finite(self.open_interest, "open_interest")
             if self.open_interest < ZERO:
@@ -189,6 +192,7 @@ class FundingRateRecord:
     rate: Decimal
     event_at: datetime
     premium: Decimal | None = None
+    raw_record_bytes: bytes = b""
 
     def __post_init__(self) -> None:
         if not self.symbol:
@@ -197,6 +201,8 @@ class FundingRateRecord:
         if self.premium is not None:
             _finite(self.premium, "funding premium")
         _aware_utc(self.event_at, "funding event time")
+        if len(self.raw_record_bytes) > 64_000:
+            raise ValueError("funding evidence record is too large")
 
 
 @dataclass(frozen=True, slots=True)

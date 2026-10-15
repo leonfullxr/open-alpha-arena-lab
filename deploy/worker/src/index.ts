@@ -7,6 +7,8 @@ const PUBLIC_PATHS = [
   new RegExp(`^${PUBLIC_ROOT}/competitions$`),
   new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}$`),
   new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}/(?:equity|chart|leaderboard|metrics|events|decisions|positions|trades|export|stream)$`),
+  new RegExp(`^${PUBLIC_ROOT}/competitions/${ID}/funding$`),
+  new RegExp(`^${PUBLIC_ROOT}/funding/evidence/${ID}$`),
   new RegExp(`^${PUBLIC_ROOT}/models/${ID}$`),
   new RegExp(`^${PUBLIC_ROOT}/decisions/${ID}/artifact$`),
   new RegExp(`^${PUBLIC_ROOT}/ticker$`),
@@ -55,6 +57,8 @@ function boundedQuery(url: URL): boolean {
         ? new Set(["limit", "offset"])
       : pathname.endsWith("/chart")
         ? new Set(["range", "points"])
+      : pathname.endsWith("/funding")
+        ? new Set(["limit", "offset", "agent_id", "symbol"])
         : /\/(?:equity|trades|positions|decisions)$/.test(pathname)
           ? new Set(["limit", "offset", "agent_id", "symbol", ...(pathname.endsWith("/positions") ? ["include_closed"] : [])])
           : new Set<string>();

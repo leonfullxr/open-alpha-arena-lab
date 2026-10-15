@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -31,11 +34,13 @@ from app.market.persistence import persist_quote_set
 from app.market.types import BASELINE_SYMBOLS, InstrumentSpec, MarketQuoteSet
 from app.market.types import MarketQuote as Quote
 from app.services.execution import (
+    ExecutionReceipt,
     _rules,
     execute_job,
     run_protective_exit_cycle,
 )
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine, func, select, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 
@@ -60,9 +65,9 @@ def _output(action: str = "OPEN_LONG", quantity: str = "0.1") -> bytes:
 
 
 def _setup(
-    *, output: bytes | None = None, fresh: bool = True
+    *, output: bytes | None = None, fresh: bool = True, engine: Engine | None = None
 ) -> tuple[Session, str, int, str, str]:
-    engine = create_engine("sqlite://")
+    engine = engine or create_engine("sqlite://")
     Base.metadata.create_all(engine)
     db = Session(engine, expire_on_commit=False)
     now = datetime.now(UTC).replace(microsecond=0)
@@ -227,6 +232,26 @@ def test_execution_persists_balanced_ledger_and_is_idempotent() -> None:
     db.close()
 
 
+def test_dirty_ledger_blocks_new_entries_before_execution() -> None:
+    db, job_id, fence, quote_set_id, account_id = _setup()
+    account = db.get(Account, account_id)
+    assert account is not None
+    account.cash += Decimal("1")
+    db.commit()
+
+    receipt = execute_job(db, job_id, fence, quote_set_id)
+
+    assert receipt.state == "RISK_REJECTED"
+    assert receipt.accepted_proposals == 0
+    assert receipt.rejected_proposals == 1
+    assert db.scalar(select(func.count()).select_from(Order)) == 0
+    assert db.scalar(select(func.count()).select_from(Fill)) == 0
+    risk = db.scalar(select(RiskEvaluation))
+    assert risk is not None and risk.decision == "REJECTED"
+    assert "ledger reconciliation" in risk.reasons[0]
+    db.close()
+
+
 def test_incomplete_or_stale_shared_quotes_reject_new_entries_without_fills() -> None:
     db, job_id, fence, quote_set_id, account_id = _setup(fresh=False)
     receipt = execute_job(db, job_id, fence, quote_set_id)
@@ -238,6 +263,210 @@ def test_incomplete_or_stale_shared_quotes_reject_new_entries_without_fills() ->
     account = db.get(Account, account_id)
     assert account is not None and account.cash == Decimal("10000")
     db.close()
+
+
+@pytest.mark.parametrize("incomplete_quotes,invalid_output", [(True, False), (False, True)])
+def test_protective_close_accounting_commits_before_untrusted_result_return(
+    incomplete_quotes: bool, invalid_output: bool
+) -> None:
+    db, job_id, fence, original_quote_set_id, account_id = _setup(
+        output=b"not-json" if invalid_output else _output("HOLD", "0")
+    )
+    account = db.get(Account, account_id)
+    assert account is not None
+    round_row = db.get(DecisionRound, "round-1")
+    assert round_row is not None
+    now = round_row.logical_at
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=UTC)
+    account.cash = Decimal("9000")
+    account.reserved_margin = Decimal("1000")
+    db.add(
+        Position(
+            id="position-before-protection",
+            account_id=account_id,
+            symbol="BTC",
+            side="LONG",
+            quantity=Decimal("10"),
+            average_entry=Decimal("100"),
+            reserved_margin=Decimal("1000"),
+            stop_loss=Decimal("101"),
+            take_profit=None,
+            state="OPEN",
+            opened_at=now - timedelta(hours=1),
+        )
+    )
+    db.flush()
+    quote_set_id = original_quote_set_id
+    if incomplete_quotes:
+        held_price = Quote(
+            symbol="BTC",
+            bid=Decimal("99"),
+            ask=Decimal("101"),
+            mark=Decimal("100"),
+            funding_rate=Decimal("0"),
+            open_interest=Decimal("10"),
+            source_at=now,
+            received_at=now,
+            context_received_at=now,
+        )
+        incomplete_set = MarketQuoteSet(
+            now,
+            (held_price,),
+            (InstrumentSpec("BTC", 4, 20),),
+        )
+        quote_set_id = persist_quote_set(db, incomplete_set).quote_set_id
+    db.commit()
+
+    receipt = execute_job(db, job_id, fence, quote_set_id)
+
+    assert receipt.protective_exits == 1
+    closed = db.get(Position, "position-before-protection")
+    assert closed is not None and closed.state == "CLOSED" and closed.closed_at is not None
+    refreshed = db.get(Account, account_id)
+    assert refreshed is not None
+    assert refreshed.cash != Decimal("9000")
+    assert refreshed.reserved_margin == Decimal("0")
+    assert db.scalar(select(func.count()).select_from(LedgerJournal)) == 1
+    postings = db.scalars(select(LedgerPosting)).all()
+    assert abs(sum((item.amount for item in postings), Decimal("0"))) < Decimal("1e-12")
+    assert execute_job(db, job_id, fence, quote_set_id).idempotent_replay
+    assert db.scalar(select(func.count()).select_from(LedgerJournal)) == 1
+    if incomplete_quotes:
+        assert db.scalar(select(func.count()).select_from(EquitySample)) == 0
+    db.close()
+
+
+def test_dirty_ledger_blocks_new_entry_but_keeps_protective_close() -> None:
+    proposal = json.loads(_output())
+    proposal["proposals"][0]["symbol"] = "ETH"
+    output = json.dumps(proposal).encode()
+    db, job_id, fence, quote_set_id, account_id = _setup(output=output)
+    account = db.get(Account, account_id)
+    round_row = db.get(DecisionRound, "round-1")
+    assert account is not None and round_row is not None
+    now = round_row.logical_at
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=UTC)
+    account.cash = Decimal("9000")
+    account.reserved_margin = Decimal("1000")
+    db.add(
+        Position(
+            id="dirty-protection-position",
+            account_id=account_id,
+            symbol="BTC",
+            side="LONG",
+            quantity=Decimal("10"),
+            average_entry=Decimal("100"),
+            reserved_margin=Decimal("1000"),
+            stop_loss=Decimal("101"),
+            take_profit=None,
+            state="OPEN",
+            opened_at=now - timedelta(hours=1),
+        )
+    )
+    db.commit()
+
+    receipt = execute_job(db, job_id, fence, quote_set_id)
+
+    assert receipt.protective_exits == 1
+    assert receipt.accepted_proposals == 0 and receipt.rejected_proposals == 1
+    closed = db.get(Position, "dirty-protection-position")
+    assert closed is not None and closed.state == "CLOSED" and closed.closed_at is not None
+    assert db.scalar(select(func.count()).select_from(Order)) == 1
+    risk = db.scalar(select(RiskEvaluation))
+    assert risk is not None and "ledger reconciliation" in risk.reasons[0]
+    db.close()
+
+
+_EXECUTION_PG_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
+_EXECUTION_PG_URL = (
+    _EXECUTION_PG_URL if _EXECUTION_PG_URL and _EXECUTION_PG_URL.startswith("postgresql") else None
+)
+
+
+@pytest.mark.skipif(_EXECUTION_PG_URL is None, reason="TEST_DATABASE_URL is not configured")
+def test_postgres_fencing_crash_rollback_and_competing_protective_closes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert _EXECUTION_PG_URL is not None
+    schema = f"arena_exec_{uuid.uuid4().hex[:16]}"
+    admin = create_engine(_EXECUTION_PG_URL, pool_pre_ping=True)
+    with admin.begin() as connection:
+        connection.execute(text(f'CREATE SCHEMA "{schema}"'))
+    engine = create_engine(
+        _EXECUTION_PG_URL,
+        pool_pre_ping=True,
+        connect_args={"options": f"-csearch_path={schema}"},
+    )
+    try:
+        db, job_id, fence, quote_set_id, account_id = _setup(output=b"not-json", engine=engine)
+        round_row = db.get(DecisionRound, "round-1")
+        assert round_row is not None
+        now = round_row.logical_at
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=UTC)
+        account = db.get(Account, account_id)
+        assert account is not None
+        account.cash = Decimal("9000")
+        account.reserved_margin = Decimal("1000")
+        db.add(
+            Position(
+                id="pg-protective-position",
+                account_id=account_id,
+                symbol="BTC",
+                side="LONG",
+                quantity=Decimal("10"),
+                average_entry=Decimal("100"),
+                reserved_margin=Decimal("1000"),
+                stop_loss=Decimal("101"),
+                take_profit=None,
+                state="OPEN",
+                opened_at=now - timedelta(hours=1),
+            )
+        )
+        db.commit()
+        db.close()
+
+        with Session(engine) as stale_db, pytest.raises(ValueError, match="stale"):
+            execute_job(stale_db, job_id, fence + 1, quote_set_id)
+
+        import app.services.execution as execution_module
+
+        def fail_after_protection(_db: Session, _context: object) -> None:
+            raise RuntimeError("simulated post-protection crash")
+
+        monkeypatch.setattr(execution_module, "_persist_account_and_equity", fail_after_protection)
+        with Session(engine) as crash_db, pytest.raises(RuntimeError, match="simulated"):
+            execute_job(crash_db, job_id, fence, quote_set_id)
+        with Session(engine) as check_db:
+            position = check_db.get(Position, "pg-protective-position")
+            assert position is not None and position.state == "OPEN"
+            assert check_db.scalar(select(func.count()).select_from(Fill)) == 0
+            assert check_db.scalar(select(func.count()).select_from(LedgerJournal)) == 0
+
+        monkeypatch.undo()
+
+        def execute_once() -> ExecutionReceipt:
+            with Session(engine) as execution_db:
+                return execute_job(execution_db, job_id, fence, quote_set_id)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            receipts = tuple(pool.map(lambda _index: execute_once(), range(2)))
+        assert sum(not receipt.idempotent_replay for receipt in receipts) == 1
+        with Session(engine) as check_db:
+            position = check_db.get(Position, "pg-protective-position")
+            assert position is not None and position.state == "CLOSED"
+            assert position.closed_at is not None
+            assert check_db.scalar(select(func.count()).select_from(Fill)) == 1
+            assert check_db.scalar(select(func.count()).select_from(LedgerJournal)) == 1
+            postings = check_db.scalars(select(LedgerPosting)).all()
+            assert sum((row.amount for row in postings), Decimal("0")) == Decimal("0")
+    finally:
+        engine.dispose()
+        with admin.begin() as connection:
+            connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        admin.dispose()
 
 
 def test_invalid_provider_schema_is_terminal_and_does_not_create_trade() -> None:
@@ -335,8 +564,6 @@ def test_execution_uses_canonical_frozen_risk_rule_names() -> None:
     assert rules.max_daily_loss == Decimal("500")
     assert rules.max_drawdown_fraction == Decimal("0.25")
     assert rules.liquidation_fee_rate == Decimal("0.01")
-
-
 
 
 def test_same_batch_reentry_is_rejected_after_protective_close() -> None:

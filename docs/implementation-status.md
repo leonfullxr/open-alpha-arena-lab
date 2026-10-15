@@ -6,14 +6,14 @@ Public repository: https://github.com/leonfullxr/open-alpha-arena-lab
 
 | Milestone | State | Evidence and remaining work |
 | --- | --- | --- |
-| M0 repository and foundations | Integration review | Independent MIT repository, auth, API, migrations and CI committed locally; final Compose and schema checks pending |
+| M0 repository and foundations | Integration review | Independent MIT repository, authentication, API, migrations, containers and CI exist; final publication gate pending |
 | M1a landing | Accepted checkpoint | Five viewport captures, forward/reverse transfers, resize, Home, reduced motion and canvas failure checked. See [landing validation](landing-validation.md); final split-route regression remains |
-| M1b simulation | In progress | Started after the landing gate; generated-contract dashboard and separate admin entry under implementation |
-| M2 live market data | In progress | Public Hyperliquid BTC book request succeeded; source event time and bid/ask verified. Collector, candle backfill and indicators under implementation |
-| M3 paper engine | In progress | Core PostgreSQL checkpoint passed; review found multi-position stop, loss-policy and coverage gaps. Persistent risk and independent protection integration underway |
-| M4 model harness | In progress | User authorized existing OpenCode Work Go credential. Model catalog verified without inference; no key copied to source or printed. Provider/job modules under implementation |
-| M5 live/admin product | Pending | Requires typed UI, durable worker integration and bounded genuine-model smoke |
-| M6 deployment hardening | In progress | Fixed-origin Worker, Access separation, allowlists, stream forwarding, local backups and CI config exist. Actual Compose, recovery and production checks still pending |
+| M1b simulation | Final regression | Typed dashboard, leaderboard, model evidence, filters, pagination and separate admin entry are built. Funding and pause/resume updates await final browser checks |
+| M2 live market data | Collected and reviewed | Primary ran the collector against Hyperliquid: trusted six-symbol snapshot and roughly 25,900 backfilled candles, with twelve completed bars and indicators per symbol. Final runtime regression remains |
+| M3 paper engine | Integration review | Decimal accounting, persistent risk, independent exits, historical funding and ledger reconciliation exist. PostgreSQL concurrency and final guard tests remain |
+| M4 model harness | Integration review | Exact sent request artifacts, two adapters, durable dispatch fences, deadlines and spend reservations exist. No inference has been sent; the genuine smoke is pending |
+| M5 live/admin product | Final integration | Public streaming, admin configuration and bounded exports exist. Genuine five-round/two-model acceptance remains pending |
+| M6 deployment hardening | Local recovery checked | A delegate ran isolated Compose startup, backup, restore and restart; primary verified the retained API image revision. Final-build recovery, PR/CI and production resource review remain |
 
 ## Verification record
 
@@ -25,7 +25,7 @@ No-mistakes is initialized and its daemon/agent health check passed. The pipelin
 
 The preliminary simulation passed primary browser checks for chart range state, series toggles, keyboard tooltips, 40-record pagination and exact artifact hashes; its final layout/contracts are being integrated. Primary review also found inconsistent admin baseline settings, incomplete failure evidence, a per-run budget reset at midnight, per-job quote selection and a subsecond provider timeout. Corrections are in progress and require final regression checks.
 
-The remove-ai-marks HTTP service is unreachable at its default loopback address. That skill requires the service and forbids a local fallback, so no metadata-cleaning result is claimed. Deslop applies to project prose; financial values, prompts and byte-hashed evidence are preserved.
+The remove-ai-marks service was unavailable on its default port; an existing service was then found on loopback port 8767. Its inspect/clean API processed nineteen original documentation and screenshot files: no AI provenance or invisible Unicode was reported; eight screenshots lost ICC profile metadata. It reported no residual metadata findings. No pixel watermark removal or statistical detection result is claimed. Deslop applies to prose; financial values, prompts and hashed evidence remain intact. An additional statistical prose rewrite is optional and cannot establish human authorship.
 
 ## Checkpoints
 
@@ -34,12 +34,18 @@ The remove-ai-marks HTTP service is unreachable at its default loopback address.
 - `b8ee0f4`: signed Access JWT negative tests and guard verification.
 - `0e91c2c`: persistent accounting/API/auth foundation. Primary scoped PostgreSQL suite: 16 passed; migrations aligned.
 - `56f7bbf`: accepted landing checkpoint and captures, before simulation implementation. Independent read-only review found no medium-or-higher landing bug; three low follow-ups were recorded.
-- `0771c31`: accounting/operator policies and primary validation record. Runtime and final frontend integration remain in progress.
+- `0771c31`: accounting/operator policies and primary validation record.
+- `d5f50a4`: typed simulation and separate administration entry.
+- `2d47f4e`: bounded workers, live market contracts, competition controls and risk integration.
+- `3afbb05`: configurable loopback ports, complete API container inputs and stricter CI checks.
+- `760f18b`, `0aa4618`: primary corrections to the repository prompt path and BTC benchmark commission.
 
 Only the bootstrap main branch was published before the user requested no-mistakes. Further source publication uses the requested gate. No PR, merge, DNS, Tunnel or production deployment result is claimed.
 
 ## Acceptance still required
 
-Final landing bundle/route cleanup regression. Complete API/schema/secret/auth tests, PostgreSQL migrations and concurrency tests, ledger replay and crash recovery, 20-round/two-mock restart proof, typed demo/live UI, backup/restore, and CI must run on completed code.
+At `0aa4618`, the primary ran the complete backend suite against a fresh PostgreSQL database: 76 passed. The primary then ran the funding/reconciliation checkpoint in an isolated checkout against a fresh migrated PostgreSQL database: 104 tests passed; Ruff, strict source mypy, web build/typecheck and fourteen Worker tests passed. Further execution-evidence corrections remain before final acceptance. Primary review caught a multi-agent creation rejection, protective-exit account projection loss, and a benchmark fee-key mismatch; fixes require final regression. The latest authentication mutation pass killed seventeen of eighteen changes; the missing-claim test has since been strengthened and awaits recheck.
+
+Final schema/secret/auth tests, migrations, concurrency, ledger replay, crash recovery, 20-round worker restart proof, browser regression, final-build backup/restore and PR/CI checks must run on the completed code. Both production npm dependency audits returned zero findings on 2026-10-15. These audits do not establish that all dependencies are vulnerability-free.
 
 Real-model smoke is limited to five rounds, two explicitly selected models and a reserved configured spend cap. Genuine HOLD decisions are valid. Executed-fill acceptance remains pending until a real proposal produces a valid simulated fill. Provider failures and quota errors must remain visible rather than being replaced with fixtures.

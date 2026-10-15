@@ -123,6 +123,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/competitions/{competition_id}/funding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Funding History */
+        get: operations["funding_history_competitions__competition_id__funding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/competitions/{competition_id}/leaderboard": {
         parameters: {
             query?: never;
@@ -217,6 +234,23 @@ export interface paths {
         };
         /** Artifact */
         get: operations["artifact_decisions__decision_id__artifact_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/funding/evidence/{evidence_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Funding Evidence */
+        get: operations["funding_evidence_funding_evidence__evidence_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -502,10 +536,62 @@ export interface components {
             exported_decisions: number;
             /** Exported Equity Points */
             exported_equity_points: number;
+            /** Exported Funding Payments */
+            exported_funding_payments: number;
+            /** Funding */
+            funding: components["schemas"]["FundingPaymentDTO"][];
             /** Leaderboard */
             leaderboard: components["schemas"]["LeaderboardRow"][];
             /** Truncated */
             truncated: boolean;
+        };
+        /** FundingEvidenceArtifactDTO */
+        FundingEvidenceArtifactDTO: {
+            /** Boundary At */
+            boundary_at: string;
+            /** Exact Record Base64 */
+            exact_record_base64: string | null;
+            /** History Event At */
+            history_event_at: string | null;
+            /** Id */
+            id: string;
+            /** Rate */
+            rate: string | null;
+            /** Sha256 */
+            sha256: string | null;
+            /** Status */
+            status: string;
+            /** Symbol */
+            symbol: string;
+        };
+        /** FundingPaymentDTO */
+        FundingPaymentDTO: {
+            /** Agent Id */
+            agent_id: string;
+            /** Agent Name */
+            agent_name: string;
+            /** Amount */
+            amount: string | null;
+            /** Boundary At */
+            boundary_at: string;
+            /** Evidence Id */
+            evidence_id: string | null;
+            /** Evidence Sha256 */
+            evidence_sha256: string | null;
+            /** Id */
+            id: string;
+            /** Oracle Px */
+            oracle_px: string | null;
+            /** Rate */
+            rate: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            /** Symbol */
+            symbol: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -581,6 +667,17 @@ export interface components {
         PageDTO_EquityPoint_: {
             /** Items */
             items: components["schemas"]["EquityPoint"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** PageDTO[FundingPaymentDTO] */
+        PageDTO_FundingPaymentDTO_: {
+            /** Items */
+            items: components["schemas"]["FundingPaymentDTO"][];
             /** Limit */
             limit: number;
             /** Offset */
@@ -976,6 +1073,42 @@ export interface operations {
             };
         };
     };
+    funding_history_competitions__competition_id__funding_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                agent_id?: string | null;
+                symbol?: string | null;
+            };
+            header?: never;
+            path: {
+                competition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageDTO_FundingPaymentDTO_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     leaderboard_competitions__competition_id__leaderboard_get: {
         parameters: {
             query?: never;
@@ -1162,6 +1295,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ArtifactDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    funding_evidence_funding_evidence__evidence_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evidence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundingEvidenceArtifactDTO"];
                 };
             };
             /** @description Validation Error */

@@ -742,6 +742,17 @@
             "title": "Exported Equity Points",
             "type": "integer"
           },
+          "exported_funding_payments": {
+            "title": "Exported Funding Payments",
+            "type": "integer"
+          },
+          "funding": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPaymentDTO"
+            },
+            "title": "Funding",
+            "type": "array"
+          },
           "leaderboard": {
             "items": {
               "$ref": "#/components/schemas/LeaderboardRow"
@@ -759,11 +770,206 @@
           "leaderboard",
           "equity",
           "decisions",
+          "funding",
           "truncated",
           "exported_decisions",
-          "exported_equity_points"
+          "exported_equity_points",
+          "exported_funding_payments"
         ],
         "title": "ExportDTO",
+        "type": "object"
+      },
+      "FundingEvidenceArtifactDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "boundary_at": {
+            "title": "Boundary At",
+            "type": "string"
+          },
+          "exact_record_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exact Record Base64"
+          },
+          "history_event_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Event At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "symbol",
+          "boundary_at",
+          "status",
+          "rate",
+          "history_event_at",
+          "sha256",
+          "exact_record_base64"
+        ],
+        "title": "FundingEvidenceArtifactDTO",
+        "type": "object"
+      },
+      "FundingPaymentDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "agent_name": {
+            "title": "Agent Name",
+            "type": "string"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "boundary_at": {
+            "title": "Boundary At",
+            "type": "string"
+          },
+          "evidence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Id"
+          },
+          "evidence_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Sha256"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "oracle_px": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oracle Px"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "agent_name",
+          "symbol",
+          "boundary_at",
+          "status",
+          "reason",
+          "amount",
+          "rate",
+          "oracle_px",
+          "source",
+          "evidence_id",
+          "evidence_sha256"
+        ],
+        "title": "FundingPaymentDTO",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -984,6 +1190,38 @@
           "total"
         ],
         "title": "PageDTO[EquityPoint]",
+        "type": "object"
+      },
+      "PageDTO_FundingPaymentDTO_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPaymentDTO"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "total"
+        ],
+        "title": "PageDTO[FundingPaymentDTO]",
         "type": "object"
       },
       "PageDTO_PositionDTO_": {
@@ -1913,6 +2151,99 @@
         "summary": "Export Competition"
       }
     },
+    "/competitions/{competition_id}/funding": {
+      "get": {
+        "operationId": "funding_history_competitions__competition_id__funding_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "competition_id",
+            "required": true,
+            "schema": {
+              "title": "Competition Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "agent_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDTO_FundingPaymentDTO_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Funding History"
+      }
+    },
     "/competitions/{competition_id}/leaderboard": {
       "get": {
         "operationId": "leaderboard_competitions__competition_id__leaderboard_get",
@@ -2281,6 +2612,45 @@
           }
         },
         "summary": "Artifact"
+      }
+    },
+    "/funding/evidence/{evidence_id}": {
+      "get": {
+        "operationId": "funding_evidence_funding_evidence__evidence_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidence_id",
+            "required": true,
+            "schema": {
+              "title": "Evidence Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundingEvidenceArtifactDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Funding Evidence"
       }
     },
     "/models/{agent_id}": {

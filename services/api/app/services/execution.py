@@ -52,6 +52,7 @@ from app.engine.finance import (
     unrealized_pnl,
 )
 from app.llm.schema import ProposalBatch, ProposalOutputError, parse_proposal_output
+from app.services.reconciliation import reconcile_ledger
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -128,6 +129,7 @@ def execute_job(
         try:
             batch = parse_proposal_output(context.output)
         except ProposalOutputError:
+            _persist_account_and_equity(db, context)
             context.job.state = "TERMINAL"
             context.job.terminal_result = "PROVIDER_ERROR"
             context.job.error_code = "INVALID_PROPOSAL_OUTPUT"
@@ -149,9 +151,13 @@ def execute_job(
                 False,
             )
 
-        accepted, rejected = _apply_proposals(db, context, batch)
-        if context.quote_trusted:
-            _persist_account_and_equity(db, context)
+        ledger_clean = reconcile_ledger(
+            db, competition_id=context.competition.id
+        ).balanced
+        accepted, rejected = _apply_proposals(
+            db, context, batch, allow_new_entries=ledger_clean
+        )
+        _persist_account_and_equity(db, context)
         context.job.state = "TERMINAL"
         context.job.terminal_result = "SUCCESS" if rejected == 0 else "RISK_REJECTED"
         context.job.error_code = None if rejected == 0 else "RISK_REJECTED"
@@ -356,7 +362,13 @@ def _apply_protective_exits(db: Session, context: _Context) -> int:
     return count
 
 
-def _apply_proposals(db: Session, context: _Context, batch: ProposalBatch) -> tuple[int, int]:
+def _apply_proposals(
+    db: Session,
+    context: _Context,
+    batch: ProposalBatch,
+    *,
+    allow_new_entries: bool,
+) -> tuple[int, int]:
     accepted = rejected = 0
     seen_symbols: set[str] = set()
     symbol_order = {symbol: index for index, symbol in enumerate(context.symbols)}
@@ -381,7 +393,9 @@ def _apply_proposals(db: Session, context: _Context, batch: ProposalBatch) -> tu
             )
         )
         db.flush()
-        if proposal.symbol not in context.symbols:
+        if proposal.action.value in {"OPEN_LONG", "OPEN_SHORT"} and not allow_new_entries:
+            reasons.append("account ledger reconciliation is dirty; new entries are blocked")
+        elif proposal.symbol not in context.symbols:
             reasons.append("symbol outside frozen competition universe")
         elif proposal.symbol in context.protectively_closed_symbols:
             reasons.append("symbol closed by a protective order in this batch")
@@ -520,6 +534,7 @@ def _sync_positions(db: Session, context: _Context, changed_symbol: str) -> None
         context.positions,
         context.account,
         changed_symbol,
+        context.now,
     )
 
 
@@ -529,14 +544,16 @@ def _sync_position_rows(
     positions: tuple[PositionRow, ...],
     account: Account,
     changed_symbol: str,
+    now: datetime,
 ) -> tuple[PositionRow, ...]:
-    row_by_symbol = {row.symbol: row for row in positions}
+    row_by_symbol = {row.symbol: row for row in positions if row.state == "OPEN"}
     simulated = account.positions
     position = simulated.get(changed_symbol)
     row = row_by_symbol.get(changed_symbol)
     if position is None:
         if row is not None:
             row.state = "CLOSED"
+            row.closed_at = now
         return positions
     if row is None:
         row = PositionRow(
@@ -550,6 +567,7 @@ def _sync_position_rows(
             stop_loss=position.stop_loss,
             take_profit=position.take_profit,
             state="OPEN",
+            opened_at=now,
         )
         db.add(row)
         return (*positions, row)
@@ -567,6 +585,8 @@ def _persist_account_and_equity(db: Session, context: _Context) -> None:
     account = context.account
     account_row = context.account_row
     _persist_account_row(account_row, account)
+    if not context.quote_trusted:
+        return
     marks = {symbol: quote.mark for symbol, quote in context.quotes.items()}
     current_equity = equity(account, context.quotes, context.instruments)
     unrealized = sum(

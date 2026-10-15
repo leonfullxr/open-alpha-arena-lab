@@ -219,9 +219,38 @@ class ExportDTO(PublicModel):
     leaderboard: list[LeaderboardRow]
     equity: list[EquityPoint]
     decisions: list[DecisionDTO]
+    funding: list[FundingPaymentDTO]
     truncated: bool
     exported_decisions: int
     exported_equity_points: int
+    exported_funding_payments: int
+
+
+class FundingPaymentDTO(PublicModel):
+    id: str
+    agent_id: str
+    agent_name: str
+    symbol: str
+    boundary_at: str
+    status: str
+    reason: str | None
+    amount: str | None
+    rate: str | None
+    oracle_px: str | None
+    source: str
+    evidence_id: str | None
+    evidence_sha256: str | None
+
+
+class FundingEvidenceArtifactDTO(PublicModel):
+    id: str
+    symbol: str
+    boundary_at: str
+    status: str
+    rate: str | None
+    history_event_at: str | None
+    sha256: str | None
+    exact_record_base64: str | None
 
 
 class ArtifactDTO(PublicModel):

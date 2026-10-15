@@ -126,9 +126,11 @@ def create_competition(db: Session, payload: dict[str, object]) -> Competition:
     agents = payload.get("agents")
     if not isinstance(agents, list) or not 1 <= len(agents) <= 6:
         raise AdminInputError("competition requires 1..6 agents")
+    if any(not isinstance(spec, dict) for spec in agents):
+        raise AdminInputError("each agent must be an object")
     prompt_ids = {spec.get("prompt_version_id") for spec in agents if isinstance(spec, dict)}
-    if len(prompt_ids) != 1 or len(prompt_ids) != len(agents):
-        raise AdminInputError("all agents must use one shared prompt version")
+    if profile == "alpha_2025_baseline" and len(prompt_ids) != 1:
+        raise AdminInputError("baseline agents must use one shared prompt version")
     rules = {**canonical_rules, "inference_budget_usd": format(inference_budget, "f")}
     rules_bytes = canonical_json_bytes(rules)
     competition = Competition(

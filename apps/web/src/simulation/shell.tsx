@@ -7,16 +7,16 @@ const symbols = ['BTC', 'ETH', 'SOL', 'BNB', 'DOGE', 'XRP'];
 
 export function SimulationShell({ children }: { children: ReactNode }): React.JSX.Element {
   const location = useLocation();
-  const competitions = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions, refetchInterval: (query) => query.state.data?.some((item) => item.state === 'RUNNING') ? 5_000 : false });
+  const competitions = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions, refetchInterval: 15_000 });
   const pathCompetition = location.pathname.split('/')[2];
   const scopedCompetition = competitions.data?.find((competition) => competition.id === pathCompetition);
-  const live = scopedCompetition?.state === 'RUNNING';
-  const status = useQuery({ queryKey: ['status'], queryFn: getStatus, refetchInterval: live ? 5_000 : false });
-  const ticker = useQuery({ queryKey: ['ticker', scopedCompetition?.id], queryFn: () => getTicker(scopedCompetition?.id), refetchInterval: live ? 5_000 : false });
+  const refreshMarket = scopedCompetition?.state === 'RUNNING' || scopedCompetition?.state === 'PAUSED';
+  const status = useQuery({ queryKey: ['status'], queryFn: getStatus, refetchInterval: refreshMarket ? 5_000 : false });
+  const ticker = useQuery({ queryKey: ['ticker', scopedCompetition?.id], queryFn: () => getTicker(scopedCompetition?.id), refetchInterval: refreshMarket ? 5_000 : false });
   const selected = competitions.data?.find((competition) => competition.id === pathCompetition) ?? competitions.data?.[0];
   const competitionPath = selected ? `/simulation/${encodeURIComponent(selected.id)}` : '/simulation';
   const stale = ticker.data?.some((quote) => quote.stale) ?? false;
-  const tickerLabel = status.isError || ticker.isError ? 'API UNAVAILABLE' : live ? stale ? `${scopedCompetition?.source_label ?? 'MARKET DATA'} · STALE DATA` : `${scopedCompetition?.source_label ?? 'MARKET DATA'} · RUNNING` : scopedCompetition ? `${scopedCompetition.source_label} · ${scopedCompetition.state}` : status.data?.demo_label ?? status.data?.state ?? 'CONNECTING';
+  const tickerLabel = status.isError || ticker.isError ? 'API UNAVAILABLE' : refreshMarket ? stale ? `${scopedCompetition?.source_label ?? 'MARKET DATA'} · STALE DATA` : `${scopedCompetition?.source_label ?? 'MARKET DATA'} · ${scopedCompetition?.state} · MARKET REFRESH` : scopedCompetition ? `${scopedCompetition.source_label} · ${scopedCompetition.state}` : status.data?.demo_label ?? status.data?.state ?? 'CONNECTING';
 
   return <div className="terminal">
     <a className="terminal-skip" href="#terminal-main">Skip to content</a>

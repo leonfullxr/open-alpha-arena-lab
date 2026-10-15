@@ -8,6 +8,9 @@ export type EquityPoint = PublicSchema['EquityPoint'];
 export type LeaderboardRow = PublicSchema['LeaderboardRow'];
 export type Trade = PublicSchema['TradeDTO'];
 export type Position = PublicSchema['PositionDTO'];
+export type FundingPayment = PublicSchema['FundingPaymentDTO'];
+export type FundingEvidence = PublicSchema['FundingEvidenceArtifactDTO'];
+export type FundingPage = PublicSchema['PageDTO_FundingPaymentDTO_'];
 export type Decision = PublicSchema['DecisionDTO'];
 export type Artifact = PublicSchema['ArtifactDTO'];
 export type EventPage = PublicSchema['EventPageDTO'];
@@ -86,6 +89,18 @@ export function getPositionHistory(id: string, query: HistoryQuery): Promise<Pos
   return client.GET('/competitions/{competition_id}/positions', {
     params: { path: { competition_id: id }, query: { ...query, include_closed: true } },
   }).then(requireData);
+}
+
+export function getFundingHistory(id: string, query: HistoryQuery): Promise<FundingPage> {
+  return client.GET('/competitions/{competition_id}/funding', {
+    params: { path: { competition_id: id }, query },
+  }).then(requireData);
+}
+
+export async function getFundingEvidence(id: string): Promise<FundingEvidence> {
+  return requireData(await client.GET('/funding/evidence/{evidence_id}', {
+    params: { path: { evidence_id: id } },
+  }));
 }
 
 export function getDecisionHistory(id: string, query: HistoryQuery): Promise<DecisionPage> {

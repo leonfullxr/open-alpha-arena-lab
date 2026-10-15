@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getArtifact, getDecisionHistory, getPositionHistory, getTradeHistory, type Agent, type Decision, type Position, type Trade } from './api';
-import { decimal, money } from './ui';
+import { getArtifact, getDecisionHistory, getFundingEvidence, getFundingHistory, getPositionHistory, getTradeHistory, type Agent, type Decision, type FundingEvidence, type FundingPayment, type Position, type Trade } from './api';
+import { decimal, money, timestamp } from './ui';
 
 export type ActivityTab = 'Live Trades' | 'Model Chat' | 'Positions' | 'README.TXT';
 const PAGE_SIZE = 20;
@@ -44,7 +44,7 @@ export function ActivityPanel({ tab, competitionId, agentId, agents = [] }: {
     {tab === 'README.TXT' ? <Readme /> : active?.isLoading ? <div className="query-state" role="status">Loading records…</div> : active?.error ? <div className="query-error" role="alert">{active.error.message} <button onClick={() => void active.refetch()}>Retry</button></div> : <>
       {tab === 'Live Trades' && <TradesTable rows={trades.data?.items ?? []} />}
       {tab === 'Model Chat' && <DecisionsList rows={decisions.data?.items ?? []} />}
-      {tab === 'Positions' && <PositionsTable rows={positions.data?.items ?? []} />}
+      {tab === 'Positions' && <><PositionsTable rows={positions.data?.items ?? []} /><FundingSection competitionId={competitionId} agentId={effectiveAgent} symbol={symbol} /></>}
       {active?.isFetching && <p className="complete-history-note" role="status">Updating this page…</p>}
       {pageCount > 1 && <div className="history-pagination"><span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}</span><div><button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button><button disabled={page + 1 >= pageCount} onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}>Next</button></div></div>}
       <p className="complete-history-note">Showing server-filtered records{effectiveAgent ? ` for ${agents.find((agent) => agent.id === effectiveAgent)?.name ?? 'this model'}` : ''}{symbol ? ` for ${symbol}` : ''}; {total} records match.</p>
@@ -60,6 +60,91 @@ function TradesTable({ rows }: { rows: Trade[] }): React.JSX.Element {
 function PositionsTable({ rows }: { rows: Position[] }): React.JSX.Element {
   if (!rows.length) return <div className="query-state">No positions match this filter.</div>;
   return <div className="table-scroll"><table><thead><tr><th>Model</th><th>Symbol</th><th>Side</th><th>Quantity</th><th>Average entry</th><th>Reserved margin</th><th>Stop / take profit</th><th>State</th></tr></thead><tbody>{rows.map((row, index) => <tr key={`${row.agent_id}-${row.symbol}-${index}`}><td>{row.agent_name}</td><td>{row.symbol}</td><td>{row.side}</td><td>{decimal(row.quantity, 6)}</td><td>{money(row.average_entry)}</td><td>{money(row.reserved_margin)}</td><td>{row.stop_loss ? money(row.stop_loss) : '—'} / {row.take_profit ? money(row.take_profit) : '—'}</td><td>{row.state}</td></tr>)}</tbody></table></div>;
+}
+
+function FundingSection({ competitionId, agentId, symbol }: { competitionId: string; agentId?: string; symbol: string }): React.JSX.Element {
+  const [page, setPage] = useState(0);
+  useEffect(() => { setPage(0); }, [competitionId, agentId, symbol]);
+  const query = { limit: PAGE_SIZE, offset: page * PAGE_SIZE, ...(agentId ? { agent_id: agentId } : {}), ...(symbol ? { symbol } : {}) };
+  const funding = useQuery({ queryKey: ['competition', competitionId, 'funding', query], queryFn: () => getFundingHistory(competitionId, query), enabled: Boolean(competitionId) });
+  const total = funding.data?.total ?? 0;
+  const pageCount = Math.ceil(total / PAGE_SIZE);
+  useEffect(() => {
+    if (funding.data) setPage((current) => Math.min(current, Math.max(0, pageCount - 1)));
+  }, [funding.data, pageCount]);
+
+  return <section className="funding-section" aria-labelledby="funding-title">
+    <div className="funding-heading"><div><p className="terminal-eyebrow">ACCOUNTING EVIDENCE</p><h3 id="funding-title">Funding history</h3></div><span>{total} records</span></div>
+    {funding.isLoading ? <div className="query-state" role="status">Loading funding records…</div>
+      : funding.error ? <div className="query-error" role="alert">{funding.error.message} <button onClick={() => void funding.refetch()}>Retry funding</button></div>
+        : <>
+          <FundingTable rows={funding.data?.items ?? []} />
+          {pageCount > 1 && <div className="history-pagination"><span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}</span><div><button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button><button disabled={page + 1 >= pageCount} onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}>Next</button></div></div>}
+          <p className="complete-history-note">Funding entries are server-filtered with the model and symbol filters above. Amounts and evidence appear only when returned by the API.</p>
+        </>}
+  </section>;
+}
+
+function FundingTable({ rows }: { rows: FundingPayment[] }): React.JSX.Element {
+  if (!rows.length) return <div className="query-state">No funding entries match this filter.</div>;
+  return <div className="table-scroll"><table><thead><tr><th>Boundary</th><th>Model</th><th>Symbol</th><th>Status / reason</th><th>Amount</th><th>Rate</th><th>Oracle price</th><th>Source</th><th>Evidence</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}>
+    <td>{timestamp(row.boundary_at)}</td><td>{row.agent_name}</td><td>{row.symbol}</td><td>{row.status}{row.reason ? <small className="funding-reason">{row.reason}</small> : null}</td><td>{row.amount === null ? 'N/A' : money(row.amount)}</td><td>{row.rate ?? 'N/A'}</td><td>{row.oracle_px === null ? 'N/A' : money(row.oracle_px)}</td><td>{row.source}</td><td><FundingEvidenceDisclosure row={row} /></td>
+  </tr>)}</tbody></table></div>;
+}
+
+function FundingEvidenceDisclosure({ row }: { row: FundingPayment }): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const evidence = useQuery({ queryKey: ['funding-evidence', row.evidence_id], queryFn: () => getFundingEvidence(row.evidence_id!), enabled: open && Boolean(row.evidence_id) });
+  if (!row.evidence_id) return <span>{row.evidence_sha256 ? `SHA ${shortHash(row.evidence_sha256)}` : 'Not supplied'}</span>;
+  return <div className="funding-evidence">
+    <button className="small-button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>{open ? 'Hide record' : 'Inspect record'}</button>
+    {row.evidence_sha256 && <small>SHA {shortHash(row.evidence_sha256)}</small>}
+    {open && <div className="funding-evidence-detail">
+      {evidence.isLoading && <p role="status">Loading evidence…</p>}
+      {evidence.error && <p className="query-error" role="alert">{evidence.error.message} <button onClick={() => void evidence.refetch()}>Retry</button></p>}
+      {evidence.data && <FundingEvidenceRecord evidence={evidence.data} />}
+    </div>}
+  </div>;
+}
+
+function FundingEvidenceRecord({ evidence }: { evidence: FundingEvidence }): React.JSX.Element {
+  const decoded = useMemo(() => evidence.exact_record_base64 ? decodeBase64Safely(evidence.exact_record_base64) : null, [evidence.exact_record_base64]);
+  const [actualHash, setActualHash] = useState<string | null>(null);
+  useEffect(() => {
+    let current = true;
+    setActualHash(null);
+    if (decoded?.bytes) {
+      void crypto.subtle.digest('SHA-256', decoded.bytes).then((digest) => {
+        const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+        if (current) setActualHash(hex);
+      }).catch(() => { if (current) setActualHash('unavailable'); });
+    }
+    return () => { current = false; };
+  }, [decoded?.bytes]);
+  const hashMatches = evidence.sha256 === null || actualHash === evidence.sha256;
+
+  function download(): void {
+    if (!decoded?.bytes || !hashMatches) return;
+    const blob = new Blob([decoded.bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `funding-evidence-${evidence.id}.bin`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  }
+
+  return <div className="funding-record-detail">
+    <dl><div><dt>Recorded boundary</dt><dd>{timestamp(evidence.boundary_at)}</dd></div><div><dt>Evidence status</dt><dd>{evidence.status}</dd></div><div><dt>Historical event</dt><dd>{evidence.history_event_at ? timestamp(evidence.history_event_at) : 'Not reported'}</dd></div><div><dt>Record SHA-256</dt><dd>{evidence.sha256 ?? 'Not supplied'}</dd></div></dl>
+    {decoded?.error && <p className="query-error" role="alert">Projected record could not be decoded: {decoded.error}</p>}
+    {decoded?.bytes && <>
+      {evidence.sha256 && actualHash !== null && <p className={hashMatches ? 'evidence-hash-ok' : 'query-error'} role={hashMatches ? 'status' : 'alert'}>{hashMatches ? 'Projected record SHA-256 verified.' : actualHash === 'unavailable' ? 'Record hash verification is unavailable.' : 'Projected record does not match the returned SHA-256.'}</p>}
+      <p className="complete-history-note">Canonical public evidence projection; raw upstream response bytes are not included.</p>
+      <button className="small-button" onClick={download} disabled={!hashMatches || actualHash === 'unavailable'}>Download exact projected bytes</button>
+      <pre>{new TextDecoder('utf-8', { fatal: false }).decode(decoded.bytes) || '[Empty record]'}</pre>
+    </>}
+    {!decoded?.bytes && !decoded?.error && <p className="availability-note">No projected record bytes were returned. The evidence reference and metadata remain available.</p>}
+  </div>;
 }
 
 function DecisionsList({ rows }: { rows: Decision[] }): React.JSX.Element {

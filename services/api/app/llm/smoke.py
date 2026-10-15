@@ -22,13 +22,23 @@ from app.db.models import (
     InvocationAttempt,
     InvocationResult,
     MarketSnapshot,
+    Position,
     PromptVersion,
     RoundAgentJob,
 )
 from app.db.session import SessionLocal
+from app.llm.inputs import build_agent_request_bytes
 from app.market.hyperliquid import HyperliquidClient
 from app.market.persistence import SnapshotReceipt
-from app.worker import WorkerReport, capture_market_snapshot, run_once
+from app.market.types import BASELINE_SYMBOLS
+from app.worker import (
+    WorkerReport,
+    _provider_config,
+    _worst_case_reservation,
+    build_agent_input,
+    capture_market_snapshot,
+    run_once,
+)
 
 _APPROVED_MODELS = {"mimo-v2.6-flash", "glm-5.3-flash"}
 _MAX_ROUNDS = 5
@@ -96,6 +106,9 @@ def run_live_smoke(
         first_snapshot = _store_current_quotes(session_factory, client)
         competition_id = _create_competition(session_factory, config, first_snapshot)
         try:
+            _preflight_smoke_inputs(
+                session_factory, competition_id, first_snapshot, config, rounds
+            )
             results = _run_rounds(
                 session_factory,
                 client,
@@ -130,7 +143,7 @@ def _load_config(path: str | Path) -> dict[str, Any]:
     if raw["schema_version"] != 1:
         raise SmokeRunError("SMOKE_CONFIG_INVALID")
     max_rounds = _bounded_integer(raw["max_rounds"], 1, _MAX_ROUNDS)
-    max_body = _bounded_integer(raw["max_input_body_bytes"], 1, 20_000)
+    max_body = _bounded_integer(raw["max_input_body_bytes"], 1, 80_000)
     max_output = _bounded_integer(raw["max_output_tokens"], 1, 1_000)
     api_key_env = raw["api_key_env"]
     if api_key_env != "OPENCODE_API_KEY":
@@ -266,6 +279,102 @@ def _create_competition(
                     )
                 )
     return competition_id
+
+
+def _preflight_smoke_inputs(
+    session_factory: sessionmaker[Session],
+    competition_id: str,
+    snapshot_receipt: SnapshotReceipt,
+    config: dict[str, Any],
+    rounds: int,
+) -> None:
+    if not snapshot_receipt.trusted:
+        raise SmokeRunError("SMOKE_MARKET_UNTRUSTED")
+    with session_factory() as db:
+        competition = db.get(Competition, competition_id)
+        snapshot = db.get(MarketSnapshot, snapshot_receipt.snapshot_id)
+        if competition is None or competition.started_at is None or snapshot is None:
+            raise SmokeRunError("SMOKE_BASELINE_UNAVAILABLE")
+        rules = _json_object(competition.rules_bytes)
+        payload = _json_object(snapshot.canonical_bytes)
+        _validate_candle_warmup(payload, rules)
+        agents = db.scalars(
+            select(AgentRun)
+            .where(AgentRun.competition_id == competition_id)
+            .order_by(AgentRun.manifest_order)
+        ).all()
+        if len(agents) != 2:
+            raise SmokeRunError("SMOKE_BASELINE_UNAVAILABLE")
+        prompt = db.get(PromptVersion, agents[0].prompt_version_id)
+        if prompt is None or any(agent.prompt_version_id != prompt.id for agent in agents):
+            raise SmokeRunError("SMOKE_BASELINE_UNAVAILABLE")
+        total_reservation = Decimal("0")
+        logical_at = _utc(competition.started_at) + timedelta(seconds=_ROUND_SECONDS)
+        for agent in agents:
+            account = db.scalar(select(Account).where(Account.agent_run_id == agent.id))
+            if account is None:
+                raise SmokeRunError("SMOKE_BASELINE_UNAVAILABLE")
+            positions = tuple(
+                db.scalars(
+                    select(Position)
+                    .where(Position.account_id == account.id, Position.state == "OPEN")
+                    .order_by(Position.symbol)
+                ).all()
+            )
+            settings = _json_object(agent.model_settings_bytes)
+            provider_config = _provider_config(agent.provider, agent.model, settings)
+            body = build_agent_request_bytes(
+                provider_config,
+                system_prompt_bytes=prompt.template_bytes,
+                user_prompt_bytes=build_agent_input(
+                    logical_at=logical_at,
+                    competition=competition,
+                    snapshot=snapshot,
+                    account=account,
+                    positions=positions,
+                ),
+            )
+            if len(body) > config["max_input_body_bytes"]:
+                raise SmokeRunError("SMOKE_INPUT_BODY_LIMIT")
+            reservation = _worst_case_reservation(provider_config, body)
+            if reservation > config["max_cost_per_request_usd"]:
+                raise SmokeRunError("SMOKE_REQUEST_RESERVATION_LIMIT")
+            total_reservation += reservation * rounds
+        if total_reservation > config["max_spend_usd"]:
+            raise SmokeRunError("SMOKE_TOTAL_RESERVATION_LIMIT")
+
+
+def _validate_candle_warmup(payload: dict[str, Any], rules: dict[str, Any]) -> None:
+    expected_window = rules.get("market_window_candles")
+    windows = payload.get("candles")
+    if (
+        payload.get("schema_version") != rules.get("snapshot_schema_version")
+        or rules.get("proposal_schema_version") != 1
+        or rules.get("public_evidence_schema_version") != 1
+        or isinstance(expected_window, bool)
+        or not isinstance(expected_window, int)
+        or not 1 <= expected_window <= 40
+        or not isinstance(windows, list)
+    ):
+        raise SmokeRunError("SMOKE_EVIDENCE_SCHEMA_UNSUPPORTED")
+    by_symbol = {
+        row.get("symbol"): row for row in windows if isinstance(row, dict)
+    }
+    if set(by_symbol) != set(BASELINE_SYMBOLS):
+        raise SmokeRunError("SMOKE_CANDLE_WARMUP_UNAVAILABLE")
+    for symbol in BASELINE_SYMBOLS:
+        series = by_symbol[symbol]
+        bars = series.get("bars")
+        if series.get("interval") != "3m" or not isinstance(bars, list):
+            raise SmokeRunError("SMOKE_CANDLE_WARMUP_UNAVAILABLE")
+        if len(bars) != expected_window or not isinstance(bars[-1], dict):
+            raise SmokeRunError("SMOKE_CANDLE_WARMUP_UNAVAILABLE")
+        latest = bars[-1]
+        if any(
+            latest.get(field) is None
+            for field in ("ema20", "rsi7", "macd", "macd_signal", "macd_histogram")
+        ):
+            raise SmokeRunError("SMOKE_CANDLE_WARMUP_UNAVAILABLE")
 
 
 def _run_rounds(
@@ -476,6 +585,16 @@ def _positive_decimal(value: object) -> Decimal:
     if not result.is_finite() or result <= 0:
         raise SmokeRunError("SMOKE_CONFIG_INVALID")
     return result
+
+
+def _json_object(body: bytes) -> dict[str, Any]:
+    try:
+        value = json.loads(body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise SmokeRunError("SMOKE_STORED_EVIDENCE_INVALID") from None
+    if not isinstance(value, dict):
+        raise SmokeRunError("SMOKE_STORED_EVIDENCE_INVALID")
+    return value
 
 
 def _utc(value: datetime) -> datetime:

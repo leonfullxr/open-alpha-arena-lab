@@ -91,6 +91,46 @@ describe("edge request boundaries", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("forwards bounded public funding history and exact evidence routes", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(String(input), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const env = makeEnv();
+    const funding = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/funding?limit=50&offset=20&agent_id=agent-1&symbol=BTC"),
+      env,
+    );
+    const evidence = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/funding/evidence/evidence-1"),
+      env,
+    );
+    const tooManyRows = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/funding?limit=201"),
+      env,
+    );
+    const unknownFilter = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/competitions/c1/funding?all=true"),
+      env,
+    );
+    const wrongMethod = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/funding/evidence/evidence-1", { method: "POST" }),
+      env,
+    );
+    const unlisted = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/funding/evidence/evidence-1/raw"),
+      env,
+    );
+
+    expect(funding.status).toBe(200);
+    expect(evidence.status).toBe(200);
+    expect(tooManyRows.status).toBe(400);
+    expect(unknownFilter.status).toBe(400);
+    expect(wrongMethod.status).toBe(405);
+    expect(unlisted.status).toBe(404);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`${apiOrigin}/api/v1/public/competitions/c1/funding?limit=50&offset=20&agent_id=agent-1&symbol=BTC`);
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(`${apiOrigin}/api/v1/public/funding/evidence/evidence-1`);
+  });
+
   it("allows competition metrics and validates the optional ticker competition UUID", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(String(input), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

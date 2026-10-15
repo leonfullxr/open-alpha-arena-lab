@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
@@ -13,7 +14,6 @@ class ProposalAction(StrEnum):
     OPEN_SHORT = "OPEN_SHORT"
     CLOSE_POSITION = "CLOSE_POSITION"
     HOLD = "HOLD"
-    NO_ACTION = "NO_ACTION"
 
 
 class Proposal(BaseModel):
@@ -37,7 +37,7 @@ class Proposal(BaseModel):
 class ProposalBatch(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
-    proposals: tuple[Proposal, ...] = Field(max_length=6)
+    proposals: tuple[Proposal, ...] = Field(min_length=1, max_length=6)
 
 
 class ProposalOutputError(ValueError):
@@ -52,6 +52,19 @@ def parse_proposal_output(output: bytes) -> ProposalBatch:
             for proposal in proposals:
                 if isinstance(proposal, dict) and isinstance(proposal.get("action"), str):
                     proposal["action"] = ProposalAction(proposal["action"])
+                if isinstance(proposal, dict):
+                    for field in (
+                        "quantity",
+                        "leverage",
+                        "stop_loss",
+                        "take_profit",
+                        "confidence",
+                    ):
+                        value = proposal.get(field)
+                        if isinstance(value, str):
+                            if not re.fullmatch(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?", value):
+                                raise ValueError("invalid decimal string")
+                            proposal[field] = Decimal(value)
             parsed["proposals"] = tuple(proposals)
         return ProposalBatch.model_validate(parsed)
     except (UnicodeDecodeError, json.JSONDecodeError, ValidationError, ValueError):

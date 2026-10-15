@@ -74,7 +74,7 @@ export function EquityChart({ agents, rows, initialBalance, sampleCount, sampled
     <div className="equity-legend" aria-label="Toggle account series">
       {agents.map((agent, index) => <label key={agent.id}><input type="checkbox" checked={enabled[agent.id] !== false} onChange={(event) => setEnabled((current) => ({ ...current, [agent.id]: event.target.checked }))} /><i style={{ backgroundColor: colors[index % colors.length] }} />{agent.name}<span>{money(points.at(-1)?.values.get(agent.id) ?? NaN)}</span></label>)}
     </div>
-    <p className="chart-note">{benchmark ? `BTC buy & hold finished at ${money(benchmark.equity)} (${Number(benchmark.roi_pct).toFixed(2)}%) after ${Number(benchmark.fee_rate).toFixed(2)}% fees and ${Number(benchmark.slippage_bps).toFixed(1)} bps slippage. The API provides a summary, not an intraperiod benchmark series.` : 'BTC buy-and-hold summary is unavailable for this competition.'}</p>
+    <p className="chart-note">{benchmark ? `BTC buy & hold finished at ${money(benchmark.equity)} (${Number(benchmark.roi_pct).toFixed(2)}%) after ${(Number(benchmark.fee_rate) * 100).toFixed(2)}% fees and ${Number(benchmark.slippage_bps).toFixed(1)} bps slippage. The API provides a summary, not an intraperiod benchmark series.` : 'BTC buy-and-hold summary is unavailable for this competition.'}</p>
     <table className="visually-hidden"><caption>Latest returned account equity</caption><thead><tr><th>Account</th><th>Equity</th></tr></thead><tbody>{agents.map((agent) => <tr key={agent.id}><th>{agent.name}</th><td>{money(points.at(-1)?.values.get(agent.id) ?? NaN)}</td></tr>)}</tbody></table>
   </section>;
 }

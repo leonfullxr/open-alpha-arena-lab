@@ -10,6 +10,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.public_chart import chart_router
+from app.api.public_funding import funding_history, funding_router
 from app.api.public_history import bounded_page, decisions, history_router
 from app.api.public_metrics import metrics_router
 from app.api.public_schemas import (
@@ -34,6 +35,7 @@ from app.db.models import (
     DecisionRound,
     DomainEvent,
     EquitySample,
+    FundingPayment,
     InvocationAttempt,
     MarketSnapshot,
     Order,
@@ -45,6 +47,7 @@ router = APIRouter()
 router.include_router(stream_router)
 router.include_router(metrics_router)
 router.include_router(history_router)
+router.include_router(funding_router)
 router.include_router(chart_router)
 
 
@@ -107,20 +110,24 @@ def status(db: Annotated[Session, Depends(get_db)]) -> StatusDTO:
 def ticker(
     db: Annotated[Session, Depends(get_db)], competition_id: str | None = None
 ) -> list[TickerItem]:
-    query = (
-        select(MarketSnapshot)
-        .join(DecisionRound, DecisionRound.snapshot_id == MarketSnapshot.id)
-        .join(Competition, Competition.id == DecisionRound.competition_id)
-    )
-    query = query.where(
-        Competition.id == competition_id
-        if competition_id
-        else Competition.source_label.like("DEMO REPLAY%")
-    )
-    snapshot = db.scalar(query.order_by(MarketSnapshot.captured_at.desc()).limit(1))
+    competition_row = _competition(db, competition_id) if competition_id else None
+    if competition_row is not None and not competition_row.source_label.startswith("DEMO REPLAY"):
+        snapshot_query = select(MarketSnapshot).where(MarketSnapshot.source_label == "hyperliquid")
+    else:
+        snapshot_query = (
+            select(MarketSnapshot)
+            .join(DecisionRound, DecisionRound.snapshot_id == MarketSnapshot.id)
+            .join(Competition, Competition.id == DecisionRound.competition_id)
+        )
+        snapshot_query = snapshot_query.where(
+            Competition.id == competition_id
+            if competition_id
+            else Competition.source_label.like("DEMO REPLAY%")
+        )
+    snapshot = db.scalar(snapshot_query.order_by(MarketSnapshot.captured_at.desc()).limit(1))
     if snapshot is None:
         return []
-    competition = db.scalar(
+    competition = competition_row or db.scalar(
         select(Competition)
         .join(DecisionRound, DecisionRound.competition_id == Competition.id)
         .where(DecisionRound.snapshot_id == snapshot.id)
@@ -273,7 +280,12 @@ def events(
         .order_by(DomainEvent.sequence)
         .limit(limit + 1)
     ).all()
-    agents = {a.id: a for a in _agents(db, competition_id)}
+    account_agent_ids = db.execute(
+        select(Account.id, AgentRun.id)
+        .join(AgentRun, AgentRun.id == Account.agent_run_id)
+        .where(AgentRun.competition_id == competition_id)
+    ).all()
+    agent_by_account = {account_id: agent_id for account_id, agent_id in account_agent_ids}
     has_more = len(rows) > limit
     rows = rows[:limit]
     items = [
@@ -281,15 +293,7 @@ def events(
             sequence=e.sequence,
             event_type=e.event_type,
             event_at=e.event_at.isoformat(),
-            agent_id=next(
-                (
-                    a.id
-                    for a in agents.values()
-                    if db.scalar(select(Account.id).where(Account.agent_run_id == a.id))
-                    == e.account_id
-                ),
-                None,
-            ),
+            agent_id=(agent_by_account.get(e.account_id) if e.account_id is not None else None),
             payload=public_event_payload(e.payload),
         )
         for e in rows
@@ -311,11 +315,22 @@ def export_competition(
     comp = _competition(db, competition_id)
     equity_rows: list[EquityPoint] = []
     decision_rows: list[DecisionDTO] = []
+    funding_rows = []
     for offset in range(0, limit, 200):
         page_size = min(200, limit - offset)
         equity_rows.extend(equity_curve(competition_id, db, limit=page_size, offset=offset).items)
         decision_rows.extend(
             decisions(
+                competition_id,
+                db,
+                limit=page_size,
+                offset=offset,
+                agent_id=None,
+                symbol=None,
+            ).items
+        )
+        funding_rows.extend(
+            funding_history(
                 competition_id,
                 db,
                 limit=page_size,
@@ -347,12 +362,28 @@ def export_competition(
         )
         or 0
     )
+    total_funding = (
+        db.scalar(
+            select(func.count())
+            .select_from(FundingPayment)
+            .join(Account, Account.id == FundingPayment.account_id)
+            .join(AgentRun, AgentRun.id == Account.agent_run_id)
+            .where(AgentRun.competition_id == competition_id)
+        )
+        or 0
+    )
     return ExportDTO(
         competition=_serialize_competition(db, comp),
         leaderboard=leaderboard(competition_id, db),
         equity=equity_rows,
         decisions=decision_rows,
-        truncated=total_equity > len(equity_rows) or total_decisions > len(decision_rows),
+        funding=funding_rows,
+        truncated=(
+            total_equity > len(equity_rows)
+            or total_decisions > len(decision_rows)
+            or total_funding > len(funding_rows)
+        ),
         exported_decisions=len(decision_rows),
         exported_equity_points=len(equity_rows),
+        exported_funding_payments=len(funding_rows),
     )

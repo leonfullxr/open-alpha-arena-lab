@@ -174,8 +174,10 @@ class MarketQuote(Base):
     mark: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     funding_rate: Mapped[Decimal | None] = mapped_column(MONEY)
     open_interest: Mapped[Decimal | None] = mapped_column(MONEY)
+    oracle_px: Mapped[Decimal | None] = mapped_column(MONEY)
     source_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    context_received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     source_at_basis: Mapped[str] = mapped_column(String(60), nullable=False)
 
 
@@ -338,7 +340,9 @@ class Position(Base):
     opened_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     __table_args__ = (
+        CheckConstraint("(state = 'CLOSED') = (closed_at is not null)"),
         Index(
             "uq_positions_open_account_symbol",
             "account_id",
@@ -383,11 +387,59 @@ class FundingPayment(Base):
     account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"), nullable=False)
     position_id: Mapped[str] = mapped_column(ForeignKey("positions.id"), nullable=False)
     symbol: Mapped[str] = mapped_column(String(32), nullable=False)
-    rate: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
-    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    rate: Mapped[Decimal | None] = mapped_column(MONEY)
+    amount: Mapped[Decimal | None] = mapped_column(MONEY)
     event_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     source: Mapped[str] = mapped_column(String(60), nullable=False)
-    __table_args__ = (UniqueConstraint("position_id", "event_at"),)
+    oracle_px: Mapped[Decimal | None] = mapped_column(MONEY)
+    evidence_id: Mapped[str | None] = mapped_column(ForeignKey("funding_rate_evidence.id"))
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default="PAID")
+    reason: Mapped[str | None] = mapped_column(String(80))
+    __table_args__ = (
+        UniqueConstraint("position_id", "event_at"),
+        CheckConstraint("status in ('PAID','SKIPPED')"),
+        CheckConstraint("(status = 'PAID') = (amount is not null)"),
+        CheckConstraint("status != 'PAID' or rate is not null"),
+    )
+
+
+class FundingBoundaryTask(Base):
+    __tablename__ = "funding_boundary_tasks"
+    boundary_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="CAPTURE_PENDING")
+    expected_symbols: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    oracle_quote_set_id: Mapped[str | None] = mapped_column(ForeignKey("quote_sets.id"))
+    oracle_snapshot_id: Mapped[str | None] = mapped_column(ForeignKey("market_snapshots.id"))
+    context_received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_poll_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deadline_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    capture_owner: Mapped[str | None] = mapped_column(String(80))
+    capture_lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    poll_owner: Mapped[str | None] = mapped_column(String(80))
+    poll_lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    __table_args__ = (
+        CheckConstraint("status in ('CAPTURE_PENDING','PENDING','READY','UNAVAILABLE')"),
+    )
+
+
+class FundingRateEvidence(Base):
+    __tablename__ = "funding_rate_evidence"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    boundary_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(12), nullable=False)
+    rate: Mapped[Decimal | None] = mapped_column(MONEY)
+    history_event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    raw_record_bytes: Mapped[bytes | None] = mapped_column(LargeBinary)
+    sha256: Mapped[str | None] = mapped_column(String(64))
+    __table_args__ = (
+        UniqueConstraint("symbol", "boundary_at"),
+        CheckConstraint("status in ('READY','UNAVAILABLE')"),
+        CheckConstraint(
+            "(status = 'READY') = (rate is not null and history_event_at is not null "
+            "and raw_record_bytes is not null and sha256 is not null)"
+        ),
+    )
 
 
 class EquitySample(Base):

@@ -20,7 +20,15 @@ def metadata() -> list[object]:
                 {"name": symbol, "szDecimals": 4, "maxLeverage": 20} for symbol in BASELINE_SYMBOLS
             ]
         },
-        [{"markPx": "100", "funding": "0.0001", "openInterest": "42"} for _ in BASELINE_SYMBOLS],
+        [
+            {
+                "markPx": "100",
+                "oraclePx": "98.5",
+                "funding": "0.0001",
+                "openInterest": "42",
+            }
+            for _ in BASELINE_SYMBOLS
+        ],
     ]
 
 
@@ -40,6 +48,7 @@ def make_quote(symbol: str, *, source_at: datetime = NOW) -> MarketQuote:
         mark=Decimal("100"),
         funding_rate=Decimal("0.0001"),
         open_interest=Decimal("42"),
+        oracle_px=Decimal("98.5"),
         source_at=source_at,
         received_at=NOW,
         context_received_at=NOW,
@@ -66,6 +75,7 @@ def test_capture_uses_fixed_endpoint_and_returns_complete_fresh_set() -> None:
     assert len(quote_set.instruments) == 6
     assert quote_set.quotes[0].funding_rate == Decimal("0.0001")
     assert quote_set.quotes[0].open_interest == Decimal("42")
+    assert quote_set.quotes[0].oracle_px == Decimal("98.5")
     assert len(seen) == 7
     assert all(
         method == "POST" and url == "https://api.hyperliquid.xyz/info" for method, url, _ in seen
@@ -152,11 +162,12 @@ def test_candle_backfill_parses_order_and_received_timestamp() -> None:
 
 def test_funding_history_parses_hourly_historical_rate_without_prediction_fallback() -> None:
     requests: list[dict[str, object]] = []
+    response_bodies: list[bytes] = []
 
     def handle(request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)
         requests.append(payload)
-        return httpx.Response(
+        response = httpx.Response(
             200,
             json=[
                 {
@@ -167,6 +178,8 @@ def test_funding_history_parses_hourly_historical_rate_without_prediction_fallba
                 }
             ],
         )
+        response_bodies.append(response.content)
+        return response
 
     with httpx.Client(transport=httpx.MockTransport(handle)) as client:
         rows = HyperliquidClient(client=client, clock=lambda: NOW).fetch_funding_history(
@@ -180,6 +193,7 @@ def test_funding_history_parses_hourly_historical_rate_without_prediction_fallba
     assert rows[0].rate == Decimal("0.0000125")
     assert rows[0].premium == Decimal("0.0000025")
     assert rows[0].event_at == NOW
+    assert rows[0].raw_record_bytes == response_bodies[0]
     assert requests == [
         {
             "type": "fundingHistory",
@@ -212,9 +226,7 @@ def test_funding_history_rejects_bad_symbol_timestamp_and_unbounded_windows() ->
                 "BTC", start_at=NOW - timedelta(seconds=1), end_at=NOW + timedelta(seconds=1)
             )
         with pytest.raises(ValueError, match="at most two hours"):
-            market.fetch_funding_history(
-                "BTC", start_at=NOW, end_at=NOW + timedelta(hours=3)
-            )
+            market.fetch_funding_history("BTC", start_at=NOW, end_at=NOW + timedelta(hours=3))
 
 
 def test_duplicate_metadata_and_out_of_order_candles_fail_closed() -> None:

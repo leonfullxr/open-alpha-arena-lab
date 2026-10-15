@@ -88,9 +88,7 @@ def run_protective_exit_cycle(db: Session, *, quote_set_id: str) -> ProtectionCy
         ).all()
         for competition_id in competition_ids:
             competition = db.scalar(
-                select(Competition)
-                .where(Competition.id == competition_id)
-                .with_for_update()
+                select(Competition).where(Competition.id == competition_id).with_for_update()
             )
             if competition is None:
                 continue
@@ -236,9 +234,7 @@ def _apply_triggers(
             at=now,
         )
         account = action_result.account
-        positions = sync_position_rows(
-            db, account_row.id, positions, account, row.symbol
-        )
+        positions = sync_position_rows(db, account_row.id, positions, account, row.symbol, now)
         count += 1
     return count, account, positions
 
@@ -250,9 +246,7 @@ def _held_quotes(
 ) -> dict[str, Quote]:
     held_symbols = {position.symbol for position in positions}
     quotes = {
-        symbol: _engine_quote(row, now)
-        for symbol, row in rows.items()
-        if symbol in held_symbols
+        symbol: _engine_quote(row, now) for symbol, row in rows.items() if symbol in held_symbols
     }
     return quotes
 

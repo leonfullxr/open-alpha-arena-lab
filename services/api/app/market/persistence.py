@@ -51,7 +51,18 @@ def snapshot_payload(quote_set: MarketQuoteSet) -> dict[str, object]:
                 "bid": str(item.bid),
                 "ask": str(item.ask),
                 "mark": str(item.mark),
+                "oracle_px": str(item.oracle_px) if item.oracle_px is not None else None,
+                "oracle_px_basis": (
+                    "hyperliquid_asset_context_oracle_px"
+                    if item.oracle_px is not None
+                    else None
+                ),
                 "funding_rate": str(item.funding_rate) if item.funding_rate is not None else None,
+                "funding_rate_basis": (
+                    "hyperliquid_asset_context_predicted_hourly_rate"
+                    if item.funding_rate is not None
+                    else None
+                ),
                 "open_interest": str(item.open_interest)
                 if item.open_interest is not None
                 else None,
@@ -85,9 +96,7 @@ def _snapshot_candles(features: tuple[CandleFeatures, ...]) -> list[dict[str, ob
                 "ema20": str(item.ema20) if item.ema20 is not None else None,
                 "rsi7": str(item.rsi7) if item.rsi7 is not None else None,
                 "macd": str(item.macd) if item.macd is not None else None,
-                "macd_signal": (
-                    str(item.macd_signal) if item.macd_signal is not None else None
-                ),
+                "macd_signal": (str(item.macd_signal) if item.macd_signal is not None else None),
                 "macd_histogram": (
                     str(item.macd_histogram) if item.macd_histogram is not None else None
                 ),
@@ -137,8 +146,10 @@ def persist_quote_set(db: Session, quote_set: MarketQuoteSet) -> SnapshotReceipt
                     mark=item.mark,
                     funding_rate=item.funding_rate,
                     open_interest=item.open_interest,
+                    oracle_px=item.oracle_px,
                     source_at=item.source_at,
                     received_at=item.received_at,
+                    context_received_at=item.context_received_at,
                     source_at_basis=item.source_at_basis,
                 )
                 for item in quote_set.quotes

@@ -31,10 +31,15 @@ _REQUIRED = {
     "allow_pyramiding",
     "funding_mode",
     "funding_interval_hours",
+    "funding_history_max_offset_seconds",
     "funding_rate_basis",
     "funding_price_basis",
     "fixture_funding_rate_per_hour",
     "risk_policy_version",
+    "snapshot_schema_version",
+    "proposal_schema_version",
+    "public_evidence_schema_version",
+    "market_window_candles",
 }
 
 

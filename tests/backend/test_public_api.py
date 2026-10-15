@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import uuid
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 import pytest
-from app.db.models import AgentRun, Competition
+from app.core.canonical import canonical_json_bytes, sha256_hex
+from app.db.models import AgentRun, Base, Competition, DecisionRound, MarketSnapshot, QuoteSet
 from app.db.session import get_db
-from app.main import app
+from app.main import app, public_app
 from app.services.demo import seed_demo
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
 
 _DATABASE_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
@@ -262,3 +266,122 @@ def test_decision_history_projects_batches_errors_and_malformed_evidence_safely(
     finally:
         app.dependency_overrides.pop(get_db, None)
         engine.dispose()
+
+
+def test_live_ticker_uses_latest_collector_snapshot_and_unknown_competition_is_404() -> None:
+    assert TEST_DATABASE_URL is not None
+    schema = f"ticker_{uuid.uuid4().hex}"
+    admin_engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
+    with admin_engine.begin() as connection:
+        connection.execute(text(f'CREATE SCHEMA "{schema}"'))
+    engine = create_engine(
+        TEST_DATABASE_URL,
+        pool_pre_ping=True,
+        connect_args={"options": f"-csearch_path={schema}"},
+    )
+    Base.metadata.create_all(engine)
+    competition_id = str(uuid.uuid4())
+    round_id = str(uuid.uuid4())
+    older_set_id, older_snapshot_id = str(uuid.uuid4()), str(uuid.uuid4())
+    newest_set_id, newest_snapshot_id = str(uuid.uuid4()), str(uuid.uuid4())
+    now = datetime.now(UTC)
+    with Session(engine) as db:
+        db.add(
+            Competition(
+                id=competition_id,
+                name="Live ticker test",
+                profile="alpha_2025_baseline",
+                rules_bytes=b"{}",
+                rules_sha256=hashlib.sha256(b"{}").hexdigest(),
+                initial_balance=Decimal("10000"),
+                state="RUNNING",
+                source_label="LIVE TEST",
+                started_at=now - timedelta(minutes=10),
+                ended_at=None,
+                event_seq=0,
+            )
+        )
+        db.add_all(
+            [
+                QuoteSet(
+                    id=older_set_id,
+                    source="hyperliquid",
+                    captured_at=now - timedelta(minutes=3),
+                    complete=True,
+                    max_age_ms=1000,
+                    skew_ms=0,
+                ),
+                QuoteSet(
+                    id=newest_set_id,
+                    source="hyperliquid",
+                    captured_at=now,
+                    complete=True,
+                    max_age_ms=100,
+                    skew_ms=0,
+                ),
+            ]
+        )
+        db.flush()
+        for snapshot_id, quote_set_id, captured_at, mark in (
+            (older_snapshot_id, older_set_id, now - timedelta(minutes=3), "90"),
+            (newest_snapshot_id, newest_set_id, now, "100"),
+        ):
+            raw = canonical_json_bytes(
+                {
+                    "quotes": {
+                        "BTC": {
+                            "bid": mark,
+                            "ask": mark,
+                            "mark": mark,
+                            "event_at": captured_at.isoformat(),
+                            "received_at": captured_at.isoformat(),
+                        }
+                    }
+                }
+            )
+            db.add(
+                MarketSnapshot(
+                    id=snapshot_id,
+                    canonical_bytes=raw,
+                    sha256=sha256_hex(raw),
+                    source_label="hyperliquid",
+                    captured_at=captured_at,
+                    quote_set_id=quote_set_id,
+                )
+            )
+        db.flush()
+        db.add(
+            DecisionRound(
+                id=round_id,
+                competition_id=competition_id,
+                round_index=0,
+                logical_at=now - timedelta(minutes=3),
+                snapshot_id=older_snapshot_id,
+                execution_quote_set_id=older_set_id,
+                deadline_at=now - timedelta(minutes=1),
+            )
+        )
+        db.commit()
+    with Session(engine) as db:
+        assert db.get(Competition, competition_id) is not None
+
+    def test_session():
+        with Session(engine) as db:
+            yield db
+
+    public_app.dependency_overrides[get_db] = test_session
+    try:
+        with TestClient(public_app) as client:
+            response = client.get(f"/ticker?competition_id={competition_id}")
+            assert response.status_code == 200, response.text
+            assert response.json()[0]["mark"] == "100"
+            assert response.json()[0]["stale"] is False
+            assert client.get(
+                "/ticker?competition_id=missing-competition"
+            ).status_code == 404
+    finally:
+        public_app.dependency_overrides.pop(get_db, None)
+        engine.dispose()
+        with admin_engine.begin() as connection:
+            connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        admin_engine.dispose()

@@ -62,6 +62,7 @@ def test_access_auth_verifies_signed_identity_and_denies_fallbacks(
     def issue(**changes: Any) -> str:
         now = datetime.now(UTC)
         signer = changes.pop("_signer", private)
+        omitted = changes.pop("_omit", ())
         claims: dict[str, Any] = {
             "iss": access_settings.access_issuer,
             "aud": access_settings.access_audience,
@@ -70,6 +71,8 @@ def test_access_auth_verifies_signed_identity_and_denies_fallbacks(
             "exp": now + timedelta(minutes=5),
         }
         claims.update(changes)
+        for name in omitted:
+            claims.pop(name, None)
         return jwt.encode(claims, signer, algorithm="RS256")
 
     try:
@@ -88,6 +91,9 @@ def test_access_auth_verifies_signed_identity_and_denies_fallbacks(
                 (issue(exp=None), 401),
                 (issue(iat=None), 401),
                 (issue(sub=None), 401),
+                (issue(_omit=("exp",)), 401),
+                (issue(_omit=("iat",)), 401),
+                (issue(_omit=("sub",)), 401),
                 (issue(exp=datetime.now(UTC) - timedelta(seconds=10)), 401),
                 (issue(iat=datetime.now(UTC) + timedelta(minutes=5)), 401),
                 (issue(sub="not-allowlisted"), 403),

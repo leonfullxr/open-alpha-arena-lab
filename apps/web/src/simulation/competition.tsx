@@ -18,7 +18,7 @@ export default function CompetitionPage(): React.JSX.Element {
     queryKey: ['competition', competitionId],
     queryFn: () => getCompetition(competitionId),
     enabled: Boolean(competitionId),
-    refetchInterval: (query) => query.state.data?.state === 'RUNNING' ? 5_000 : false,
+    refetchInterval: (query) => ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? 5_000 : false,
   });
   const competition = competitionQuery.data;
   const leaderboard = useQuery({ queryKey: ['competition', competitionId, 'leaderboard'], queryFn: () => getLeaderboard(competitionId), enabled: Boolean(competitionId) });
@@ -86,7 +86,7 @@ function runLabel(source: string, state: string, stream: 'paused' | 'connected' 
 function BenchmarkTile({ benchmark, loading }: { benchmark: Benchmark | null | undefined; loading: boolean }): React.JSX.Element {
   return <div className="benchmark-tile">
     <div className="benchmark-heading"><span>{benchmark?.label ?? 'BTC buy & hold'}</span><strong>{benchmark ? money(benchmark.equity) : loading ? 'Loading…' : 'N/A'}</strong></div>
-    {benchmark ? <><span>{Number(benchmark.roi_pct).toFixed(2)}% return · {benchmark.symbol}</span><small>{money(benchmark.start_price)} → {money(benchmark.end_price)} · fee {Number(benchmark.fee_rate).toFixed(2)}% · slippage {Number(benchmark.slippage_bps).toFixed(1)} bps</small></> : <small>{loading ? 'Loading API benchmark summary.' : 'No benchmark summary is available for this competition.'}</small>}
+    {benchmark ? <><span>{Number(benchmark.roi_pct).toFixed(2)}% return · {benchmark.symbol}</span><small>{money(benchmark.start_price)} → {money(benchmark.end_price)} · fee {(Number(benchmark.fee_rate) * 100).toFixed(2)}% · slippage {Number(benchmark.slippage_bps).toFixed(1)} bps</small></> : <small>{loading ? 'Loading API benchmark summary.' : 'No benchmark summary is available for this competition.'}</small>}
   </div>;
 }
 

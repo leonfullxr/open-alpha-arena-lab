@@ -16,6 +16,8 @@ Keep canonical snapshots, exact sent request bytes, returned visible decisions a
 
 A pending job may be claimed again after its lease expires if no dispatch was recorded. A recorded uncertain external dispatch must be audited and terminalized without retrying the paid call. Before recovering a stopped worker, inspect durable jobs, attempts, fences and reservations; do not reset them to manufacture a successful round.
 
+Run `python -m app.cli reconcile` against the selected database after recovery. It compares account cash, realized PnL, fees, funding and reserved margin with the ledger, checks each journal, and compares open position margin. It reports mismatches without repairing them and exits nonzero on drift. PostgreSQL is the authoritative accounting store; SQLite numeric conversions are unsuitable for financial reconciliation.
+
 Run-level inference reservations and the global UTC daily reservation cap are separate bounds. Unknown billing remains unknown. Reservation assumptions are not provider price claims and provider costs are separate from trading equity.
 
 ## Backup and restore
