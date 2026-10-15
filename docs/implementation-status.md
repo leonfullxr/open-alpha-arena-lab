@@ -6,11 +6,11 @@ Public repository: https://github.com/leonfullxr/open-alpha-arena-lab
 
 | Milestone | State | Evidence and remaining work |
 | --- | --- | --- |
-| M0 repository and foundations | In progress | Independent MIT repository created; container and Worker checkpoint committed locally; API/auth/migrations under implementation |
+| M0 repository and foundations | Integration review | Independent MIT repository, auth, API, migrations and CI committed locally; final Compose and schema checks pending |
 | M1a landing | Accepted checkpoint | Five viewport captures, forward/reverse transfers, resize, Home, reduced motion and canvas failure checked. See [landing validation](landing-validation.md); final split-route regression remains |
 | M1b simulation | In progress | Started after the landing gate; generated-contract dashboard and separate admin entry under implementation |
 | M2 live market data | In progress | Public Hyperliquid BTC book request succeeded; source event time and bid/ask verified. Collector, candle backfill and indicators under implementation |
-| M3 paper engine | In progress | Decimal pure engine and durable replay/API being built. Primary review caught pre-slippage close PnL and multi-symbol mark errors; regression fixes underway |
+| M3 paper engine | In progress | Core PostgreSQL checkpoint passed; review found multi-position stop, loss-policy and coverage gaps. Persistent risk and independent protection integration underway |
 | M4 model harness | In progress | User authorized existing OpenCode Work Go credential. Model catalog verified without inference; no key copied to source or printed. Provider/job modules under implementation |
 | M5 live/admin product | Pending | Requires typed UI, durable worker integration and bounded genuine-model smoke |
 | M6 deployment hardening | In progress | Fixed-origin Worker, Access separation, allowlists, stream forwarding, local backups and CI config exist. Actual Compose, recovery and production checks still pending |
@@ -23,6 +23,8 @@ The primary accepted the landing checkpoint after correcting scene transfers, an
 
 No-mistakes is initialized and its daemon/agent health check passed. The pipeline has not started while source writers are active. An independent read-only Muse review in a detached worktree found no medium-or-higher infrastructure bug. It noted three low items: static-header coverage (now addressed with a Static Assets _headers file), per-request JWKS cache creation, and admin POST-body test coverage. Final review includes the requested thermo-nuclear maintainability checks.
 
+The preliminary simulation passed primary browser checks for chart range state, series toggles, keyboard tooltips, 40-record pagination and exact artifact hashes; its final layout/contracts are being integrated. Primary review also found inconsistent admin baseline settings, incomplete failure evidence, a per-run budget reset at midnight, per-job quote selection and a subsecond provider timeout. Corrections are in progress and require final regression checks.
+
 The remove-ai-marks HTTP service is unreachable at its default loopback address. That skill requires the service and forbids a local fallback, so no metadata-cleaning result is claimed. Deslop applies to project prose; financial values, prompts and byte-hashed evidence are preserved.
 
 ## Checkpoints
@@ -30,7 +32,9 @@ The remove-ai-marks HTTP service is unreachable at its default loopback address.
 - `08548ed`: independent repository, MIT, initial README and fixed architecture.
 - `1da8f54`: containers, guarded Cloudflare proxy, CI and source/license decisions.
 - `b8ee0f4`: signed Access JWT negative tests and guard verification.
-- `0e91c2c`: persistent accounting/API/auth foundation. Primary scoped PostgreSQL suite: 16 passed; migrations aligned. Runtime and frontend integration remain in progress.
+- `0e91c2c`: persistent accounting/API/auth foundation. Primary scoped PostgreSQL suite: 16 passed; migrations aligned.
+- `56f7bbf`: accepted landing checkpoint and captures, before simulation implementation. Independent read-only review found no medium-or-higher landing bug; three low follow-ups were recorded.
+- `0771c31`: accounting/operator policies and primary validation record. Runtime and final frontend integration remain in progress.
 
 Only the bootstrap main branch was published before the user requested no-mistakes. Further source publication uses the requested gate. No PR, merge, DNS, Tunnel or production deployment result is claimed.
 

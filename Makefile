@@ -1,4 +1,4 @@
-.PHONY: dev-up dev-down test lint build migrate seed-demo e2e logs backup restore
+.PHONY: dev-up dev-down test lint build check migrate seed-demo e2e logs backup restore
 
 dev-up:
 	@test -f .env || { cp .env.example .env; echo "Created .env from development-only defaults; review it before use."; }
@@ -18,6 +18,19 @@ lint:
 build:
 	npm run build
 	docker compose build
+
+check:
+	npm run api:generate
+	git diff --exit-code -- apps/web/src/api/public.generated.ts apps/web/src/admin/admin.generated.ts
+	npm run typecheck
+	npm run build
+	uv run ruff check services/api tests
+	uv run mypy services/api
+	PYTHONPATH=services/api uv run pytest
+	npm ci --prefix deploy/worker
+	npm --prefix deploy/worker run typecheck
+	npm --prefix deploy/worker test
+	npm --prefix deploy/worker run deploy:dry-run
 
 migrate:
 	docker compose run --rm init python -m app.cli migrate

@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?copy .env.example to .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
     ports:
-      - "127.0.0.1:15432:5432"
+      - "127.0.0.1:${DB_PORT:-15432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: deploy/api.Dockerfile
-    env_file: .env
+    env_file: ${ARENA_ENV_FILE:-.env}
     command: ["sh", "-ec", "python -m app.cli migrate && python -m app.cli seed-demo"]
     depends_on:
       db:
@@ -31,10 +31,10 @@ services:
     build:
       context: .
       dockerfile: deploy/api.Dockerfile
-    env_file: .env
+    env_file: ${ARENA_ENV_FILE:-.env}
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     depends_on:
       init:
         condition: service_completed_successfully
@@ -50,7 +50,7 @@ services:
       context: .
       dockerfile: deploy/web.Dockerfile
     ports:
-      - "127.0.0.1:3000:8080"
+      - "127.0.0.1:${WEB_PORT:-3000}:8080"
     depends_on:
       api:
         condition: service_healthy
@@ -64,7 +64,7 @@ services:
     build:
       context: .
       dockerfile: deploy/api.Dockerfile
-    env_file: .env
+    env_file: ${ARENA_ENV_FILE:-.env}
     command: ["python", "-m", "app.worker", "collector"]
     profiles: [workers]
     depends_on:
@@ -75,7 +75,7 @@ services:
     build:
       context: .
       dockerfile: deploy/api.Dockerfile
-    env_file: .env
+    env_file: ${ARENA_ENV_FILE:-.env}
     command: ["python", "-m", "app.worker", "scheduler"]
     profiles: [workers]
     depends_on:
@@ -86,7 +86,7 @@ services:
     build:
       context: .
       dockerfile: deploy/api.Dockerfile
-    env_file: .env
+    env_file: ${ARENA_ENV_FILE:-.env}
     command: ["python", "-m", "app.worker", "executor"]
     profiles: [workers]
     depends_on:

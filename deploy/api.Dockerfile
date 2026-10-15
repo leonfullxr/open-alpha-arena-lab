@@ -13,6 +13,8 @@ RUN pip install --no-cache-dir uv==0.6.14 \
 
 COPY pyproject.toml uv.lock ./
 COPY services/api ./services/api
+COPY prompts ./prompts
+COPY configs ./configs
 RUN uv sync --frozen --no-dev --no-install-project \
     && chown -R app:app /app
 

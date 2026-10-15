@@ -41,6 +41,8 @@ jobs:
         with:
           enable-cache: true
       - run: npm ci
+      - run: npm run api:generate
+      - run: git diff --exit-code -- apps/web/src/api/public.generated.ts apps/web/src/admin/admin.generated.ts
       - run: npm run build
       - run: npm run typecheck
       - run: npm ci --prefix deploy/worker
@@ -48,6 +50,9 @@ jobs:
       - run: npm --prefix deploy/worker test
       - run: npm --prefix deploy/worker run deploy:dry-run
       - run: uv sync --frozen
+      - run: PYTHONPATH=services/api uv run python scripts/export-openapi.py
+      - run: git diff --exit-code -- contracts/public.openapi.json contracts/admin.openapi.json
       - run: PYTHONPATH=services/api uv run python -m app.cli migrate
       - run: uv run ruff check services/api tests
+      - run: uv run mypy services/api
       - run: PYTHONPATH=services/api uv run pytest
