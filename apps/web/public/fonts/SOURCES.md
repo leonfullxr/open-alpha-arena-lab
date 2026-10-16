@@ -1,13 +1,13 @@
 # Landing font sources
 
-The landing comparison uses Signifier Roman and Italic variable WOFF2 faces publicly served by the reference homepage, retrieved 15 October 2026:
+The current landing stylesheet loads Signifier Roman and Italic variable WOFF2 faces. The files were publicly served by the reference homepage and retrieved 15 October 2026:
 
 - https://www.nof1.ai/_next/static/media/signifier-vf-roman.3aqrr1no44ii2.woff2
 - https://www.nof1.ai/_next/static/media/signifier-vf-italic.09hp43-yre30y.woff2
 
-Signifier is by Klim Type Foundry. These files are retained for the requested local reference study; no redistribution licence is asserted here. The `OFL.txt` file applies to the separately bundled Newsreader font, not to Signifier.
+Signifier is by Klim Type Foundry. These files are included in the deployed landing build. This source note does not assert a redistribution licence. The `OFL.txt` file applies only to the separately bundled Newsreader font, not to Signifier.
 
-Newsreader remains available as the previously bundled open-font asset. See `OFL.txt` for its licence.
+Newsreader remains bundled under its open-font licence but is not used by the current landing stylesheet. See `OFL.txt` for its licence.
 
 # Simulation font sources
 

@@ -1,6 +1,6 @@
 # Architecture and fixed decisions
 
-React, TypeScript and Vite provide separately loaded landing, simulation and admin entries. Original canvas/SVG artwork follows the measured layout in the local nine-page reference PDF. The landing uses self-hosted Newsreader and the simulation uses self-hosted IBM Plex Mono; both are distributed under OFL. Landing has no API dependency. No third-party Alpha Arena source, brand assets or proprietary font files are copied.
+React, TypeScript and Vite provide separately loaded landing, simulation and admin entries. Original canvas/SVG artwork follows the measured layout in the local nine-page reference PDF. Font provenance and license notes live in [font source notes](../apps/web/public/fonts/SOURCES.md). The supplied bracket-and-alpha logo is used in the landing, terminal, fallback, and settled landing illustration. Landing has no API dependency; the simulation and admin entry points consume their separate API boundaries.
 
 FastAPI and PostgreSQL run on Debian with independent collector, scheduler and executor entrypoints. SQLAlchemy transactions, database uniqueness, row locks and worker fencing protect durable state. Decimal is authoritative for quantities, prices, fees, funding, collateral and PnL. Only paper execution exists.
 
@@ -14,9 +14,11 @@ Inference dispatch is not exactly-once: uncertain dispatches are audited and nev
 
 Public API `/api/v1/public/*` is read-only, bounded and separately documented. Admin API `/api/v1/admin/*` requires authenticated RBAC and uses a separate OpenAPI document and frontend types. This intentionally refines the master brief's shared endpoint prefix.
 
-Production path: browser -> Worker with Static Assets -> service-authenticated Cloudflare Tunnel -> Debian API. Fixed origin `https://arena-origin.leonfuller.com`; frontend target `arena.leonfuller.com`. Worker allowlists paths/methods, strips visitor internal headers, streams SSE, and validates admin Access JWT independently of backend RBAC. The origin transport token does not grant visitor admin rights. Local Argon2id sessions and production Access modes are mutually exclusive. Default offline demo makes no external requests.
+Planned production path: browser -> Worker with Static Assets -> service-authenticated Cloudflare Tunnel -> Debian API. Fixed origin `https://arena-origin.leonfuller.com`; planned custom-domain frontend target `arena.leonfuller.com`. Worker allowlists paths and methods, strips visitor internal headers, streams SSE, and validates admin Access JWT independently of backend RBAC. The origin transport token does not grant visitor admin rights. Local Argon2id sessions and production Access modes are mutually exclusive. Default offline demo makes no external requests.
 
-Backend production deployment and account/DNS/Tunnel/Access resources remain unverified. The frontend-only Workers.dev landing environment is documented in the [Worker guide](../deploy/worker/README.md). Tailscale remains the server recovery channel.
+The [Worker guide](../deploy/worker/README.md) describes the frontend-only deployment boundary. The [session closeout](session-closeout-2026-10-16.md) records the current release and hosted route status. Plan and review backend resources as a separate deployment. Tailscale remains the server recovery channel.
+
+Public error response and retry behavior are detailed in the [error handling validation guide](error-handling-validation.md). FastAPI's standard array-shaped 422 validation response remains unchanged.
 
 ## Transaction and identity refinements
 

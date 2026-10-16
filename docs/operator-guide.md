@@ -1,6 +1,6 @@
 # Operator guide
 
-The default Compose stack serves offline replay data. It does not start the optional collector, scheduler or executor services. Production release is pending concrete build review; do not infer deployment from the checked-in Wrangler configuration.
+The default Compose stack serves offline replay data. It does not start the optional collector, scheduler, or executor services. The approved landing and simulation frontend are live on the persistent Workers.dev host. The backend and proposed custom-domain route remain unconfigured. The [session closeout](session-closeout-2026-10-16.md) records the current release boundary and cleanup.
 
 ## Local operation
 
@@ -38,6 +38,8 @@ docker compose exec api python -m app.cli live-smoke --config configs/live-smoke
 
 This command sends genuine provider requests. The example fixes MiMo Flash and GLM Flash to five rounds at most, 80 KB request bodies, 1,000 output tokens, a $0.50 request reservation limit and a $2.50 run cap. The conservative reservation assumptions of $1/$3 per million input/output tokens are accounting bounds, not an invoice or a claim about provider prices. A missing key or invalid limit fails before market or provider access. Keep the collector separate so hourly funding evidence can be captured during a long model response. A failed or uncertain provider request is recorded without automatic retry; do not restart a failed smoke to disguise it. HOLD is a valid result.
 
+The last genuine smoke sent ten requests, and all ten returned HTTP 429. Successful provider acceptance remains pending. Do not repeat those paid calls to close this session or claim a successful decision or fill.
+
 ## Evidence and failures
 
 Keep canonical snapshots, exact sent request bytes, returned visible decisions and their hashes. Database migrations protect evidence tables from alteration. Provider transport headers and credentials are not public evidence. Never put keys in frontend variables, URLs, screenshots or logs.
@@ -64,8 +66,8 @@ Stop writers for a recovery operation, restore, check Alembic revision and readi
 
 The frontend target is `arena.leonfuller.com`; the fixed Tunnel origin is `arena-origin.leonfuller.com`. Configure service-authenticated Tunnel transport separately from visitor Access identity. Both Worker and API verify admin identity. Protect admin HTML, its assets and admin API paths. Keep Tailscale available for server recovery.
 
-The default API Worker has no production route. The separate frontend-only Workers.dev landing environment and its deployment boundary are documented in the [Worker guide](../deploy/worker/README.md). API requests fail closed while required bindings are absent.
+The default API Worker has no route and is not deployed. The separate `landing` environment serves the landing and simulation frontend at [Workers.dev](https://open-alpha-arena-landing.l-elliottfuller.workers.dev/). The [Worker guide](../deploy/worker/README.md) describes the environment boundary, and the [session closeout](session-closeout-2026-10-16.md) records current hosted API and custom-domain status.
 
 For the Debian API, set `AUTH_MODE=access`, `ALLOWED_ORIGINS=["https://arena.leonfuller.com"]`, the Access issuer/audience/JWKS URL, `ADMIN_SUBJECTS`, and a private `ORIGIN_TRANSPORT_TOKEN`. Configure the Worker with the matching identity policy and its private Tunnel service credentials. Local login is unavailable in Access mode. Keep the origin token separate from visitor identity.
 
-Use the [Worker guide](../deploy/worker/README.md) for exact variables and dry-run commands. Combined static assets and API handling follow [Cloudflare Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/); visitor JWT validation follows [Cloudflare's validation guidance](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/). Account resources, DNS and production routing have not been verified or changed by this implementation checkpoint.
+Use the [Worker guide](../deploy/worker/README.md) for exact variables and dry-run commands. Combined static assets and API handling follow [Cloudflare Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/); visitor JWT validation follows [Cloudflare's validation guidance](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/).
