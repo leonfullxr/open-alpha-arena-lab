@@ -17,17 +17,25 @@ export function extractUserPrompt(requestBytes: Uint8Array): string | null {
     return null;
   }
   if (!request || typeof request !== 'object' || !('messages' in request) || !Array.isArray(request.messages)) return null;
-  const messages = request.messages;
-  if (!messages.every((message) => message && typeof message === 'object' && 'role' in message && typeof message.role === 'string')) return null;
-  const userMessages = messages.filter((message) => message.role === 'user');
+  const messages: unknown[] = request.messages;
+  const userMessages: unknown[] = [];
+  for (const message of messages) {
+    if (!message || typeof message !== 'object' || !('role' in message) || typeof message.role !== 'string') return null;
+    if (message.role === 'user') userMessages.push(message);
+  }
   if (!userMessages.length) return null;
   const content: string[] = [];
   for (const message of userMessages) {
+    if (!message || typeof message !== 'object') return null;
     if (!('content' in message)) return null;
     if (typeof message.content === 'string') content.push(message.content);
     else if (Array.isArray(message.content)) {
-      if (!message.content.length || !message.content.every((part) => part && typeof part === 'object' && 'type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string')) return null;
-      content.push(...message.content.map((part) => part.text));
+      const parts: unknown[] = message.content;
+      if (!parts.length) return null;
+      for (const part of parts) {
+        if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'text' || !('text' in part) || typeof part.text !== 'string') return null;
+        content.push(part.text);
+      }
     } else return null;
   }
   return content.join('\n');

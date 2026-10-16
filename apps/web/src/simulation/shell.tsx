@@ -28,7 +28,7 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
   const refreshMarket = selected?.state === 'RUNNING' || selected?.state === 'PAUSED';
   const status = useQuery({ queryKey: ['status'], queryFn: getStatus, refetchInterval: refreshMarket ? 5_000 : false });
   const ticker = useQuery({ queryKey: ['ticker', requestedRun ?? 'aggregate'], queryFn: () => getTicker(requestedRun ? selected?.id : undefined), enabled: !requestedRun || Boolean(selected), refetchInterval: refreshMarket ? 5_000 : false });
-  const streamState = useCompetitionStream(selected);
+  const streamState = useCompetitionStream(requestedRun ? selected : undefined);
   const routeCompetitionPath = pathCompetition ? `/simulation/${encodeURIComponent(pathCompetition)}` : undefined;
   const narrativePath = selected ? `/simulation?run=${encodeURIComponent(selected.id)}` : '/simulation';
   const competitionPath = routeCompetitionPath ?? (selected ? `/simulation/${encodeURIComponent(selected.id)}` : '/simulation');

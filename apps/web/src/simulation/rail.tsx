@@ -5,6 +5,7 @@ import { ActivityPanel, type ActivityTab } from './activity';
 import { DecisionFeed } from './chat';
 import { getCompetitionMetrics, getLeaderboard, getTradeHistory, type Competition, type Trade } from './api';
 import { RulesEvidence, useRulesArtifact } from './rules';
+import { useCompetitionStream } from './stream';
 import { modelToneClass, profileTag } from './colors';
 import { AgentLink, decimal, money, percent, QueryState, StatusBadge, timestamp } from './ui';
 
@@ -79,6 +80,7 @@ function AggregateChat({ competitions, loading, error }: { competitions: Competi
   const [competitionId, setCompetitionId] = useState(competitions[0]?.id ?? '');
   const [agentId, setAgentId] = useState('');
   const competition = competitions.find((item) => item.id === competitionId);
+  useCompetitionStream(competition);
 
   useEffect(() => {
     if (!competitions.some((item) => item.id === competitionId)) setCompetitionId(competitions[0]?.id ?? '');

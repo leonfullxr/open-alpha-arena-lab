@@ -19,7 +19,8 @@ const evidencePath = path.join(
 );
 const screenshotDir = path.join(root, 'docs/screenshots');
 const apiOnly = process.argv.includes('--api-only');
-const includeFixtures = process.argv.includes('--fixtures');
+const aggregateStreamOnly = process.argv.includes('--aggregate-stream-check');
+const includeFixtures = process.argv.includes('--fixtures') || aggregateStreamOnly;
 const functionalOnly = process.argv.includes('--functional-only');
 const focusedReviewFixes = process.argv.includes('--focused-review-fixes');
 const checks = [];
@@ -278,7 +279,7 @@ async function browserChecks(apiEvidence) {
     [768, 1024],
     [390, 844],
   ];
-  if (!functionalOnly) {
+  if (!functionalOnly && !aggregateStreamOnly) {
     axi('resize', '1920', '1080');
     axi('screenshot', path.join('docs/screenshots', 'simulation-directory-1920x1080.png'));
   }
@@ -294,7 +295,7 @@ async function browserChecks(apiEvidence) {
     'selected-run narrative and model chat rail',
   );
   for (const [width, height] of viewports) {
-    if (focusedReviewFixes) break;
+    if (focusedReviewFixes || aggregateStreamOnly) break;
     if (functionalOnly) break;
     axi('resize', String(width), String(height));
     const metrics = evaluate('JSON.stringify({width:innerWidth,height:innerHeight,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,context:(()=>{const r=document.querySelector(".arena-context")?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,height:r.height}:null})(),tabs:(()=>{const r=document.querySelector(".arena-rail-tabs")?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,height:r.height}:null})()})');
@@ -318,7 +319,7 @@ async function browserChecks(apiEvidence) {
   );
   const screenshots = [];
   for (const [width, height] of viewports) {
-    if (functionalOnly || focusedReviewFixes) break;
+    if (functionalOnly || focusedReviewFixes || aggregateStreamOnly) break;
     axi('resize', String(width), String(height));
     const metrics = evaluate('JSON.stringify({width:innerWidth,height:innerHeight,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,context:(()=>{const r=document.querySelector(".arena-context")?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,height:r.height}:null})(),tabs:(()=>{const r=document.querySelector(".arena-rail-tabs")?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,height:r.height}:null})()})');
     record(`competition-viewport-${width}x${height}-no-document-overflow`,
@@ -332,7 +333,7 @@ async function browserChecks(apiEvidence) {
   }
 
   for (const item of routes) {
-    if (focusedReviewFixes) break;
+    if (focusedReviewFixes || aggregateStreamOnly) break;
     const url = new URL(item.route, web).href;
     axi('resize', '1920', '1080');
     axi('open', url);
@@ -367,6 +368,45 @@ async function browserChecks(apiEvidence) {
   const clickPrefix = (selector, prefix) => evaluate(`JSON.stringify((()=>{const e=[...document.querySelectorAll(${JSON.stringify(selector)})].find(x=>x.textContent.trim().startsWith(${JSON.stringify(prefix)}));if(!e)return false;e.click();return true})())`);
   const clickHref = (href) => evaluate(`JSON.stringify((()=>{const e=[...document.querySelectorAll('a[href]')].find(x=>x.getAttribute('href')===${JSON.stringify(href)} || x.href.endsWith(${JSON.stringify(href)}));if(!e)return false;e.click();return true})())`);
   const setInput = (selector, value) => evaluate(`JSON.stringify((()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)return false;const setter=Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e),'value').set;setter.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true})())`);
+  if (aggregateStreamOnly) {
+    const running = apiEvidence.fixtures.find((fixture) => fixture.name.endsWith('running stream state'));
+    const paused = apiEvidence.fixtures.find((fixture) => fixture.name.endsWith('paused lifecycle state'));
+    if (!running || !paused) throw new Error('The read-only RUNNING and PAUSED fixtures are required for the aggregate stream check');
+    record('aggregate-index-opens-for-selected-run-freshness', clickHref('/simulation'));
+    await waitFor('JSON.stringify({path:location.pathname,selector:!!document.querySelector("#aggregate-run-filter")})', (value) => value.path === '/simulation' && value.selector, 'aggregate chat selector before stream check');
+    evaluate(`JSON.stringify((()=>{
+      const originalSetInterval=window.setInterval.bind(window);
+      const originalClearInterval=window.clearInterval.bind(window);
+      const originalEventSource=window.EventSource;
+      performance.clearResourceTimings();
+      window.__aggregateStreamTest={sources:[],intervals:[],cleared:[],originalSetInterval,originalClearInterval,originalEventSource,requestCount:(id)=>performance.getEntriesByType('resource').filter((entry)=>new URL(entry.name).pathname.endsWith('/competitions/'+id+'/decisions')).length};
+      window.setInterval=(callback,delay,...args)=>{const id=originalSetInterval(callback,delay,...args);window.__aggregateStreamTest.intervals.push({id,callback,delay});return id};
+      window.clearInterval=(id)=>{window.__aggregateStreamTest.cleared.push(id);return originalClearInterval(id)};
+      window.EventSource=class{constructor(url){this.url=url;this.onopen=null;this.onmessage=null;this.onerror=null;this.closeCalls=0;window.__aggregateStreamTest.sources.push(this);queueMicrotask(()=>this.onopen?.({}))}emitMessage(){this.onmessage?.({data:'{}'})}close(){this.closeCalls++;this.readyState=2}};
+      return true;
+    })())`);
+    record('aggregate-stream-controls-are-installed', evaluate('JSON.stringify(Boolean(window.__aggregateStreamTest))'));
+    record('aggregate-run-selector-accepts-nonfirst-running-run', setInput('#aggregate-run-filter', running.id), { run: running.id, state: 'RUNNING' });
+    const runningSubscription = await waitFor(`JSON.stringify((()=>{const test=window.__aggregateStreamTest;const source=test.sources.find(item=>item.url.includes(${JSON.stringify(encodeURIComponent(running.id))}));return source?{url:source.url,sources:test.sources.filter(item=>item.url.includes(${JSON.stringify(encodeURIComponent(running.id))})).length,selected:document.querySelector('#aggregate-run-filter')?.value}:null})())`, (value) => value?.selected === running.id && value.sources === 1, 'one stream subscribes to the selected nonfirst RUNNING run');
+    const runningIndex = evaluate('JSON.stringify(document.querySelector("#aggregate-run-filter")?.selectedIndex ?? -1)');
+    record('aggregate-selected-nonfirst-running-run-owns-single-stream', runningIndex > 0 && runningSubscription.url.endsWith(`/competitions/${encodeURIComponent(running.id)}/stream`) && runningSubscription.sources === 1, { ...runningSubscription, selected_index: runningIndex });
+    const runningDecisionCount = await waitFor(`JSON.stringify(window.__aggregateStreamTest.requestCount(${JSON.stringify(running.id)}))`, (value) => value > 0, 'selected RUNNING decisions query');
+    evaluate(`JSON.stringify((()=>{window.__aggregateStreamTest.sources.find(item=>item.url.includes(${JSON.stringify(encodeURIComponent(running.id))})).emitMessage();return true})())`);
+    const refreshedRunningCount = await waitFor(`JSON.stringify(window.__aggregateStreamTest.requestCount(${JSON.stringify(running.id)}))`, (value) => value > runningDecisionCount, 'RUNNING stream message invalidates selected decision query');
+    record('aggregate-running-stream-invalidates-selected-decisions', refreshedRunningCount > runningDecisionCount, { before: runningDecisionCount, after: refreshedRunningCount });
+    record('aggregate-selector-switches-to-paused-run', setInput('#aggregate-run-filter', paused.id), { run: paused.id, state: 'PAUSED' });
+    const pausedPolling = await waitFor(`JSON.stringify((()=>{const test=window.__aggregateStreamTest;const source=test.sources.find(item=>item.url.includes(${JSON.stringify(encodeURIComponent(running.id))}));const timer=test.intervals.find(item=>item.delay===5000);return {oldStreamClosed:source?.closeCalls??0,pausedStreamCount:test.sources.filter(item=>item.url.includes(${JSON.stringify(encodeURIComponent(paused.id))})).length,timer:timer?{id:timer.id,delay:timer.delay}:null,selected:document.querySelector('#aggregate-run-filter')?.value}})())`, (value) => value.oldStreamClosed === 1 && value.pausedStreamCount === 0 && value.timer?.delay === 5000 && value.selected === paused.id, 'RUNNING stream cleanup and PAUSED polling on selection switch');
+    record('aggregate-run-switch-cleans-stream-and-starts-paused-polling', pausedPolling.oldStreamClosed === 1 && pausedPolling.pausedStreamCount === 0 && pausedPolling.timer.delay === 5000, pausedPolling);
+    const pausedDecisionCount = await waitFor(`JSON.stringify(window.__aggregateStreamTest.requestCount(${JSON.stringify(paused.id)}))`, (value) => value > 0, 'selected PAUSED decisions query');
+    evaluate(`JSON.stringify((()=>{const timer=window.__aggregateStreamTest.intervals.find(item=>item.id===${pausedPolling.timer.id});timer.callback();return true})())`);
+    const refreshedPausedCount = await waitFor(`JSON.stringify(window.__aggregateStreamTest.requestCount(${JSON.stringify(paused.id)}))`, (value) => value > pausedDecisionCount, 'PAUSED timer invalidates selected decision query');
+    record('aggregate-paused-poll-refreshes-selected-decisions', refreshedPausedCount > pausedDecisionCount, { before: pausedDecisionCount, after: refreshedPausedCount });
+    record('aggregate-chat-unmount-clears-paused-poll', clickText('[aria-label="Activity views"] [role="tab"]', 'SEASON DETAILS'));
+    const unmountCleanup = await waitFor(`JSON.stringify((()=>{const test=window.__aggregateStreamTest;return {cleared:test.cleared.includes(${pausedPolling.timer.id}),chat:!!document.querySelector('#aggregate-run-filter')}})())`, (value) => value.cleared && !value.chat, 'PAUSED polling cleanup when aggregate chat unmounts');
+    record('aggregate-chat-unmount-cleans-paused-poll', unmountCleanup.cleared && !unmountCleanup.chat, unmountCleanup);
+    evaluate('JSON.stringify((()=>{const test=window.__aggregateStreamTest;if(!test)return true;window.setInterval=test.originalSetInterval;window.clearInterval=test.originalClearInterval;window.EventSource=test.originalEventSource;delete window.__aggregateStreamTest;return true})())');
+    return { stream: 'aggregate selection follows RUNNING SSE and PAUSED polling with switch and unmount cleanup', runs: { running: running.id, paused: paused.id } };
+  }
   const fillChatFilter = (value) => {
     const input = evaluate('JSON.stringify([...document.querySelectorAll("input")].find(e=>e.getAttribute("placeholder")?.toUpperCase()==="SYMBOL" || e.labels?.[0]?.textContent.trim()==="Symbol")?.outerHTML ?? null)');
     if (!input) throw new Error('Could not locate chat symbol filter');
