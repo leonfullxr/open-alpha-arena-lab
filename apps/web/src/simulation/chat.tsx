@@ -60,6 +60,7 @@ export function DecisionFeed({
   highlightDecisionId,
   decisionRound,
   idPrefix,
+  showAgentFilter = true,
   emptyMessage = 'No model decisions match this filter.',
 }: {
   competitionId: string;
@@ -69,6 +70,7 @@ export function DecisionFeed({
   highlightDecisionId?: string;
   decisionRound?: number;
   idPrefix?: string;
+  showAgentFilter?: boolean;
   emptyMessage?: string;
 }): React.JSX.Element {
   const generatedId = useId().replaceAll(':', '');
@@ -106,7 +108,7 @@ export function DecisionFeed({
   return <>
     <div className="chat-filters">
       <span className="chat-filter-label">FILTER:</span>
-      {!agentId && agents.length > 1 && <><label className="visually-hidden" htmlFor={`${feedId}-agent`}>Model</label>
+      {showAgentFilter && !agentId && agents.length > 1 && <><label className="visually-hidden" htmlFor={`${feedId}-agent`}>Model</label>
       <select id={`${feedId}-agent`} value={selectedAgent} onChange={(event) => setSelectedAgent(event.target.value)}>
         <option value="">ALL MODELS</option>
         {agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name.toUpperCase()}</option>)}
@@ -183,6 +185,8 @@ function ChatDetail({ decision, competitionId }: { decision: Decision; competiti
   const usage = Object.entries(decision.usage).map(([name, value]) => `${name}: ${value}`).join(' · ') || 'Not reported';
 
   return <div className="chat-detail">
+    <p className="public-evidence-scope">PUBLIC DECISION RECORD — only supplied API fields and artifacts marked for public release appear here. Hidden reasoning is not published or inferred.</p>
+    <details className="chat-block chat-disclosure"><summary>PUBLIC JUSTIFICATION</summary><p className="chat-body">{decision.justification ?? 'The API returned no public justification for this decision.'}</p></details>
     <dl className="chat-facts">
       <div><dt>Round</dt><dd>{decision.round}</dd></div>
       <div><dt>Validation</dt><dd>{decision.validation_status}</dd></div>
@@ -197,7 +201,7 @@ function ChatDetail({ decision, competitionId }: { decision: Decision; competiti
       <div><dt>Output SHA-256</dt><dd className="chat-hash">{shortHash(decision.output_sha256)}</dd></div>
     </dl>
     {decision.validation_errors.length > 0 && <section className="chat-block"><h3>Validation details</h3><ul>{decision.validation_errors.map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}</ul></section>}
-    {decision.proposals.length > 0 && <section className="chat-block"><h3>Recorded proposals</h3>
+    {decision.proposals.length > 0 && <details className="chat-block chat-disclosure" open><summary>TRADING_DECISIONS · RECORDED PROPOSALS</summary>
       {decision.proposals.map((proposal, index) => <article className="chat-proposal" key={`${proposal.symbol}-${index}`}>
         <header><strong>{proposal.action} {proposal.symbol}</strong><span>RISK: {proposal.risk_decision ?? 'Not evaluated'}</span></header>
         <p>{proposal.justification}</p>
@@ -210,12 +214,12 @@ function ChatDetail({ decision, competitionId }: { decision: Decision; competiti
         </dl>
         {proposal.risk_reasons.length > 0 && <ul>{proposal.risk_reasons.map((reason, reasonIndex) => <li key={`${reasonIndex}-${reason}`}>{reason}</li>)}</ul>}
       </article>)}
-    </section>}
+    </details>}
     {artifact.isLoading && <p role="status">Loading exact artifact bytes…</p>}
     {artifact.error && <div className="query-error" role="alert">{artifact.error.message} <button onClick={() => void artifact.refetch()}>Retry artifacts</button></div>}
     {(promptArtifact?.bytes || outputArtifact?.bytes) && <div className="artifact-grid">
-      {promptArtifact?.bytes && artifact.data && <ArtifactText title="Prompt bytes" bytes={promptArtifact.bytes} hash={artifact.data.prompt_sha256} />}
-      {outputArtifact?.bytes && artifact.data && <ArtifactText title="Provider output bytes" bytes={outputArtifact.bytes} hash={artifact.data.output_sha256} />}
+      {promptArtifact?.bytes && artifact.data && <details className="chat-block chat-disclosure" open><summary>USER_PROMPT · EXACT ARTIFACT BYTES</summary><ArtifactText title="User prompt bytes" bytes={promptArtifact.bytes} hash={artifact.data.prompt_sha256} /></details>}
+      {outputArtifact?.bytes && artifact.data && <ArtifactText title="Public provider output bytes" bytes={outputArtifact.bytes} hash={artifact.data.output_sha256} />}
     </div>}
     {promptArtifact?.error && <p className="query-error" role="alert">Prompt artifact could not be decoded: {promptArtifact.error}</p>}
     {outputArtifact?.error && <p className="query-error" role="alert">Provider output could not be decoded: {outputArtifact.error}</p>}

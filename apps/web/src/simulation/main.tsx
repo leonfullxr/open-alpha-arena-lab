@@ -6,6 +6,7 @@ import '../simulation.css';
 import { SimulationShell } from './shell';
 
 const DirectoryPage = React.lazy(() => import('./directory'));
+const BlogPage = React.lazy(() => import('./blog'));
 const CompetitionPage = React.lazy(() => import('./competition'));
 const LeaderboardPage = React.lazy(() => import('./leaderboard'));
 const ModelPage = React.lazy(() => import('./model'));
@@ -28,6 +29,7 @@ export function mount(): void {
             <Suspense fallback={<div className="page-loading" role="status">Loading this view…</div>}>
               <Routes>
                 <Route path="/simulation" element={<DirectoryPage />} />
+                <Route path="/simulation/blog" element={<BlogPage />} />
                 <Route path="/simulation/:competitionId" element={<CompetitionPage />} />
                 <Route path="/simulation/:competitionId/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/simulation/:competitionId/models/:agentId" element={<ModelPage />} />

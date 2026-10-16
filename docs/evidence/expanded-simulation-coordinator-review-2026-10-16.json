@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-16",
+  "reviewer": "coordinator",
+  "implementation_and_independent_validation": "gpt-6-luna, high reasoning",
+  "checks": [
+    {
+      "name": "typescript-and-production-build",
+      "command": "npm run check",
+      "passed": true
+    },
+    {
+      "name": "worker-asset-runtime-routing",
+      "command": "npm --prefix deploy/worker run verify:assets",
+      "passed": true,
+      "note": "Checked the generated frontend assets locally. No deployment was performed."
+    },
+    {
+      "name": "protected-source-paths",
+      "command": "git diff --exit-code HEAD -- apps/web/src/landing apps/web/src/main.tsx services contracts deploy/worker package.json package-lock.json",
+      "passed": true,
+      "note": "The approved landing, backend, API contracts, Worker source and dependency manifests are unchanged."
+    },
+    {
+      "name": "desktop-leaderboard-geometry",
+      "passed": true,
+      "viewport_width": 1920,
+      "content_x": 176,
+      "content_width": 1568,
+      "heading_top": 123,
+      "controls_top": 178,
+      "tabs_top": 233,
+      "table_top": 275,
+      "table_row_height": 22,
+      "navigation_font_size": 14
+    },
+    {
+      "name": "desktop-model-identity-geometry",
+      "passed": true,
+      "viewport_width": 1920,
+      "content_x": 352,
+      "content_width": 1216,
+      "identity_top": 224,
+      "identity_width": 365,
+      "identity_height": 105,
+      "fill_body_font_size": 11
+    },
+    {
+      "name": "live-narrative-and-selected-run",
+      "passed": true,
+      "viewport_width": 1920,
+      "header_and_competition_band_height": 103,
+      "article_x": 374,
+      "article_width": 672,
+      "sidebar_width": 500,
+      "message_font_size": 13,
+      "selected_competition_link_count": 1
+    },
+    {
+      "name": "latest-fill-after-fresh-page-load",
+      "passed": true,
+      "competition_id": "036d6115-3edb-5dca-92d3-eb46a649a1b2",
+      "agent_id": "ce388865-2dfe-5055-9173-2bbce70b24cc",
+      "first_visible_fill_round": 18,
+      "first_visible_fill_time": "2025-01-01 00:54 UTC",
+      "section_label": "LAST 25 FILLS"
+    }
+  ],
+  "visual_reference": "All nine supplied images in logos/site were inspected. Browser chrome was excluded from layout comparisons.",
+  "data_scope": "The preview uses the actual local DEMO REPLAY and explicitly labeled lifecycle fixtures. Unpublished statistics remain N/A. Browser-only synthetic position cards are recorded separately by the validation runner.",
+  "publication_scope": "Local changes only; the previously completed landing publication is preserved."
+}

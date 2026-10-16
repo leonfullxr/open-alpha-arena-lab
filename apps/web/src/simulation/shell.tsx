@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BrandMark } from '../branding';
 import { getCompetition, getCompetitions, getStatus, getTicker } from './api';
@@ -14,7 +14,8 @@ const LEAD_SYMBOLS = ['BTC', 'ETH'];
 export function SimulationShell({ children }: { children: ReactNode }): React.JSX.Element {
   const location = useLocation();
   const competitions = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions, refetchInterval: 15_000 });
-  const pathCompetition = decodePathSegment(location.pathname.split('/')[2]);
+  const competitionsInDisplayOrder = useMemo(() => [...(competitions.data ?? [])].sort((left, right) => Number(isTestFixture(left.source_label)) - Number(isTestFixture(right.source_label))), [competitions.data]);
+  const pathCompetition = location.pathname === '/simulation/blog' ? undefined : decodePathSegment(location.pathname.split('/')[2]);
   const requestedRun = pathCompetition ?? new URLSearchParams(location.search).get('run') ?? undefined;
   const scoped = useQuery({
     queryKey: ['competition', requestedRun ?? ''],
@@ -23,18 +24,21 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
     refetchInterval: (query) => ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? 5_000 : false,
   });
   const scopedCompetition = scoped.data;
-  const selected = requestedRun ? scopedCompetition : competitions.data?.[0];
+  const selected = requestedRun ? scopedCompetition : competitionsInDisplayOrder[0];
   const refreshMarket = selected?.state === 'RUNNING' || selected?.state === 'PAUSED';
   const status = useQuery({ queryKey: ['status'], queryFn: getStatus, refetchInterval: refreshMarket ? 5_000 : false });
-  const ticker = useQuery({ queryKey: ['ticker', selected?.id], queryFn: () => getTicker(selected?.id), enabled: !requestedRun || Boolean(selected), refetchInterval: refreshMarket ? 5_000 : false });
+  const ticker = useQuery({ queryKey: ['ticker', requestedRun ?? 'aggregate'], queryFn: () => getTicker(requestedRun ? selected?.id : undefined), enabled: !requestedRun || Boolean(selected), refetchInterval: refreshMarket ? 5_000 : false });
   const streamState = useCompetitionStream(selected);
   const routeCompetitionPath = pathCompetition ? `/simulation/${encodeURIComponent(pathCompetition)}` : undefined;
+  const narrativePath = selected ? `/simulation?run=${encodeURIComponent(selected.id)}` : '/simulation';
   const competitionPath = routeCompetitionPath ?? (selected ? `/simulation/${encodeURIComponent(selected.id)}` : '/simulation');
   const leaderboardPath = selected ? `${competitionPath}/leaderboard` : '/simulation';
   const requestedAgent = decodePathSegment(location.pathname.split('/')[4]);
   const focusedAgent = selected?.agents.find((agent) => agent.id === requestedAgent) ?? selected?.agents[0];
   const modelsPath = focusedAgent ? `${competitionPath}/models/${encodeURIComponent(focusedAgent.id)}` : '/simulation';
-  const showRail = location.pathname.startsWith('/simulation');
+  const isStandalone = location.pathname.endsWith('/leaderboard') || location.pathname.includes('/models/') || location.pathname === '/simulation/blog';
+  const showRail = location.pathname.startsWith('/simulation') && !isStandalone;
+  const hasExplicitRun = Boolean(pathCompetition || new URLSearchParams(location.search).get('run'));
 
   const symbols = useMemo(() => {
     const listed = ticker.data?.map((quote) => quote.symbol) ?? [];
@@ -47,36 +51,43 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
   const stale = ticker.data?.some((quote) => quote.stale) ?? false;
   const contextLabel = pathCompetition && selected
     ? `${selected.name} · ${profileTag(selected.profile)} · ${selected.state} · ${selected.source_label}`
-    : selected
-      ? `RUN INDEX · CHAT PREVIEW: ${selected.name} · ${profileTag(selected.profile)} · ${selected.source_label}`
+    : hasExplicitRun && selected
+      ? `${selected.name} · ${profileTag(selected.profile)} · ${selected.state} · ${selected.source_label}`
+      : selected
+        ? `PUBLISHED PAPER RUNS · ${competitions.data?.length ?? 0} · PROFILES REPORTED SEPARATELY`
       : requestedRun ? `RUN UNAVAILABLE · ${requestedRun}`
     : competitions.data
       ? `RUN INDEX · ${competitions.data.length} PUBLIC PAPER ${competitions.data.length === 1 ? 'RUN' : 'RUNS'} · ${status.data?.demo_label ?? 'PUBLIC API'}`
       : status.isError ? 'PUBLIC API UNAVAILABLE' : 'CONNECTING TO THE PUBLIC API';
 
-  return <div className={`arena${showRail ? '' : ' arena--wide'}`}>
+  return <div className={`arena${showRail ? '' : ' arena--wide'}${hasExplicitRun && !pathCompetition ? ' arena--narrative-run' : ''}`}>
     <a className="arena-skip" href="#arena-main">Skip to content</a>
     <header className="arena-head">
       <div className="arena-head-row">
         <a className="arena-brand" href="/" aria-label="Open Alpha Arena Lab home">
           <BrandMark className="arena-mark" monochrome />
-          <span className="arena-brand-text">OPEN ALPHA ARENA<i className="arena-brand-sub">PAPER TRADING LAB</i></span>
+          <span className="arena-brand-text"><span>OPEN ALPHA ARENA <i className="arena-brand-inline">LAB</i></span></span>
         </a>
         <nav className="arena-nav" aria-label="Arena navigation">
-          <NavLink to={competitionPath} end>LIVE</NavLink>
+          <NavLink to={narrativePath} end>LIVE</NavLink>
           <span className="arena-nav-divider" aria-hidden="true" />
           <NavLink to={leaderboardPath} end>LEADERBOARD</NavLink>
           <span className="arena-nav-divider" aria-hidden="true" />
           <NavLink to={modelsPath} end>MODELS</NavLink>
           <span className="arena-nav-divider" aria-hidden="true" />
-          <NavLink to={selected ? `/simulation?run=${encodeURIComponent(selected.id)}` : '/simulation'} end>ABOUT</NavLink>
+          <NavLink to="/simulation/blog" end>BLOG</NavLink>
+          <span className="arena-nav-divider" aria-hidden="true" />
+          <a href="/#methodology">ABOUT</a>
         </nav>
         <a className="arena-utility" href="https://github.com/leonfullxr/open-alpha-arena-lab" target="_blank" rel="noreferrer">GITHUB ↗</a>
       </div>
       <div className="arena-band">
         <div className="arena-runs" role="group" aria-label="Competitions">
-          <NavLink to={selected ? `/simulation?run=${encodeURIComponent(selected.id)}` : '/simulation'} className="arena-run-tab arena-run-tab--index" end>RUN INDEX</NavLink>
-          {(competitions.data ?? []).map((competition) => <NavLink key={competition.id} title={competition.name} to={`/simulation/${encodeURIComponent(competition.id)}`} className={`arena-run-tab ${competition.profile === 'alpha_2025_baseline' ? 'arena-run-tab--baseline' : 'arena-run-tab--extended'}`}>{competition.name}</NavLink>)}
+          <Link to="/simulation" aria-current={!requestedRun ? 'page' : undefined} className={`arena-run-tab arena-run-tab--index${!requestedRun ? ' active' : ''}`}>RUN INDEX</Link>
+          {competitionsInDisplayOrder.map((competition) => {
+            const active = requestedRun === competition.id;
+            return <Link key={competition.id} title={`${competition.name} · ${competition.source_label}`} to={`/simulation?run=${encodeURIComponent(competition.id)}`} aria-current={active ? 'page' : undefined} className={`arena-run-tab ${competition.profile === 'alpha_2025_baseline' ? 'arena-run-tab--baseline' : 'arena-run-tab--extended'}${active ? ' active' : ''}`}><span className="arena-run-source">{isTestFixture(competition.source_label) ? 'TEST FIXTURE · ' : ''}</span>{competition.name}</Link>;
+          })}
         </div>
         <div className="arena-ticker" aria-label="Market ticker">
           {symbols.map((symbol) => {
@@ -101,7 +112,7 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
         <a className="mobile-activity-jump" href="#model-activity">MODEL CHAT ↓</a>
         <main id="arena-main" className="arena-main">{children}</main>
       </div>
-      {showRail && <ActivityRail competition={selected} loading={competitions.isLoading || scoped.isLoading} error={requestedRun ? scoped.error : competitions.error} />}
+      {showRail && <ActivityRail mode={hasExplicitRun ? 'run' : 'aggregate'} competition={hasExplicitRun ? selected : undefined} competitions={competitionsInDisplayOrder} loading={competitions.isLoading || scoped.isLoading} error={requestedRun ? scoped.error : competitions.error} />}
     </div></CompetitionStreamProvider>
     <footer className="arena-foot">
       <BrandMark className="arena-mark" monochrome />
@@ -130,4 +141,8 @@ function decodePathSegment(value: string | undefined): string | undefined {
   } catch {
     return value;
   }
+}
+
+function isTestFixture(source: string): boolean {
+  return source.toUpperCase().includes('TEST FIXTURE');
 }
