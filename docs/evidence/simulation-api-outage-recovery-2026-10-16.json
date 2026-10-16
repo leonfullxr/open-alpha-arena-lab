@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "date": "2026-10-16",
+  "api": "http://127.0.0.1:8026",
+  "frontend": "http://127.0.0.1:5186",
+  "database": "dedicated disposable validation PostgreSQL on 127.0.0.1:15436",
+  "competition_id": "be4a738f-804c-4107-ba9e-95c23b5d3fce",
+  "source_label": "TEST FIXTURE · running stream state · NEVER DISPATCHED",
+  "route": "/simulation/be4a738f-804c-4107-ba9e-95c23b5d3fce",
+  "steps": [
+    {
+      "action": "Terminated only the validation API process on port 8026 while the browser was on the running fixture route.",
+      "observed": "The same route showed the public API 500 retry alert. No route navigation occurred."
+    },
+    {
+      "action": "Restarted the same API and database with STREAM_SECONDS=5 to bound the live SSE response for this probe.",
+      "observed": "The route recovered to EVENT STREAM CONNECTED with the same pathname and no navigation. A direct stream request returned HTTP 200 and closed after 5.012 seconds."
+    },
+    {
+      "action": "Stopped the short-stream server and restarted the API on port 8026 with its default STREAM_SECONDS=900.",
+      "observed": "The preview API is left healthy with its normal stream duration."
+    }
+  ],
+  "same_route": true,
+  "navigation_performed": false,
+  "retained_services_touched": false,
+  "provider_calls": 0,
+  "limitations": "This confirms same-route recovery through the live API outage and restoration. The evidence does not claim to distinguish an automatic retry on the original EventSource object from the UI's recovery path after its competition query refetched."
+}

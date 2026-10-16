@@ -1,0 +1,726 @@
+{
+  "generated_at": "2026-10-16T13:40:53.111Z",
+  "api_base": "http://127.0.0.1:8026",
+  "web_base": "http://127.0.0.1:5186",
+  "session": "arena-exact-spec-tests",
+  "baseline": {
+    "id": "036d6115-3edb-5dca-92d3-eb46a649a1b2",
+    "state": "FINISHED",
+    "models": [
+      {
+        "id": "ce388865-2dfe-5055-9173-2bbce70b24cc",
+        "name": "Atlas",
+        "provider": "MockLLMAdapter",
+        "model": "mock-atlas-v3"
+      },
+      {
+        "id": "94cfdc45-adb3-5766-b2d1-bbd78ad49783",
+        "name": "Vector",
+        "provider": "MockLLMAdapter",
+        "model": "mock-vector-v3"
+      }
+    ],
+    "run_count": 5,
+    "ticker_symbols": [
+      "BNB",
+      "BTC",
+      "DOGE",
+      "ETH",
+      "SOL",
+      "XRP"
+    ],
+    "decisions": 40
+  },
+  "checks": [
+    {
+      "0": {
+        "text": "LIVE",
+        "href": "/simulation?run=036d6115-3edb-5dca-92d3-eb46a649a1b2"
+      },
+      "1": {
+        "text": "LEADERBOARD",
+        "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard"
+      },
+      "2": {
+        "text": "MODELS",
+        "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc"
+      },
+      "3": {
+        "text": "BLOG",
+        "href": "/#methodology"
+      },
+      "4": {
+        "text": "ABOUT",
+        "href": "/#methodology"
+      },
+      "name": "desktop-header-navigation-labels-and-targets",
+      "passed": true
+    },
+    {
+      "name": "desktop-header-band-context-and-rail-geometry",
+      "passed": true,
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 58
+      },
+      "headRow": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 58
+      },
+      "band": {
+        "x": 0,
+        "y": 58,
+        "width": 1920,
+        "height": 45
+      },
+      "context": {
+        "x": 0,
+        "y": 103,
+        "width": 1420,
+        "height": 32
+      },
+      "workspace": {
+        "x": 0,
+        "y": 103,
+        "width": 1420,
+        "height": 938
+      },
+      "main": {
+        "x": 0,
+        "y": 135,
+        "width": 1420,
+        "height": 906
+      },
+      "article": {
+        "x": 374,
+        "y": 135,
+        "width": 672,
+        "height": 684
+      },
+      "rail": {
+        "x": 1420,
+        "y": 103,
+        "width": 500,
+        "height": 938
+      },
+      "railTabs": {
+        "x": 1421,
+        "y": 103,
+        "width": 499,
+        "height": 32
+      },
+      "links": [
+        {
+          "text": "LIVE",
+          "href": "/simulation?run=036d6115-3edb-5dca-92d3-eb46a649a1b2"
+        },
+        {
+          "text": "LEADERBOARD",
+          "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard"
+        },
+        {
+          "text": "MODELS",
+          "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc"
+        },
+        {
+          "text": "BLOG",
+          "href": "/#methodology"
+        },
+        {
+          "text": "ABOUT",
+          "href": "/#methodology"
+        }
+      ],
+      "runs": [
+        {
+          "text": "AGGREGATE INDEX",
+          "href": "/simulation"
+        },
+        {
+          "text": "1:Offline Paper Arena · fill evidence v3 · 20 rounds",
+          "href": "/simulation?run=036d6115-3edb-5dca-92d3-eb46a649a1b2"
+        },
+        {
+          "text": "2:TEST FIXTURE · SIMULATION UI VALIDATION · paused lifecycle state",
+          "href": "/simulation?run=7415b28f-4c5b-49f2-9564-52cbf8725974"
+        },
+        {
+          "text": "3:TEST FIXTURE · SIMULATION UI VALIDATION · running stream state",
+          "href": "/simulation?run=be4a738f-804c-4107-ba9e-95c23b5d3fce"
+        },
+        {
+          "text": "4:TEST FIXTURE · SIMULATION UI VALIDATION · rules evidence unavailable",
+          "href": "/simulation?run=90db292a-ae72-487f-a878-5d7371a3396c"
+        },
+        {
+          "text": "5:TEST FIXTURE · SIMULATION UI VALIDATION · extended empty evidence",
+          "href": "/simulation?run=c442896c-50fc-4eab-9235-6103e9776bcc"
+        }
+      ],
+      "quotes": [
+        "BTC",
+        "ETH",
+        "BNB",
+        "DOGE",
+        "SOL",
+        "XRP"
+      ],
+      "documentWidth": 1920,
+      "fonts": "loaded"
+    },
+    {
+      "name": "run-band-uses-aggregate-index-and-numbered-public-runs",
+      "passed": true,
+      "runs": [
+        {
+          "text": "AGGREGATE INDEX",
+          "href": "/simulation"
+        },
+        {
+          "text": "1:Offline Paper Arena · fill evidence v3 · 20 rounds",
+          "href": "/simulation?run=036d6115-3edb-5dca-92d3-eb46a649a1b2"
+        },
+        {
+          "text": "2:TEST FIXTURE · SIMULATION UI VALIDATION · paused lifecycle state",
+          "href": "/simulation?run=7415b28f-4c5b-49f2-9564-52cbf8725974"
+        },
+        {
+          "text": "3:TEST FIXTURE · SIMULATION UI VALIDATION · running stream state",
+          "href": "/simulation?run=be4a738f-804c-4107-ba9e-95c23b5d3fce"
+        },
+        {
+          "text": "4:TEST FIXTURE · SIMULATION UI VALIDATION · rules evidence unavailable",
+          "href": "/simulation?run=90db292a-ae72-487f-a878-5d7371a3396c"
+        },
+        {
+          "text": "5:TEST FIXTURE · SIMULATION UI VALIDATION · extended empty evidence",
+          "href": "/simulation?run=c442896c-50fc-4eab-9235-6103e9776bcc"
+        }
+      ],
+      "api_run_count": 5
+    },
+    {
+      "name": "run-band-market-ticker-uses-real-api-symbols",
+      "passed": true,
+      "api_symbols": [
+        "BNB",
+        "BTC",
+        "DOGE",
+        "ETH",
+        "SOL",
+        "XRP"
+      ],
+      "visible_symbols": [
+        "BTC",
+        "ETH",
+        "BNB",
+        "DOGE",
+        "SOL",
+        "XRP"
+      ]
+    },
+    {
+      "name": "theme-tokens-and-static-mono-font",
+      "passed": true,
+      "paper": "#ffffff",
+      "secondary": "#f7f7f7",
+      "panel": "#f9fafb",
+      "ink": "#111111",
+      "muted": "#5b6470",
+      "hairline": "#d7dce2",
+      "positive": "#00bf00",
+      "negative": "#ff0000",
+      "link": "#3467ff",
+      "mono": "\"IBM Plex Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace"
+    },
+    {
+      "name": "actual-decision-card-has-model-tint",
+      "passed": true,
+      "decision_id": "f7d19e4b-05cc-537e-8722-709b609d8101",
+      "card": {
+        "id": "_r_2_-decision-f7d19e4b-05cc-537e-8722-709b609d8101",
+        "classes": "chat-card model-tone-0",
+        "background": "color(srgb 0.960196 0.970196 1)",
+        "marker": "rgb(52, 103, 255)",
+        "card": "ATLASBASELINE01/01 00:03:00 UTC"
+      }
+    },
+    {
+      "name": "actual-decision-exposes-prompt-proposals-and-download",
+      "passed": true,
+      "prompt": true,
+      "trading": true,
+      "download": true,
+      "hash": true
+    },
+    {
+      "0": {
+        "id": "rail-tab-chat",
+        "label": "MODELCHAT"
+      },
+      "1": {
+        "id": "rail-tab-details",
+        "label": "SEASON DETAILS"
+      },
+      "name": "aggregate-index-rail-tabs-use-requested-labels",
+      "passed": true
+    },
+    {
+      "name": "index-route-link-uses-bright-blue-token",
+      "passed": true,
+      "text": "OPEN THE AVAILABLE RUN CHART →",
+      "color": "rgb(52, 103, 255)"
+    },
+    {
+      "name": "season-details-selects-real-run-records",
+      "passed": true,
+      "selected": "rail-tab-details",
+      "runs": 5
+    },
+    {
+      "name": "blog-link-lands-on-existing-methodology-section",
+      "passed": true,
+      "path": "/",
+      "hash": "#methodology",
+      "exists": true
+    },
+    {
+      "0": {
+        "id": "rail-tab-fills",
+        "label": "TRADES"
+      },
+      "1": {
+        "id": "rail-tab-chat",
+        "label": "MODELCHAT"
+      },
+      "2": {
+        "id": "rail-tab-positions",
+        "label": "POSITIONS"
+      },
+      "3": {
+        "id": "rail-tab-details",
+        "label": "COMP DETAILS"
+      },
+      "name": "selected-run-rail-tabs-use-requested-labels",
+      "passed": true
+    },
+    {
+      "name": "live-1440-no-overflow-and-five-navigation-links",
+      "passed": true,
+      "width": 1440,
+      "doc": 1440,
+      "nav": {
+        "x": 520.984375,
+        "right": 919.015625,
+        "client": 398,
+        "scroll": 398,
+        "lastRight": 919.015625,
+        "links": [
+          {
+            "text": "LIVE",
+            "href": "/simulation?run=036d6115-3edb-5dca-92d3-eb46a649a1b2"
+          },
+          {
+            "text": "LEADERBOARD",
+            "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard"
+          },
+          {
+            "text": "MODELS",
+            "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc"
+          },
+          {
+            "text": "BLOG",
+            "href": "/#methodology"
+          },
+          {
+            "text": "ABOUT",
+            "href": "/#methodology"
+          }
+        ]
+      },
+      "header": 58,
+      "head": 58,
+      "band": 45,
+      "context": {
+        "top": 103,
+        "height": 32
+      },
+      "railTop": 103
+    },
+    {
+      "name": "live-1440-rail-stays-aligned-after-context",
+      "passed": true,
+      "width": 1440,
+      "doc": 1440,
+      "nav": {
+        "x": 520.984375,
+        "right": 919.015625,
+        "client": 398,
+        "scroll": 398,
+        "lastRight": 919.015625,
+        "links": [
+          {
+            "text": "LIVE",
+            "href": "/simulation?run=036d6115-3edb-5dca-92d3-eb46a649a1b2"
+          },
+          {
+            "text": "LEADERBOARD",
+            "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard"
+          },
+          {
+            "text": "MODELS",
+            "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc"
+          },
+          {
+            "text": "BLOG",
+            "href": "/#methodology"
+          },
+          {
+            "text": "ABOUT",
+            "href": "/#methodology"
+          }
+        ]
+      },
+      "header": 58,
+      "head": 58,
+      "band": 45,
+      "context": {
+        "top": 103,
+        "height": 32
+      },
+      "railTop": 103
+    },
+    {
+      "name": "live-390-no-overflow-and-five-navigation-links",
+      "passed": true,
+      "width": 390,
+      "doc": 390,
+      "nav": {
+        "x": 14,
+        "right": 376,
+        "client": 362,
+        "scroll": 362,
+        "lastRight": 267.046875,
+        "links": [
+          {
+            "text": "LIVE",
+            "href": "/simulation?run=036d6115-3edb-5dca-92d3-eb46a649a1b2"
+          },
+          {
+            "text": "LEADERBOARD",
+            "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard"
+          },
+          {
+            "text": "MODELS",
+            "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc"
+          },
+          {
+            "text": "BLOG",
+            "href": "/#methodology"
+          },
+          {
+            "text": "ABOUT",
+            "href": "/#methodology"
+          }
+        ]
+      },
+      "header": 58,
+      "head": 58,
+      "band": 45,
+      "context": {
+        "top": 103,
+        "height": 32
+      },
+      "railTop": 1066
+    },
+    {
+      "name": "live-390-rail-stays-aligned-after-context",
+      "passed": true,
+      "width": 390,
+      "doc": 390,
+      "nav": {
+        "x": 14,
+        "right": 376,
+        "client": 362,
+        "scroll": 362,
+        "lastRight": 267.046875,
+        "links": [
+          {
+            "text": "LIVE",
+            "href": "/simulation?run=036d6115-3edb-5dca-92d3-eb46a649a1b2"
+          },
+          {
+            "text": "LEADERBOARD",
+            "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard"
+          },
+          {
+            "text": "MODELS",
+            "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc"
+          },
+          {
+            "text": "BLOG",
+            "href": "/#methodology"
+          },
+          {
+            "text": "ABOUT",
+            "href": "/#methodology"
+          }
+        ]
+      },
+      "header": 58,
+      "head": 58,
+      "band": 45,
+      "context": {
+        "top": 103,
+        "height": 32
+      },
+      "railTop": 1066
+    },
+    {
+      "name": "model-page-1216-wide-90px-pnl-strip-and-three-columns",
+      "passed": true,
+      "page": {
+        "x": 352,
+        "y": 122,
+        "width": 1216,
+        "height": 1513.90625
+      },
+      "links": [
+        {
+          "text": "[← LIVE CHART]",
+          "height": 42,
+          "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2"
+        },
+        {
+          "text": "[▥ LEADERBOARD]",
+          "height": 42,
+          "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard"
+        }
+      ],
+      "summary": {
+        "x": 352,
+        "y": 340,
+        "width": 1216,
+        "height": 90
+      },
+      "summaryColumns": 3,
+      "fillHeading": "LAST 25 FILLS",
+      "fills": 8,
+      "classes": "md-page model-tone-0",
+      "modelName": "Atlas",
+      "wideBody": "rgba(0, 0, 0, 0)",
+      "grain": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.015'/%3E%3C/svg%3E\")"
+    },
+    {
+      "name": "standalone-model-page-reveals-static-grain",
+      "passed": true,
+      "wideBody": "rgba(0, 0, 0, 0)",
+      "grain": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/20"
+    },
+    {
+      "name": "model-page-shows-the-last-25-fills",
+      "passed": true,
+      "page": {
+        "x": 352,
+        "y": 122,
+        "width": 1216,
+        "height": 1513.90625
+      },
+      "links": [
+        {
+          "text": "[← LIVE CHART]",
+          "height": 42,
+          "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2"
+        },
+        {
+          "text": "[▥ LEADERBOARD]",
+          "height": 42,
+          "href": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard"
+        }
+      ],
+      "summary": {
+        "x": 352,
+        "y": 340,
+        "width": 1216,
+        "height": 90
+      },
+      "summaryColumns": 3,
+      "fillHeading": "LAST 25 FILLS",
+      "fills": 8,
+      "classes": "md-page model-tone-0",
+      "modelName": "Atlas",
+      "wideBody": "rgba(0, 0, 0, 0)",
+      "grain": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.015'/%3E%3C/svg%3E\")"
+    },
+    {
+      "0": {
+        "name": "Atlas",
+        "provider": "MockLLMAdapter",
+        "model": "mock-atlas-v3",
+        "id": "ce388865-2dfe-5055-9173-2bbce70b24cc",
+        "color": "#3467ff",
+        "reversed": "#ec4899",
+        "tone": "model-tone-0"
+      },
+      "1": {
+        "name": "Vector",
+        "provider": "MockLLMAdapter",
+        "model": "mock-vector-v3",
+        "id": "94cfdc45-adb3-5766-b2d1-bbd78ad49783",
+        "color": "#ec4899",
+        "reversed": "#3467ff",
+        "tone": "model-tone-1"
+      },
+      "name": "atlas-vector-fallbacks-use-first-two-palette-slots",
+      "passed": true
+    },
+    {
+      "name": "named-model-palette-maps-all-eight-models-independent-of-order",
+      "passed": true,
+      "status": "ready",
+      "models": [
+        {
+          "model": "GPT-5.1",
+          "expected": "#00a98f",
+          "color": "#00a98f",
+          "reversed": "#00a98f"
+        },
+        {
+          "model": "Qwen",
+          "expected": "#8b5cf6",
+          "color": "#8b5cf6",
+          "reversed": "#8b5cf6"
+        },
+        {
+          "model": "Kimi",
+          "expected": "#168bff",
+          "color": "#168bff",
+          "reversed": "#168bff"
+        },
+        {
+          "model": "DeepSeek",
+          "expected": "#4f46e5",
+          "color": "#4f46e5",
+          "reversed": "#4f46e5"
+        },
+        {
+          "model": "Gemini",
+          "expected": "#3467ff",
+          "color": "#3467ff",
+          "reversed": "#3467ff"
+        },
+        {
+          "model": "Claude",
+          "expected": "#f97316",
+          "color": "#f97316",
+          "reversed": "#f97316"
+        },
+        {
+          "model": "Grok-4.20",
+          "expected": "#ec4899",
+          "color": "#ec4899",
+          "reversed": "#ec4899"
+        },
+        {
+          "model": "Grok-4",
+          "expected": "#111111",
+          "color": "#111111",
+          "reversed": "#111111"
+        }
+      ]
+    },
+    {
+      "name": "leaderboard-1568-wide-heading-35-and-22px-rows",
+      "passed": true,
+      "page": {
+        "x": 176,
+        "y": 58,
+        "width": 1568,
+        "height": 653.0625
+      },
+      "heading": 35,
+      "headerHeight": 22,
+      "rowHeight": 22,
+      "table": {
+        "x": 176,
+        "y": 273,
+        "width": 1568,
+        "height": 67
+      },
+      "sort": {
+        "text": "ACCOUNT VALUE ↓",
+        "state": "descending",
+        "color": "rgb(63, 64, 60)",
+        "borderColor": "rgb(25, 26, 23)"
+      },
+      "modelColumn": {
+        "x": 220.5,
+        "y": 273.5,
+        "width": 485.765625,
+        "height": 22
+      },
+      "summary": "WINNING MODEL\n\nmock-atlas-v3\nMockLLMAdapter · mock-atlas-v3\n\nTOTAL EQUITY\n$10,006.86\nTOTAL P&L\n$6.86",
+      "winner": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc",
+      "documentWidth": 1920,
+      "wideBody": "rgba(0, 0, 0, 0)",
+      "grain": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.015'/%3E%3C/svg%3E\")"
+    },
+    {
+      "name": "leaderboard-black-dividers-default-equity-sort-and-summary",
+      "passed": true,
+      "page": {
+        "x": 176,
+        "y": 58,
+        "width": 1568,
+        "height": 653.0625
+      },
+      "heading": 35,
+      "headerHeight": 22,
+      "rowHeight": 22,
+      "table": {
+        "x": 176,
+        "y": 273,
+        "width": 1568,
+        "height": 67
+      },
+      "sort": {
+        "text": "ACCOUNT VALUE ↓",
+        "state": "descending",
+        "color": "rgb(63, 64, 60)",
+        "borderColor": "rgb(25, 26, 23)"
+      },
+      "modelColumn": {
+        "x": 220.5,
+        "y": 273.5,
+        "width": 485.765625,
+        "height": 22
+      },
+      "summary": "WINNING MODEL\n\nmock-atlas-v3\nMockLLMAdapter · mock-atlas-v3\n\nTOTAL EQUITY\n$10,006.86\nTOTAL P&L\n$6.86",
+      "winner": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc",
+      "documentWidth": 1920,
+      "wideBody": "rgba(0, 0, 0, 0)",
+      "grain": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.015'/%3E%3C/svg%3E\")"
+    },
+    {
+      "name": "standalone-leaderboard-reveals-static-grain",
+      "passed": true,
+      "wideBody": "rgba(0, 0, 0, 0)",
+      "grain": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/20"
+    },
+    {
+      "name": "shared-navigation-header-remains-sticky-at-58px",
+      "passed": true,
+      "scrollY": 270,
+      "top": 0,
+      "height": 58,
+      "position": "sticky"
+    }
+  ],
+  "passed": 25,
+  "failed": 0,
+  "network_summary": "network:\n## Network requests\nShowing 1-41 of 41 (Page 1 of 1).\nreqid=194 GET http://127.0.0.1:5186/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard [200]\nreqid=195 GET http://127.0.0.1:5186/@vite/client [304]\nreqid=196 GET http://127.0.0.1:5186/src/main.tsx?t=1792158003051 [304]\nreqid=197 GET http://127.0.0.1:5186/@react-refresh [304]\nreqid=198 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/vite/dist/client/env.mjs [304]\nreqid=199 GET http://127.0.0.1:5186/src/simulation/main.tsx?t=1792158003051 [304]\nreqid=200 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=cf696b10 [200]\nreqid=201 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/react.js?v=cf696b10 [200]\nreqid=202 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/react-dom_client.js?v=cf696b10 [200]\nreqid=203 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/react-router-dom.js?v=cf696b10 [200]\nreqid=204 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/@tanstack_react-query.js?v=cf696b10 [200]\nreqid=205 GET http://127.0.0.1:5186/src/simulation.css?t=1792158003051 [304]\nreqid=206 GET http://127.0.0.1:5186/src/simulation/shell.tsx [304]\nreqid=207 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/chunk-WKPMORDF.js?v=cf696b10 [200]\nreqid=208 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/chunk-QWN5BXRD.js?v=cf696b10 [200]\nreqid=209 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/chunk-7F4YVAFC.js?v=cf696b10 [200]\n    ... (truncated, 4293 chars total)\nhelp[2]:\n  Run `chrome-devtools-axi network-get <id>` to see request details\n  Run `chrome-devtools-axi network --type fetch` to filter by type\n"
+}

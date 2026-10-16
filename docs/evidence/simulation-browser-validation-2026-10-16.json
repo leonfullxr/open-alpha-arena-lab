@@ -1,0 +1,837 @@
+{
+  "created_at": "2026-10-16T07:41:32.218Z",
+  "passed": true,
+  "failure": null,
+  "method": "real local PostgreSQL replay API through FastAPI and Chrome DevTools AXI",
+  "artifact_hash_measurement": "The browser computes the visible-download Blob SHA-256 in page context. An earlier AXI JSON-array capture was truncated; its shortened-text digest 0cfb6483a1181ebb1ef971fb931dba0f072787a1f8699613bf4bc05b1ce34490 did not represent the 6078-byte artifact, whose API SHA-256 is 968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83.",
+  "no_paid_provider_calls": true,
+  "checks": [
+    {
+      "name": "real-demo-baseline-discovered",
+      "passed": true,
+      "id": "036d6115-3edb-5dca-92d3-eb46a649a1b2",
+      "state": "FINISHED",
+      "profile": "alpha_2025_baseline",
+      "source_label": "DEMO REPLAY · fill evidence v3 · deterministic local fixtures",
+      "model_count": 2
+    },
+    {
+      "name": "decision-pagination-and-count",
+      "passed": true,
+      "total": 40,
+      "page_sizes": [
+        20,
+        20
+      ]
+    },
+    {
+      "name": "symbol-filter-uses-real-proposals",
+      "passed": true,
+      "matching_decisions": 20
+    },
+    {
+      "name": "model-profile-is-same-run",
+      "passed": true,
+      "model_id": "ce388865-2dfe-5055-9173-2bbce70b24cc",
+      "model_name": "Atlas",
+      "competition_id": "036d6115-3edb-5dca-92d3-eb46a649a1b2"
+    },
+    {
+      "name": "artifact-download-hashes-match",
+      "passed": true,
+      "decision_id": "f7d19e4b-05cc-537e-8722-709b609d8101",
+      "prompt_sha256": "968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83",
+      "output_sha256": "967ef2670df640f67145a219367afaae7df805049745bcf47cb5f449e59b0234",
+      "download_bytes": {
+        "prompt": 6078,
+        "output": 587
+      }
+    },
+    {
+      "name": "chart-range-all",
+      "passed": true,
+      "count": 42,
+      "raw": 42,
+      "sampled": false
+    },
+    {
+      "name": "chart-range-72h",
+      "passed": true,
+      "count": 42,
+      "raw": 42,
+      "sampled": false
+    },
+    {
+      "name": "chart-range-24h",
+      "passed": true,
+      "count": 42,
+      "raw": 42,
+      "sampled": false
+    },
+    {
+      "name": "trades-and-leaderboard-available",
+      "passed": true,
+      "trades": 16,
+      "leaderboard_rows": 2
+    },
+    {
+      "name": "competition-export-download-counts",
+      "passed": true,
+      "exported_decisions": 40,
+      "exported_trades": 16,
+      "truncated": false
+    },
+    {
+      "name": "isolated-empty-extended-and-lifecycle-fixtures",
+      "passed": true,
+      "fixtures": [
+        {
+          "id": "c442896c-50fc-4eab-9235-6103e9776bcc",
+          "name": "SIMULATION UI VALIDATION · extended empty evidence",
+          "profile": "research_extended",
+          "state": "DRAFT",
+          "source_label": "TEST FIXTURE · DRAFT · NO DECISIONS · NEVER DISPATCHED",
+          "decisions": 0,
+          "chart_points": 0,
+          "rules_status": 200
+        },
+        {
+          "id": "be4a738f-804c-4107-ba9e-95c23b5d3fce",
+          "name": "SIMULATION UI VALIDATION · running stream state",
+          "profile": "alpha_2025_baseline",
+          "state": "RUNNING",
+          "source_label": "TEST FIXTURE · STREAM STATE ONLY · NO WORKER · NEVER DISPATCHED",
+          "decisions": 0,
+          "chart_points": 0,
+          "rules_status": 200
+        },
+        {
+          "id": "7415b28f-4c5b-49f2-9564-52cbf8725974",
+          "name": "SIMULATION UI VALIDATION · paused lifecycle state",
+          "profile": "alpha_2025_baseline",
+          "state": "PAUSED",
+          "source_label": "TEST FIXTURE · PAUSED STATE ONLY · NO WORKER · NEVER DISPATCHED",
+          "decisions": 0,
+          "chart_points": 0,
+          "rules_status": 200
+        },
+        {
+          "id": "90db292a-ae72-487f-a878-5d7371a3396c",
+          "name": "SIMULATION UI VALIDATION · rules evidence unavailable",
+          "profile": "alpha_2025_baseline",
+          "state": "DRAFT",
+          "source_label": "TEST FIXTURE · DRAFT · NO DECISIONS · NEVER DISPATCHED",
+          "decisions": 0,
+          "chart_points": 0,
+          "rules_status": 503
+        }
+      ]
+    },
+    {
+      "name": "narrative-viewport-1920x1080-no-document-overflow",
+      "passed": true,
+      "width": 1920,
+      "height": 1080,
+      "documentWidth": 1920,
+      "bodyWidth": 1920,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "narrative-viewport-1920x1080-context-aligns-with-rail-tabs",
+      "passed": true,
+      "width": 1920,
+      "height": 1080,
+      "documentWidth": 1920,
+      "bodyWidth": 1920,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "narrative-viewport-1363x936-no-document-overflow",
+      "passed": true,
+      "width": 1363,
+      "height": 936,
+      "documentWidth": 1363,
+      "bodyWidth": 1363,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "narrative-viewport-1363x936-context-aligns-with-rail-tabs",
+      "passed": true,
+      "width": 1363,
+      "height": 936,
+      "documentWidth": 1363,
+      "bodyWidth": 1363,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "narrative-viewport-1440x900-no-document-overflow",
+      "passed": true,
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "narrative-viewport-1440x900-context-aligns-with-rail-tabs",
+      "passed": true,
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "narrative-viewport-1024x768-no-document-overflow",
+      "passed": true,
+      "width": 1024,
+      "height": 768,
+      "documentWidth": 1024,
+      "bodyWidth": 1024,
+      "context": {
+        "top": 117,
+        "bottom": 147,
+        "height": 30
+      },
+      "tabs": {
+        "top": 117,
+        "bottom": 147,
+        "height": 30
+      }
+    },
+    {
+      "name": "narrative-viewport-1024x768-context-aligns-with-rail-tabs",
+      "passed": true,
+      "width": 1024,
+      "height": 768,
+      "documentWidth": 1024,
+      "bodyWidth": 1024,
+      "context": {
+        "top": 117,
+        "bottom": 147,
+        "height": 30
+      },
+      "tabs": {
+        "top": 117,
+        "bottom": 147,
+        "height": 30
+      }
+    },
+    {
+      "name": "narrative-viewport-768x1024-no-document-overflow",
+      "passed": true,
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "bodyWidth": 768,
+      "context": {
+        "top": 114,
+        "bottom": 144,
+        "height": 30
+      },
+      "tabs": {
+        "top": 2038.578125,
+        "bottom": 2068.578125,
+        "height": 30
+      }
+    },
+    {
+      "name": "narrative-viewport-390x844-no-document-overflow",
+      "passed": true,
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "context": {
+        "top": 114,
+        "bottom": 144,
+        "height": 30
+      },
+      "tabs": {
+        "top": 2571.546875,
+        "bottom": 2601.546875,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-1920x1080-no-document-overflow",
+      "passed": true,
+      "width": 1920,
+      "height": 1080,
+      "documentWidth": 1920,
+      "bodyWidth": 1920,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-1920x1080-context-aligns-with-rail-tabs",
+      "passed": true,
+      "width": 1920,
+      "height": 1080,
+      "documentWidth": 1920,
+      "bodyWidth": 1920,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-1363x936-no-document-overflow",
+      "passed": true,
+      "width": 1363,
+      "height": 936,
+      "documentWidth": 1363,
+      "bodyWidth": 1363,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-1363x936-context-aligns-with-rail-tabs",
+      "passed": true,
+      "width": 1363,
+      "height": 936,
+      "documentWidth": 1363,
+      "bodyWidth": 1363,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-1440x900-no-document-overflow",
+      "passed": true,
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-1440x900-context-aligns-with-rail-tabs",
+      "passed": true,
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "context": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      },
+      "tabs": {
+        "top": 103,
+        "bottom": 133,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-1024x768-no-document-overflow",
+      "passed": true,
+      "width": 1024,
+      "height": 768,
+      "documentWidth": 1024,
+      "bodyWidth": 1024,
+      "context": {
+        "top": 117,
+        "bottom": 147,
+        "height": 30
+      },
+      "tabs": {
+        "top": 117,
+        "bottom": 147,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-1024x768-context-aligns-with-rail-tabs",
+      "passed": true,
+      "width": 1024,
+      "height": 768,
+      "documentWidth": 1024,
+      "bodyWidth": 1024,
+      "context": {
+        "top": 117,
+        "bottom": 147,
+        "height": 30
+      },
+      "tabs": {
+        "top": 117,
+        "bottom": 147,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-768x1024-no-document-overflow",
+      "passed": true,
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "bodyWidth": 768,
+      "context": {
+        "top": 114,
+        "bottom": 144,
+        "height": 30
+      },
+      "tabs": {
+        "top": 1887.359375,
+        "bottom": 1917.359375,
+        "height": 30
+      }
+    },
+    {
+      "name": "competition-viewport-390x844-no-document-overflow",
+      "passed": true,
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "context": {
+        "top": 114,
+        "bottom": 144,
+        "height": 30
+      },
+      "tabs": {
+        "top": 2005.140625,
+        "bottom": 2035.140625,
+        "height": 30
+      }
+    },
+    {
+      "name": "deep-link-run-index-renders",
+      "passed": true,
+      "url": "/simulation",
+      "heading": "Open Alpha Arena Lab simulation"
+    },
+    {
+      "name": "deep-link-competition-renders",
+      "passed": true,
+      "url": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2",
+      "heading": "Offline Paper Arena · fill evidence v3 · 20 rounds"
+    },
+    {
+      "name": "deep-link-leaderboard-renders",
+      "passed": true,
+      "url": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard",
+      "heading": "LEADERBOARD"
+    },
+    {
+      "name": "deep-link-model-profile-renders",
+      "passed": true,
+      "url": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc",
+      "heading": "ATLAS"
+    },
+    {
+      "name": "chat-model-filter-can-select-atlas",
+      "passed": true,
+      "selected_model_id": "ce388865-2dfe-5055-9173-2bbce70b24cc"
+    },
+    {
+      "name": "unmatched-symbol-go-remains-visible",
+      "passed": true
+    },
+    {
+      "name": "unmatched-symbol-filter-is-recoverable",
+      "passed": true,
+      "symbol": "ZZZ_NOT_IN_API",
+      "selected_model_id": "ce388865-2dfe-5055-9173-2bbce70b24cc"
+    },
+    {
+      "name": "chat-filter-clears-and-recovers",
+      "passed": true
+    },
+    {
+      "name": "chat-next-page-enabled",
+      "passed": true
+    },
+    {
+      "name": "chat-pagination-next-changes-decision-page",
+      "passed": true,
+      "before": "✳ATLASBASELINE01/01 00:03:00 UTCDeterministic fixture policy selected ",
+      "after": "✳ATLASBASELINE01/01 00:18:00 UTCDeterministic fixture policy selected ",
+      "range": "11–20 of 40"
+    },
+    {
+      "name": "chat-pagination-previous-recovers-first-page",
+      "passed": true
+    },
+    {
+      "name": "chat-evidence-expands",
+      "passed": true
+    },
+    {
+      "name": "chat-expand-collapse-preserves-keyboard-focus",
+      "passed": true,
+      "focused_after_expand": true,
+      "focused_after_collapse": true
+    },
+    {
+      "name": "visible-artifact-download-matches-api-hash",
+      "passed": true,
+      "filename": "prompt-bytes-968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83.bin",
+      "size": 6078,
+      "captured_byte_length": 6078,
+      "sha256": "968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83",
+      "expected_sha256": "968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83"
+    },
+    {
+      "name": "activity-tabs-support-arrow-key-navigation",
+      "passed": true,
+      "arrow_right": "true",
+      "arrow_left": "MODEL CHAT"
+    },
+    {
+      "name": "cross-run-switch-resets-chat-filter",
+      "passed": true,
+      "fixture": "c442896c-50fc-4eab-9235-6103e9776bcc"
+    },
+    {
+      "name": "chart-range-72h-control-works",
+      "passed": true
+    },
+    {
+      "name": "chart-range-state-is-selected",
+      "passed": true,
+      "pressed": "72H",
+      "points": 2
+    },
+    {
+      "name": "chart-series-can-hide-and-restore",
+      "passed": true,
+      "series": "ATLAS$10,006.86",
+      "visible_before": 2,
+      "visible_after": 2
+    },
+    {
+      "name": "chart-left-edge-is-first-recorded-round",
+      "passed": true,
+      "pointer": {
+        "x": 100,
+        "y": 432.375,
+        "viewWidth": 1376,
+        "viewHeight": 320
+      },
+      "tooltip": "2025-01-01 00:00 UTC · ROUND 0\nAtlas\n$10,000.00\nVector\n$10,000.00\nBTC buy-and-hold · same initial capital\n$10,204.94"
+    },
+    {
+      "name": "chart-rail-and-accounts-share-model-palette",
+      "passed": true,
+      "lines": [
+        "model-tone-0",
+        "model-tone-1"
+      ],
+      "accounts": [
+        "model-tone-0",
+        "model-tone-1"
+      ],
+      "chat": [
+        "model-tone-0",
+        "model-tone-1"
+      ]
+    },
+    {
+      "name": "competition-tabs-support-arrow-key-navigation",
+      "passed": true,
+      "selected": "POSITIONS",
+      "focus": "POSITIONS"
+    },
+    {
+      "name": "model-ce388865-2dfe-5055-9173-2bbce70b24cc-has-unique-ids-and-valid-labels",
+      "passed": true,
+      "duplicateIds": [],
+      "missingLabels": []
+    },
+    {
+      "name": "model-94cfdc45-adb3-5766-b2d1-bbd78ad49783-has-unique-ids-and-valid-labels",
+      "passed": true,
+      "duplicateIds": [],
+      "missingLabels": []
+    },
+    {
+      "name": "leaderboard-account-sort-toggles-order",
+      "passed": true,
+      "ascending_first": "1\t\nAtlas\nmock-atlas-v3\n\t$10,006.86\t0.07%\t$14.55\t$0.00\t$7.69\t$0.00\t8\t100.00%\tN/A\t0.09%\t0.144\tN/A\t$0.00\t$0.00",
+      "descending_first": "1\t\nVector\nmock-vector-v3\n\t$9,975.66\t-0.24%\t-$17.45\t$0.00\t$6.89\t$0.00\t8\t75.00%\t0.02\t0.33%\t-0.214\tN/A\t$0.00\t$0.00"
+    },
+    {
+      "name": "empty-extended-run-has-real-empty-states",
+      "passed": true,
+      "id": "c442896c-50fc-4eab-9235-6103e9776bcc",
+      "equity": "The API has no equity points for this competition.",
+      "chat": "MODEL CHAT\nCOMPETITION DETAILS\nFILTER:\nSymbol\nGO\nNo model decisions match this filter."
+    },
+    {
+      "name": "paused-run-exposes-polling-state",
+      "passed": true,
+      "id": "7415b28f-4c5b-49f2-9564-52cbf8725974",
+      "status": "PAUSED · 5 S REFRESH"
+    },
+    {
+      "name": "running-fixture-connects-to-real-sse",
+      "passed": true,
+      "id": "be4a738f-804c-4107-ba9e-95c23b5d3fce",
+      "status": "EVENT STREAM CONNECTED"
+    },
+    {
+      "name": "sse-injected-url-failure-recovers-after-route-remount",
+      "passed": true,
+      "reconnecting": "RECONNECTING · 5 S REFRESH",
+      "recovered": "EVENT STREAM CONNECTED",
+      "fault": "browser-only refused connection to 127.0.0.1:1"
+    },
+    {
+      "name": "real-browser-network-failure-and-recovery",
+      "passed": true,
+      "offline_probe": {
+        "ok": false,
+        "error": "Failed to fetch"
+      },
+      "online_probe": {
+        "ok": true,
+        "status": 200
+      },
+      "fault": "Chrome DevTools AXI network emulation Offline; request used the real same-origin Vite API proxy",
+      "ui_error_state": "not asserted; existing React Query data remained cached during the offline probe"
+    },
+    {
+      "name": "rules-digest-unavailable-is-visible-and-download-disabled",
+      "passed": true,
+      "text": "FROZEN RULES\nRULES SHA-256\nee6cbaa4a6341f54170d9fbbc9ecc1e8a8a7ca8c2d5d6d399e005101147a172d\n\nRules hash verification is unavailable.\n\nPROFILE\nalpha_2025_baseline\nSYMBOLS\nBTC, ETH, SOL, BNB, DOGE, XRP\nSTARTING VIRTUAL CAPITAL\n$10,000.00\nROUND / RESPONSE DEADLINE\n180s / 120s\nQUOTE AGE / SET SKEW LIMITS\n10s / 5s\nMAXIMUM LEVERAGE\n5×\nCOMMISSION / SLIPPAGE\n0.050% / 2 bps\nDAILY LOSS / DRAWDOWN LIMITS\n$1,000.00 / 50.00%\nMAINTENANCE MARGIN / LIQUIDATION FEE\n1.00% / 0.50%\nFUNDING METHOD\nhourly_historical_rate · funding_history · oracle_px_paper_approximation\nRISK POLICY\nrisk-v1\nEVIDENCE SCHEMAS\nsnapshot 1 · proposal 1 · public 1 · 12 candles\nFIXTURE SOURCE\nfixture-replay-v3\nDOWNLOAD EXACT FROZEN RULES BYTES",
+      "disabled": true
+    },
+    {
+      "name": "rules-api-503-is-visible-and-retryable",
+      "passed": true,
+      "fixture_id": "90db292a-ae72-487f-a878-5d7371a3396c",
+      "source_label": "TEST FIXTURE · DRAFT · NO DECISIONS · NEVER DISPATCHED",
+      "text": "FROZEN RULES\n\nCompetition rules evidence unavailable\nRetry rules"
+    }
+  ],
+  "api": {
+    "api_base": "http://127.0.0.1:8026",
+    "web_base": "http://127.0.0.1:5186",
+    "baseline": {
+      "id": "036d6115-3edb-5dca-92d3-eb46a649a1b2",
+      "name": "Offline Paper Arena · fill evidence v3 · 20 rounds",
+      "source_label": "DEMO REPLAY · fill evidence v3 · deterministic local fixtures",
+      "state": "FINISHED",
+      "profile": "alpha_2025_baseline",
+      "decisions": 40,
+      "trades": 16,
+      "chart_ranges": {
+        "ALL": {
+          "count": 42,
+          "raw": 42,
+          "sampled": false
+        },
+        "72H": {
+          "count": 42,
+          "raw": 42,
+          "sampled": false
+        },
+        "24H": {
+          "count": 42,
+          "raw": 42,
+          "sampled": false
+        }
+      },
+      "model_ids": [
+        "ce388865-2dfe-5055-9173-2bbce70b24cc",
+        "94cfdc45-adb3-5766-b2d1-bbd78ad49783"
+      ],
+      "model_names": [
+        "Atlas",
+        "Vector"
+      ],
+      "artifact": {
+        "decision_id": "f7d19e4b-05cc-537e-8722-709b609d8101",
+        "prompt_sha256": "968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83",
+        "output_sha256": "967ef2670df640f67145a219367afaae7df805049745bcf47cb5f449e59b0234"
+      }
+    },
+    "api_status": {
+      "state": "ready",
+      "demo_label": "DEMO REPLAY",
+      "competition_count": 5,
+      "schema_version": 1
+    },
+    "fixtures": [
+      {
+        "id": "c442896c-50fc-4eab-9235-6103e9776bcc",
+        "name": "SIMULATION UI VALIDATION · extended empty evidence",
+        "profile": "research_extended",
+        "state": "DRAFT",
+        "source_label": "TEST FIXTURE · DRAFT · NO DECISIONS · NEVER DISPATCHED",
+        "decisions": 0,
+        "chart_points": 0,
+        "rules_status": 200
+      },
+      {
+        "id": "be4a738f-804c-4107-ba9e-95c23b5d3fce",
+        "name": "SIMULATION UI VALIDATION · running stream state",
+        "profile": "alpha_2025_baseline",
+        "state": "RUNNING",
+        "source_label": "TEST FIXTURE · STREAM STATE ONLY · NO WORKER · NEVER DISPATCHED",
+        "decisions": 0,
+        "chart_points": 0,
+        "rules_status": 200
+      },
+      {
+        "id": "7415b28f-4c5b-49f2-9564-52cbf8725974",
+        "name": "SIMULATION UI VALIDATION · paused lifecycle state",
+        "profile": "alpha_2025_baseline",
+        "state": "PAUSED",
+        "source_label": "TEST FIXTURE · PAUSED STATE ONLY · NO WORKER · NEVER DISPATCHED",
+        "decisions": 0,
+        "chart_points": 0,
+        "rules_status": 200
+      },
+      {
+        "id": "90db292a-ae72-487f-a878-5d7371a3396c",
+        "name": "SIMULATION UI VALIDATION · rules evidence unavailable",
+        "profile": "alpha_2025_baseline",
+        "state": "DRAFT",
+        "source_label": "TEST FIXTURE · DRAFT · NO DECISIONS · NEVER DISPATCHED",
+        "decisions": 0,
+        "chart_points": 0,
+        "rules_status": 503
+      }
+    ]
+  },
+  "browser": {
+    "viewport_sizes": [
+      "1920x1080",
+      "1363x936",
+      "1440x900",
+      "1024x768",
+      "768x1024",
+      "390x844"
+    ],
+    "directory_screenshot": "simulation-directory-1920x1080.png",
+    "narrative_screenshots": [
+      "simulation-narrative-1920x1080.png",
+      "simulation-narrative-1363x936.png",
+      "simulation-narrative-1440x900.png",
+      "simulation-narrative-1024x768.png",
+      "simulation-narrative-768x1024.png",
+      "simulation-narrative-390x844.png"
+    ],
+    "competition_screenshots": [
+      "simulation-competition-1920x1080.png",
+      "simulation-competition-1363x936.png",
+      "simulation-competition-1440x900.png",
+      "simulation-competition-1024x768.png",
+      "simulation-competition-768x1024.png",
+      "simulation-competition-390x844.png"
+    ],
+    "routes": [
+      {
+        "route": "/simulation",
+        "name": "run-index"
+      },
+      {
+        "route": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2",
+        "name": "competition"
+      },
+      {
+        "route": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard",
+        "name": "leaderboard"
+      },
+      {
+        "route": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc",
+        "name": "model-profile"
+      }
+    ],
+    "interactions": "filters, pagination, artifact button/blob SHA-256, keyboard tabs, ranges, series, pointer mapping, palette, model DOM ids/labels, isolated rules verification failure, injected SSE failure/remount recovery"
+  }
+}

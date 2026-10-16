@@ -1,0 +1,1835 @@
+{
+  "generated_at": "2026-10-16T13:39:21.359Z",
+  "api_base": "http://127.0.0.1:8026",
+  "web_base": "http://127.0.0.1:5186",
+  "session": "arena-exact-spec-expanded",
+  "baseline": {
+    "id": "036d6115-3edb-5dca-92d3-eb46a649a1b2",
+    "name": "Offline Paper Arena · fill evidence v3 · 20 rounds",
+    "source_label": "DEMO REPLAY · fill evidence v3 · deterministic local fixtures",
+    "state": "FINISHED",
+    "model_ids": {
+      "Atlas": "ce388865-2dfe-5055-9173-2bbce70b24cc",
+      "Vector": "94cfdc45-adb3-5766-b2d1-bbd78ad49783"
+    },
+    "decisions": 40,
+    "atlas_fill_rows": 8,
+    "atlas_open_positions": 0
+  },
+  "source_directory": "/home/leon/Nextcloud/ETSIIT/ETSHIT/Github/open-alpha-arena-lab/logos/site",
+  "reference_screenshots": [
+    {
+      "filename": "exact-expanded-simulation-aggregate-chat-1920x1080.png",
+      "route": "/simulation",
+      "source": "Screenshot from 2026-10-16 09-40-50.png",
+      "source_sha256": "a1873a46bdb0d2414e7883892a170ca40c8ce27b85e99fa31b33d994b6c57f63",
+      "source_bytes": 380903,
+      "adaptation": "Season activity chat scoped to the real baseline replay; the API serves local published runs, not the former hosted season aggregate."
+    },
+    {
+      "filename": "exact-expanded-simulation-aggregate-chat-model-1920x1080.png",
+      "route": "/simulation",
+      "source": "Screenshot from 2026-10-16 10-36-42.png",
+      "source_sha256": "af0559752d9ebb4a3d98bb40695c4279eac7ad8a9629166e6ecd66e5f42196c5",
+      "source_bytes": 385376,
+      "adaptation": "Season activity chat additionally filtered to the actual Atlas account."
+    },
+    {
+      "filename": "exact-expanded-simulation-selected-chat-1920x1080.png",
+      "route": "/simulation?run=036d6115-3edb-5dca-92d3-eb46a649a1b2",
+      "source": "Screenshot from 2026-10-16 10-36-49.png",
+      "source_sha256": "ebcd931cb5dd8e1793f4c21ac7bb25fcdbbe58843c654e3999f09d5ee3999ad3",
+      "source_bytes": 383370,
+      "adaptation": "Selected-run activity rail with the real public decision feed and exact disclosed artifacts."
+    },
+    {
+      "filename": "exact-expanded-simulation-leaderboard-overall-1920x1080.png",
+      "route": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard",
+      "source": "Screenshot from 2026-10-16 10-36-55.png",
+      "source_sha256": "014e05744088884b6bef9520b1c8ca45b91c083d7d73077d37df0494f6f608e6",
+      "source_bytes": 930036,
+      "adaptation": "Overall account ranking from public leaderboard rows."
+    },
+    {
+      "filename": "exact-expanded-simulation-leaderboard-advanced-1920x1080.png",
+      "route": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard",
+      "source": "Screenshot from 2026-10-16 10-36-58.png",
+      "source_sha256": "f133bf8288d86e8d33361c24b6e4f0fe116b4ea335359415c1cc9eee1a934919",
+      "source_bytes": 947260,
+      "adaptation": "Advanced tab preserves unavailable source metrics as N/A."
+    },
+    {
+      "filename": "exact-expanded-simulation-leaderboard-average-summary-1920x1080.png",
+      "route": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard",
+      "source": "Screenshot from 2026-10-16 10-37-03.png",
+      "source_sha256": "ed83c963901d9ccd6baa87d0cd4a935d401c0aab400d5c9f01c39da98c940265",
+      "source_bytes": 673955,
+      "adaptation": "Average enabled for the actual provider/model accounts; each group is N=1 in this replay."
+    },
+    {
+      "filename": "exact-expanded-simulation-model-summary-1920x1080.png",
+      "route": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc",
+      "source": "Screenshot from 2026-10-16 10-37-12.png",
+      "source_sha256": "fde7d8a2b8224f02df4f85ff7d3f911ab160d950d1307f4a4dde4a0249107f13",
+      "source_bytes": 489231,
+      "adaptation": "Public model profile summary and reported metrics."
+    },
+    {
+      "filename": "exact-expanded-simulation-model-positions-trades-1920x1080.png",
+      "route": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc",
+      "source": "Screenshot from 2026-10-16 10-37-15.png",
+      "source_sha256": "0cd47d581416aea11f740098628fb5057900447846b1553d0b5bcb1cafae4c36",
+      "source_bytes": 501269,
+      "adaptation": "Public position and fill panels. This closed replay has zero open positions; its actual fill rows remain available."
+    },
+    {
+      "filename": "exact-expanded-simulation-season-details-1920x1080.png",
+      "route": "/simulation",
+      "source": "Screenshot from 2026-10-16 10-37-25.png",
+      "source_sha256": "0133143c015a00d539db55ffc7cbf05068b24a350ec56ac98004887fea2d1b4e",
+      "source_bytes": 349151,
+      "adaptation": "Season details rail adapted to the actual public run index and declared run profiles."
+    }
+  ],
+  "reference_typography": [
+    {
+      "view": "aggregate-chat",
+      "filter": "11px",
+      "body": "9px"
+    },
+    {
+      "view": "aggregate-chat-model",
+      "filter": "11px",
+      "body": "9px"
+    },
+    {
+      "view": "season-details",
+      "body": "12px",
+      "heading": "14px",
+      "run": "11px"
+    }
+  ],
+  "layout_screenshots": [
+    "exact-expanded-simulation-live-mobile-390x844.png",
+    "exact-expanded-simulation-leaderboard-mobile-390x844.png",
+    "exact-expanded-simulation-model-mobile-390x844.png"
+  ],
+  "responsive_model_layout": [
+    {
+      "width": 1920,
+      "height": 932,
+      "body": 1920,
+      "doc": 1920,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 820.1875
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 949
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 1028.8125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 1089.015625
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 1159.015625
+        }
+      ],
+      "table": {
+        "client": 1182,
+        "scroll": 1182,
+        "clientRight": 1551
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "body": 1440,
+      "doc": 1440,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 580.1875
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 709
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 788.8125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 849.015625
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 919.015625
+        }
+      ],
+      "table": {
+        "client": 1182,
+        "scroll": 1182,
+        "clientRight": 1311
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "width": 1024,
+      "height": 768,
+      "body": 1024,
+      "doc": 1024,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 460.921875
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 560.625
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 621.828125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 667.640625
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 721.140625
+        }
+      ],
+      "table": {
+        "client": 942,
+        "scroll": 942,
+        "clientRight": 983
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "body": 768,
+      "doc": 768,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 51.203125
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 133.515625
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 184.328125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 222.53125
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 267.046875
+        }
+      ],
+      "table": {
+        "client": 686,
+        "scroll": 849,
+        "clientRight": 727
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "width": 640,
+      "height": 900,
+      "body": 640,
+      "doc": 640,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 51.203125
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 133.515625
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 184.328125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 222.53125
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 267.046875
+        }
+      ],
+      "table": {
+        "client": 586,
+        "scroll": 849,
+        "clientRight": 613
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "body": 390,
+      "doc": 390,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 51.203125
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 133.515625
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 184.328125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 222.53125
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 267.046875
+        }
+      ],
+      "table": {
+        "client": 344,
+        "scroll": 849,
+        "clientRight": 367
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    }
+  ],
+  "responsive_live_layout": [
+    {
+      "width": 1920,
+      "height": 932,
+      "documentWidth": 1920,
+      "bodyWidth": 1920,
+      "rail": {
+        "left": 1420,
+        "right": 1920,
+        "top": 103,
+        "bottom": 893,
+        "width": 500
+      },
+      "main": {
+        "left": 0,
+        "right": 1420,
+        "top": 135,
+        "bottom": 893,
+        "width": 1420
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 820.1875
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "rail": {
+        "left": 1060,
+        "right": 1440,
+        "top": 103,
+        "bottom": 861,
+        "width": 380
+      },
+      "main": {
+        "left": 0,
+        "right": 1060,
+        "top": 135,
+        "bottom": 861,
+        "width": 1060
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 580.1875
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "width": 1024,
+      "height": 768,
+      "documentWidth": 1024,
+      "bodyWidth": 1024,
+      "rail": {
+        "left": 704,
+        "right": 1024,
+        "top": 103,
+        "bottom": 729,
+        "width": 320
+      },
+      "main": {
+        "left": 0,
+        "right": 704,
+        "top": 135,
+        "bottom": 729,
+        "width": 704
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 460.921875
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "bodyWidth": 768,
+      "rail": {
+        "left": 0,
+        "right": 768,
+        "top": 814,
+        "bottom": 1973.0625,
+        "width": 768
+      },
+      "main": {
+        "left": 0,
+        "right": 768,
+        "top": 173,
+        "bottom": 814,
+        "width": 768
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 51.203125
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "width": 640,
+      "height": 900,
+      "documentWidth": 640,
+      "bodyWidth": 640,
+      "rail": {
+        "left": 0,
+        "right": 640,
+        "top": 814,
+        "bottom": 1973.0625,
+        "width": 640
+      },
+      "main": {
+        "left": 0,
+        "right": 640,
+        "top": 173,
+        "bottom": 814,
+        "width": 640
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 51.203125
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "rail": {
+        "left": 0,
+        "right": 390,
+        "top": 1066,
+        "bottom": 2436.3125,
+        "width": 390
+      },
+      "main": {
+        "left": 0,
+        "right": 390,
+        "top": 173,
+        "bottom": 1066,
+        "width": 390
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 51.203125
+      },
+      "selectedTab": "MODELCHAT"
+    }
+  ],
+  "responsive_leaderboard_layout": [
+    {
+      "width": 1920,
+      "height": 932,
+      "documentWidth": 1920,
+      "bodyWidth": 1920,
+      "page": {
+        "left": 176,
+        "right": 1744,
+        "width": 1568
+      },
+      "table": {
+        "client": 1568,
+        "scroll": 1568,
+        "left": 176,
+        "right": 1744
+      },
+      "nav": {
+        "visible": true,
+        "right": 949
+      }
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "page": {
+        "left": 0,
+        "right": 1440,
+        "width": 1440
+      },
+      "table": {
+        "client": 1392,
+        "scroll": 1392,
+        "left": 24,
+        "right": 1416
+      },
+      "nav": {
+        "visible": true,
+        "right": 709
+      }
+    },
+    {
+      "width": 1024,
+      "height": 768,
+      "documentWidth": 1024,
+      "bodyWidth": 1024,
+      "page": {
+        "left": 0,
+        "right": 1024,
+        "width": 1024
+      },
+      "table": {
+        "client": 976,
+        "scroll": 1200,
+        "left": 24,
+        "right": 1000
+      },
+      "nav": {
+        "visible": true,
+        "right": 560.625
+      }
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "bodyWidth": 768,
+      "page": {
+        "left": 0,
+        "right": 768,
+        "width": 768
+      },
+      "table": {
+        "client": 720,
+        "scroll": 1200,
+        "left": 24,
+        "right": 744
+      },
+      "nav": {
+        "visible": true,
+        "right": 133.515625
+      }
+    },
+    {
+      "width": 640,
+      "height": 900,
+      "documentWidth": 640,
+      "bodyWidth": 640,
+      "page": {
+        "left": 0,
+        "right": 640,
+        "width": 640
+      },
+      "table": {
+        "client": 592,
+        "scroll": 1200,
+        "left": 24,
+        "right": 616
+      },
+      "nav": {
+        "visible": true,
+        "right": 133.515625
+      }
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "page": {
+        "left": 0,
+        "right": 390,
+        "width": 390
+      },
+      "table": {
+        "client": 358,
+        "scroll": 1200,
+        "left": 16,
+        "right": 374
+      },
+      "nav": {
+        "visible": true,
+        "right": 133.515625
+      }
+    }
+  ],
+  "synthetic_position_grid": [
+    {
+      "width": 1920,
+      "columns": 3,
+      "cardCount": 3
+    },
+    {
+      "width": 1440,
+      "columns": 3,
+      "cardCount": 3
+    },
+    {
+      "width": 1024,
+      "columns": 3,
+      "cardCount": 3
+    },
+    {
+      "width": 768,
+      "columns": 3,
+      "cardCount": 3
+    },
+    {
+      "width": 640,
+      "columns": 2,
+      "cardCount": 3
+    },
+    {
+      "width": 390,
+      "columns": 1,
+      "cardCount": 3
+    }
+  ],
+  "network_summary": "network:\n## Network requests\nShowing 1-41 of 41 (Page 1 of 1).\nreqid=904 GET http://127.0.0.1:5186/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/leaderboard [304]\nreqid=905 GET http://127.0.0.1:5186/@vite/client [304]\nreqid=906 GET http://127.0.0.1:5186/src/main.tsx?t=1792157724868 [304]\nreqid=907 GET http://127.0.0.1:5186/@react-refresh [304]\nreqid=908 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/vite/dist/client/env.mjs [304]\nreqid=909 GET http://127.0.0.1:5186/src/simulation/main.tsx?t=1792157724868 [304]\nreqid=910 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=cf696b10 [200]\nreqid=911 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/react.js?v=cf696b10 [200]\nreqid=912 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/react-dom_client.js?v=cf696b10 [200]\nreqid=913 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/react-router-dom.js?v=cf696b10 [200]\nreqid=914 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/@tanstack_react-query.js?v=cf696b10 [200]\nreqid=915 GET http://127.0.0.1:5186/src/simulation.css?t=1792157724868 [304]\nreqid=916 GET http://127.0.0.1:5186/src/simulation/shell.tsx [304]\nreqid=917 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/chunk-WKPMORDF.js?v=cf696b10 [200]\nreqid=918 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/chunk-QWN5BXRD.js?v=cf696b10 [200]\nreqid=919 GET http://127.0.0.1:5186/@fs/home/leon/.cache/codex-worktrees/arena-simulation-20261016/node_modules/.vite/deps/chunk-7F4YVAFC.js?v=cf696b10 [200]\n    ... (truncated, 4293 chars total)\nhelp[2]:\n  Run `chrome-devtools-axi network-get <id>` to see request details\n  Run `chrome-devtools-axi network --type fetch` to filter by type\n",
+  "checks": [
+    {
+      "name": "source-replay-identity-and-read-only-records",
+      "passed": true,
+      "id": "036d6115-3edb-5dca-92d3-eb46a649a1b2",
+      "source_label": "DEMO REPLAY · fill evidence v3 · deterministic local fixtures",
+      "state": "FINISHED",
+      "model_ids": [
+        "ce388865-2dfe-5055-9173-2bbce70b24cc",
+        "94cfdc45-adb3-5766-b2d1-bbd78ad49783"
+      ],
+      "atlas_open_positions": 0,
+      "atlas_fill_rows": 8,
+      "decision_rows": 40
+    },
+    {
+      "name": "protected-landing-remains-rendered-with-loaded-fonts",
+      "passed": true,
+      "h1": "An open research lab for AI trading in financial markets.",
+      "fonts": "loaded",
+      "links": [
+        {
+          "text": "Home",
+          "href": "/",
+          "visible": true
+        },
+        {
+          "text": "Simulation",
+          "href": "/simulation",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "name": "aggregate-chat-filter-font-sizes",
+      "passed": true,
+      "filter": "11px",
+      "body": "9px"
+    },
+    {
+      "name": "aggregate-chat-filter-font-sizes",
+      "passed": true,
+      "filter": "11px",
+      "body": "9px"
+    },
+    {
+      "name": "leaderboard-overall-table-fits-desktop-container",
+      "passed": true,
+      "viewport": 1920,
+      "wrapClient": 1568,
+      "wrapScroll": 1568,
+      "wrapRight": 1744,
+      "tableRight": 1744,
+      "columns": 11,
+      "labels": [
+        {
+          "text": "Atlas · Offline Paper Arena · fill evidence v3 · 20 rounds",
+          "title": "Atlas · Offline Paper Arena · fill evidence v3 · 20 rounds"
+        },
+        {
+          "text": "Vector · Offline Paper Arena · fill evidence v3 · 20 rounds",
+          "title": "Vector · Offline Paper Arena · fill evidence v3 · 20 rounds"
+        }
+      ]
+    },
+    {
+      "name": "leaderboard-advanced-table-fits-desktop-container",
+      "passed": true,
+      "viewport": 1920,
+      "wrapClient": 1568,
+      "wrapScroll": 1568,
+      "wrapRight": 1744,
+      "tableRight": 1744,
+      "columns": 13,
+      "labels": [
+        {
+          "text": "Atlas · Offline Paper Arena · fill evidence v3 · 20 rounds",
+          "title": "Atlas · Offline Paper Arena · fill evidence v3 · 20 rounds"
+        },
+        {
+          "text": "Vector · Offline Paper Arena · fill evidence v3 · 20 rounds",
+          "title": "Vector · Offline Paper Arena · fill evidence v3 · 20 rounds"
+        }
+      ]
+    },
+    {
+      "0": {
+        "text": "mock-atlas-v3",
+        "title": "mock-atlas-v3"
+      },
+      "1": {
+        "text": "mock-vector-v3",
+        "title": "mock-vector-v3"
+      },
+      "name": "leaderboard-average-n1-uses-base-model-labels",
+      "passed": true
+    },
+    {
+      "name": "leaderboard-average-13-column-table-fits-desktop-container",
+      "passed": true,
+      "viewport": 1920,
+      "wrapClient": 1568,
+      "wrapScroll": 1568,
+      "wrapRight": 1744,
+      "tableRight": 1744,
+      "columns": 13,
+      "labels": [
+        {
+          "text": "mock-atlas-v3",
+          "title": "mock-atlas-v3"
+        },
+        {
+          "text": "mock-vector-v3",
+          "title": "mock-vector-v3"
+        }
+      ]
+    },
+    {
+      "name": "season-details-reference-font-sizes",
+      "passed": true,
+      "body": "12px",
+      "heading": "14px",
+      "run": "11px"
+    },
+    {
+      "name": "nine-reference-states-captured",
+      "passed": true,
+      "screenshots": [
+        {
+          "filename": "exact-expanded-simulation-aggregate-chat-1920x1080.png",
+          "source": "Screenshot from 2026-10-16 09-40-50.png"
+        },
+        {
+          "filename": "exact-expanded-simulation-aggregate-chat-model-1920x1080.png",
+          "source": "Screenshot from 2026-10-16 10-36-42.png"
+        },
+        {
+          "filename": "exact-expanded-simulation-selected-chat-1920x1080.png",
+          "source": "Screenshot from 2026-10-16 10-36-49.png"
+        },
+        {
+          "filename": "exact-expanded-simulation-leaderboard-overall-1920x1080.png",
+          "source": "Screenshot from 2026-10-16 10-36-55.png"
+        },
+        {
+          "filename": "exact-expanded-simulation-leaderboard-advanced-1920x1080.png",
+          "source": "Screenshot from 2026-10-16 10-36-58.png"
+        },
+        {
+          "filename": "exact-expanded-simulation-leaderboard-average-summary-1920x1080.png",
+          "source": "Screenshot from 2026-10-16 10-37-03.png"
+        },
+        {
+          "filename": "exact-expanded-simulation-model-summary-1920x1080.png",
+          "source": "Screenshot from 2026-10-16 10-37-12.png"
+        },
+        {
+          "filename": "exact-expanded-simulation-model-positions-trades-1920x1080.png",
+          "source": "Screenshot from 2026-10-16 10-37-15.png"
+        },
+        {
+          "filename": "exact-expanded-simulation-season-details-1920x1080.png",
+          "source": "Screenshot from 2026-10-16 10-37-25.png"
+        }
+      ]
+    },
+    {
+      "name": "live-layout-1920x932-navigation-and-rail-fit",
+      "passed": true,
+      "width": 1920,
+      "height": 932,
+      "documentWidth": 1920,
+      "bodyWidth": 1920,
+      "rail": {
+        "left": 1420,
+        "right": 1920,
+        "top": 103,
+        "bottom": 893,
+        "width": 500
+      },
+      "main": {
+        "left": 0,
+        "right": 1420,
+        "top": 135,
+        "bottom": 893,
+        "width": 1420
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 820.1875
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "name": "live-layout-1440x900-navigation-and-rail-fit",
+      "passed": true,
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "rail": {
+        "left": 1060,
+        "right": 1440,
+        "top": 103,
+        "bottom": 861,
+        "width": 380
+      },
+      "main": {
+        "left": 0,
+        "right": 1060,
+        "top": 135,
+        "bottom": 861,
+        "width": 1060
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 580.1875
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "name": "live-layout-1024x768-navigation-and-rail-fit",
+      "passed": true,
+      "width": 1024,
+      "height": 768,
+      "documentWidth": 1024,
+      "bodyWidth": 1024,
+      "rail": {
+        "left": 704,
+        "right": 1024,
+        "top": 103,
+        "bottom": 729,
+        "width": 320
+      },
+      "main": {
+        "left": 0,
+        "right": 704,
+        "top": 135,
+        "bottom": 729,
+        "width": 704
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 460.921875
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "name": "live-layout-768x1024-navigation-and-rail-fit",
+      "passed": true,
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "bodyWidth": 768,
+      "rail": {
+        "left": 0,
+        "right": 768,
+        "top": 814,
+        "bottom": 1973.0625,
+        "width": 768
+      },
+      "main": {
+        "left": 0,
+        "right": 768,
+        "top": 173,
+        "bottom": 814,
+        "width": 768
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 51.203125
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "name": "live-layout-640x900-navigation-and-rail-fit",
+      "passed": true,
+      "width": 640,
+      "height": 900,
+      "documentWidth": 640,
+      "bodyWidth": 640,
+      "rail": {
+        "left": 0,
+        "right": 640,
+        "top": 814,
+        "bottom": 1973.0625,
+        "width": 640
+      },
+      "main": {
+        "left": 0,
+        "right": 640,
+        "top": 173,
+        "bottom": 814,
+        "width": 640
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 51.203125
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "name": "live-layout-390x844-navigation-and-rail-fit",
+      "passed": true,
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "rail": {
+        "left": 0,
+        "right": 390,
+        "top": 1066,
+        "bottom": 2436.3125,
+        "width": 390
+      },
+      "main": {
+        "left": 0,
+        "right": 390,
+        "top": 173,
+        "bottom": 1066,
+        "width": 390
+      },
+      "liveLink": {
+        "visible": true,
+        "right": 51.203125
+      },
+      "selectedTab": "MODELCHAT"
+    },
+    {
+      "0": {
+        "width": 1920,
+        "rail_width": 500,
+        "rail_top": 103,
+        "main_bottom": 893
+      },
+      "1": {
+        "width": 1440,
+        "rail_width": 380,
+        "rail_top": 103,
+        "main_bottom": 861
+      },
+      "2": {
+        "width": 1024,
+        "rail_width": 320,
+        "rail_top": 103,
+        "main_bottom": 729
+      },
+      "3": {
+        "width": 768,
+        "rail_width": 768,
+        "rail_top": 814,
+        "main_bottom": 814
+      },
+      "4": {
+        "width": 640,
+        "rail_width": 640,
+        "rail_top": 814,
+        "main_bottom": 814
+      },
+      "5": {
+        "width": 390,
+        "rail_width": 390,
+        "rail_top": 1066,
+        "main_bottom": 1066
+      },
+      "name": "live-rail-is-500px-on-desktop-and-stacks-on-mobile",
+      "passed": true
+    },
+    {
+      "name": "leaderboard-layout-1920x932-max-width-and-table-fit",
+      "passed": true,
+      "width": 1920,
+      "height": 932,
+      "documentWidth": 1920,
+      "bodyWidth": 1920,
+      "page": {
+        "left": 176,
+        "right": 1744,
+        "width": 1568
+      },
+      "table": {
+        "client": 1568,
+        "scroll": 1568,
+        "left": 176,
+        "right": 1744
+      },
+      "nav": {
+        "visible": true,
+        "right": 949
+      }
+    },
+    {
+      "name": "leaderboard-layout-1440x900-max-width-and-table-fit",
+      "passed": true,
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "bodyWidth": 1440,
+      "page": {
+        "left": 0,
+        "right": 1440,
+        "width": 1440
+      },
+      "table": {
+        "client": 1392,
+        "scroll": 1392,
+        "left": 24,
+        "right": 1416
+      },
+      "nav": {
+        "visible": true,
+        "right": 709
+      }
+    },
+    {
+      "name": "leaderboard-layout-1024x768-max-width-and-table-fit",
+      "passed": true,
+      "width": 1024,
+      "height": 768,
+      "documentWidth": 1024,
+      "bodyWidth": 1024,
+      "page": {
+        "left": 0,
+        "right": 1024,
+        "width": 1024
+      },
+      "table": {
+        "client": 976,
+        "scroll": 1200,
+        "left": 24,
+        "right": 1000
+      },
+      "nav": {
+        "visible": true,
+        "right": 560.625
+      }
+    },
+    {
+      "name": "leaderboard-layout-768x1024-max-width-and-table-fit",
+      "passed": true,
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "bodyWidth": 768,
+      "page": {
+        "left": 0,
+        "right": 768,
+        "width": 768
+      },
+      "table": {
+        "client": 720,
+        "scroll": 1200,
+        "left": 24,
+        "right": 744
+      },
+      "nav": {
+        "visible": true,
+        "right": 133.515625
+      }
+    },
+    {
+      "name": "leaderboard-layout-640x900-max-width-and-table-fit",
+      "passed": true,
+      "width": 640,
+      "height": 900,
+      "documentWidth": 640,
+      "bodyWidth": 640,
+      "page": {
+        "left": 0,
+        "right": 640,
+        "width": 640
+      },
+      "table": {
+        "client": 592,
+        "scroll": 1200,
+        "left": 24,
+        "right": 616
+      },
+      "nav": {
+        "visible": true,
+        "right": 133.515625
+      }
+    },
+    {
+      "name": "leaderboard-layout-390x844-max-width-and-table-fit",
+      "passed": true,
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "page": {
+        "left": 0,
+        "right": 390,
+        "width": 390
+      },
+      "table": {
+        "client": 358,
+        "scroll": 1200,
+        "left": 16,
+        "right": 374
+      },
+      "nav": {
+        "visible": true,
+        "right": 133.515625
+      }
+    },
+    {
+      "name": "leaderboard-table-header-sticks-at-document-top",
+      "passed": true,
+      "scrollY": 254,
+      "position": "sticky",
+      "top": -0.3125
+    },
+    {
+      "name": "leaderboard-equity-sort-and-independent-winner",
+      "passed": true,
+      "before": [
+        "\nAtlas · Offline Paper Arena · fill evidence v3 · 20 rounds\nMockLLMAdapter · mock-atlas-v3\n",
+        "\nVector · Offline Paper Arena · fill evidence v3 · 20 rounds\nMockLLMAdapter · mock-vector-v3\n"
+      ],
+      "winner_after_sort": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/ce388865-2dfe-5055-9173-2bbce70b24cc",
+      "expected_highest_equity_model_id": "ce388865-2dfe-5055-9173-2bbce70b24cc"
+    },
+    {
+      "name": "leaderboard-tabs-keyboard-navigation",
+      "passed": true,
+      "selected": "OVERALL STATS",
+      "focus": "OVERALL STATS"
+    },
+    {
+      "name": "leaderboard-competition-selector-has-options",
+      "passed": true,
+      "value": "036d6115-3edb-5dca-92d3-eb46a649a1b2",
+      "options": 5
+    },
+    {
+      "name": "competition-selector-navigates-and-loads-new-competition",
+      "passed": true,
+      "competition_id": "c442896c-50fc-4eab-9235-6103e9776bcc",
+      "rows": 1
+    },
+    {
+      "name": "average-helper-groups-pair-means-values-and-excludes-null",
+      "passed": true,
+      "count": 1,
+      "members": 2,
+      "ids": [
+        "a",
+        "b"
+      ],
+      "equity": 150,
+      "roi": 2,
+      "fees": 2,
+      "sharpe": null
+    },
+    {
+      "name": "empty-fixture-run-renders-public-empty-state",
+      "passed": true,
+      "fixture_id": "c442896c-50fc-4eab-9235-6103e9776bcc",
+      "cards": 0
+    },
+    {
+      "name": "public-rules-error-has-visible-retry",
+      "passed": true,
+      "fixture_id": "90db292a-ae72-487f-a878-5d7371a3396c",
+      "alert": "Competition rules evidence unavailable Retry rules"
+    },
+    {
+      "name": "run-chat-filter-exposes-real-model-accounts",
+      "passed": true,
+      "select": "_r_2_-agent",
+      "options": 3
+    },
+    {
+      "name": "chat-symbol-filter-empty-state-preserves-model-filter",
+      "passed": true,
+      "symbol": "ZZZ_NOT_IN_API",
+      "selected_agent": "ce388865-2dfe-5055-9173-2bbce70b24cc"
+    },
+    {
+      "name": "chat-pagination-next-changes-real-decisions",
+      "passed": true,
+      "first_page_card": "ATLAS\nBASELINE\n01/01 00:03:00 UTC",
+      "second_page_card": "ATLAS\nBASELINE\n01/01 00:33:00 UTC",
+      "range": "11–20 of 20"
+    },
+    {
+      "name": "api-artifact-prompt-bytes-match-published-hash",
+      "passed": true,
+      "decision_id": "f7d19e4b-05cc-537e-8722-709b609d8101",
+      "prompt_sha256": "968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83"
+    },
+    {
+      "name": "visible-prompt-download-matches-api-sha256",
+      "passed": true,
+      "hash": "968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83",
+      "bytes": 6078,
+      "size": 6078,
+      "filename": "user-prompt-bytes-968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83.bin",
+      "expected_sha256": "968b3b1da429029fcd220b7533890109fd1f4ab89b9c1d239fe05d6266ac3c83"
+    },
+    {
+      "name": "model-1920x932-no-page-overflow-and-live-navigation",
+      "passed": true,
+      "width": 1920,
+      "height": 932,
+      "body": 1920,
+      "doc": 1920,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 820.1875
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 949
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 1028.8125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 1089.015625
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 1159.015625
+        }
+      ],
+      "table": {
+        "client": 1182,
+        "scroll": 1182,
+        "clientRight": 1551
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "name": "model-1440x900-no-page-overflow-and-live-navigation",
+      "passed": true,
+      "width": 1440,
+      "height": 900,
+      "body": 1440,
+      "doc": 1440,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 580.1875
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 709
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 788.8125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 849.015625
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 919.015625
+        }
+      ],
+      "table": {
+        "client": 1182,
+        "scroll": 1182,
+        "clientRight": 1311
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "name": "model-1024x768-no-page-overflow-and-live-navigation",
+      "passed": true,
+      "width": 1024,
+      "height": 768,
+      "body": 1024,
+      "doc": 1024,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 460.921875
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 560.625
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 621.828125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 667.640625
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 721.140625
+        }
+      ],
+      "table": {
+        "client": 942,
+        "scroll": 942,
+        "clientRight": 983
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "name": "model-768x1024-no-page-overflow-and-live-navigation",
+      "passed": true,
+      "width": 768,
+      "height": 1024,
+      "body": 768,
+      "doc": 768,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 51.203125
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 133.515625
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 184.328125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 222.53125
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 267.046875
+        }
+      ],
+      "table": {
+        "client": 686,
+        "scroll": 849,
+        "clientRight": 727
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "name": "model-640x900-no-page-overflow-and-live-navigation",
+      "passed": true,
+      "width": 640,
+      "height": 900,
+      "body": 640,
+      "doc": 640,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 51.203125
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 133.515625
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 184.328125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 222.53125
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 267.046875
+        }
+      ],
+      "table": {
+        "client": 586,
+        "scroll": 849,
+        "clientRight": 613
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "name": "model-390x844-no-page-overflow-and-live-navigation",
+      "passed": true,
+      "width": 390,
+      "height": 844,
+      "body": 390,
+      "doc": 390,
+      "positionColumns": 0,
+      "navigation": [
+        {
+          "label": "LIVE",
+          "visible": true,
+          "right": 51.203125
+        },
+        {
+          "label": "LEADERBOARD",
+          "visible": true,
+          "right": 133.515625
+        },
+        {
+          "label": "MODELS",
+          "visible": true,
+          "right": 184.328125
+        },
+        {
+          "label": "BLOG",
+          "visible": true,
+          "right": 222.53125
+        },
+        {
+          "label": "ABOUT",
+          "visible": true,
+          "right": 267.046875
+        }
+      ],
+      "table": {
+        "client": 344,
+        "scroll": 849,
+        "clientRight": 367
+      },
+      "fonts": "loaded",
+      "positionGridColumns": null
+    },
+    {
+      "name": "mobile-wide-fill-table-scrolls-inside-its-container",
+      "passed": true,
+      "client": 344,
+      "scroll": 849,
+      "clientRight": 367
+    },
+    {
+      "name": "model-public-record-disclosures-and-limits",
+      "passed": true,
+      "disclosures": [
+        {
+          "label": "ACCOUNT EQUITY CHART",
+          "found": true
+        },
+        {
+          "label": "COMPLETE FILL HISTORY",
+          "found": true
+        },
+        {
+          "label": "POSITION AND FUNDING HISTORY",
+          "found": true
+        },
+        {
+          "label": "DECISIONS AND ARTIFACTS",
+          "found": true
+        },
+        {
+          "label": "PUBLIC MODEL SETTINGS AND AUDIT REFERENCES",
+          "found": true
+        },
+        {
+          "label": "DATA AVAILABILITY AND METRIC DEFINITIONS",
+          "found": true
+        }
+      ],
+      "prompt_or_trading_decisions_labels_present": false,
+      "fills": [
+        {
+          "round": 18,
+          "side": "SHORT",
+          "tone": "md-fill-sell"
+        },
+        {
+          "round": 16,
+          "side": "LONG",
+          "tone": "md-fill-buy"
+        },
+        {
+          "round": 13,
+          "side": "SHORT",
+          "tone": "md-fill-sell"
+        },
+        {
+          "round": 11,
+          "side": "LONG",
+          "tone": "md-fill-buy"
+        },
+        {
+          "round": 8,
+          "side": "SHORT",
+          "tone": "md-fill-sell"
+        },
+        {
+          "round": 6,
+          "side": "LONG",
+          "tone": "md-fill-buy"
+        },
+        {
+          "round": 3,
+          "side": "SHORT",
+          "tone": "md-fill-sell"
+        },
+        {
+          "round": 1,
+          "side": "LONG",
+          "tone": "md-fill-buy"
+        }
+      ],
+      "actual_open_position_cards": 0,
+      "empty_state": true,
+      "unavailable_metrics": "Total P&L is account equity minus competition starting capital, so it includes recorded fees, funding, realized P&L, and unrealized P&L. Net realized is realized P&L less cumulative fees; it excludes funding.The public metrics endpoint currently returns no average leverage for this account. Confidence is the mean of recorded proposal confidence values in the first 20 of 20 decisions; it is a sample when more than 100 decisions exist. Biggest win, biggest loss, and hold times require completed trade journals that this API does not expose.Cash, per-position leverage, liquidation price, and per-position unrealized P&L are not fields in the public model, position, or leaderboard records. Active cards show only recorded entry time, average entry, quantity, exit plan, and reserved margin. Per-trade entry/exit pairs, notionals, holding time, and net P&L cannot be reconstructed safely from unpaired fills."
+    },
+    {
+      "name": "model-fill-rows-are-newest-first-with-side-colors",
+      "passed": true,
+      "api_rounds_oldest_to_newest": [
+        1,
+        3,
+        6,
+        8,
+        11,
+        13,
+        16,
+        18
+      ],
+      "visible_rounds_newest_to_oldest": [
+        18,
+        16,
+        13,
+        11,
+        8,
+        6,
+        3,
+        1
+      ],
+      "visible_sides_and_colors": [
+        {
+          "side": "SHORT",
+          "tone": "md-fill-sell"
+        },
+        {
+          "side": "LONG",
+          "tone": "md-fill-buy"
+        },
+        {
+          "side": "SHORT",
+          "tone": "md-fill-sell"
+        },
+        {
+          "side": "LONG",
+          "tone": "md-fill-buy"
+        },
+        {
+          "side": "SHORT",
+          "tone": "md-fill-sell"
+        },
+        {
+          "side": "LONG",
+          "tone": "md-fill-buy"
+        },
+        {
+          "side": "SHORT",
+          "tone": "md-fill-sell"
+        },
+        {
+          "side": "LONG",
+          "tone": "md-fill-buy"
+        }
+      ]
+    },
+    {
+      "name": "model-equity-chart-range-control-works",
+      "passed": true,
+      "before": {
+        "controls": [
+          "ALL",
+          "72H",
+          "24H"
+        ],
+        "selected": "ALL",
+        "lines": 1
+      },
+      "after": {
+        "selected": "72H",
+        "lines": 1
+      }
+    },
+    {
+      "name": "synthetic-position-card-exit-plan-and-unavailable-fields",
+      "passed": true,
+      "fixtureLabel": true,
+      "details": true,
+      "stop": true,
+      "target": true,
+      "naFields": 3,
+      "card": true
+    },
+    {
+      "name": "synthetic-position-grid-1920x932-expected-columns",
+      "passed": true,
+      "width": 1920,
+      "columns": 3,
+      "cardCount": 3,
+      "cardLefts": [
+        367,
+        766,
+        1166
+      ]
+    },
+    {
+      "name": "synthetic-position-grid-1440x900-expected-columns",
+      "passed": true,
+      "width": 1440,
+      "columns": 3,
+      "cardCount": 3,
+      "cardLefts": [
+        127,
+        526,
+        926
+      ]
+    },
+    {
+      "name": "synthetic-position-grid-1024x768-expected-columns",
+      "passed": true,
+      "width": 1024,
+      "columns": 3,
+      "cardCount": 3,
+      "cardLefts": [
+        31,
+        356,
+        680
+      ]
+    },
+    {
+      "name": "synthetic-position-grid-768x1024-expected-columns",
+      "passed": true,
+      "width": 768,
+      "columns": 3,
+      "cardCount": 3,
+      "cardLefts": [
+        31,
+        270,
+        510
+      ]
+    },
+    {
+      "name": "synthetic-position-grid-640x900-expected-columns",
+      "passed": true,
+      "width": 640,
+      "columns": 2,
+      "cardCount": 3,
+      "cardLefts": [
+        31,
+        326
+      ]
+    },
+    {
+      "name": "synthetic-position-grid-390x844-expected-columns",
+      "passed": true,
+      "width": 390,
+      "columns": 1,
+      "cardCount": 3,
+      "cardLefts": [
+        31
+      ]
+    },
+    {
+      "name": "synthetic-position-grid-responsive-3-2-1",
+      "passed": true,
+      "breakpoints": [
+        {
+          "width": 1920,
+          "columns": 3,
+          "cardCount": 3
+        },
+        {
+          "width": 1440,
+          "columns": 3,
+          "cardCount": 3
+        },
+        {
+          "width": 1024,
+          "columns": 3,
+          "cardCount": 3
+        },
+        {
+          "width": 768,
+          "columns": 3,
+          "cardCount": 3
+        },
+        {
+          "width": 640,
+          "columns": 2,
+          "cardCount": 3
+        },
+        {
+          "width": 390,
+          "columns": 1,
+          "cardCount": 3
+        }
+      ]
+    },
+    {
+      "name": "invalid-model-id-is-explained",
+      "passed": true,
+      "path": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/00000000-0000-4000-8000-000000000000",
+      "excerpt": "Skip to content\nOPEN ALPHA ARENA LAB\nLIVE\nLEADERBOARD\nMODELS\nBLOG\nABOUT\nGITHUB ↗\nAgent not found\nRetry\nOPEN ALPHA ARENA LAB\nPaper trading only · public evidence · no live orders\nMETHODOLOGY\nADMIN\nGITHUB ↗"
+    },
+    {
+      "name": "model-competition-mismatch-is-explained",
+      "passed": true,
+      "path": "/simulation/036d6115-3edb-5dca-92d3-eb46a649a1b2/models/1beebe19-fbc6-49f1-88b4-460d4858262b",
+      "message": "The requested model and competition do not match. This route keeps the supplied account ID; the model belongs to c442896c-50fc-4eab-9235-6103e9776bcc."
+    },
+    {
+      "name": "leaderboard-average-mobile-table-scrolls-locally",
+      "passed": true,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "client": 358,
+      "scroll": 1300,
+      "right": 374,
+      "columns": 13
+    }
+  ],
+  "passed": 57,
+  "failed": 0
+}

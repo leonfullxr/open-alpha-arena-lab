@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { getArtifact, getCompetitionRules, getDecisionHistory, getFundingEvidence, getFundingHistory, getPositionHistory, getTradeHistory, type Agent, type Decision, type FundingEvidence, type FundingPayment, type Position, type RulesArtifact, type Trade } from './api';
-import { decimal, money, timestamp } from './ui';
+import { getFundingEvidence, getFundingHistory, getPositionHistory, getTradeHistory, type Agent, type FundingEvidence, type FundingPayment, type Position, type Trade } from './api';
+import { DecisionFeed } from './chat';
+import { RulesEvidence, useRulesArtifact } from './rules';
+import { decimal, decodeBase64Safely, money, sha256Hex, shortHash, timestamp } from './ui';
 
 export type ActivityTab = 'Live Trades' | 'Model Chat' | 'Positions' | 'README.TXT';
 const PAGE_SIZE = 20;
@@ -15,45 +17,40 @@ export function ActivityPanel({ tab, competitionId, agentId, agents = [], highli
   highlightDecisionId?: string;
   decisionRound?: number;
 }): React.JSX.Element {
+  const panelId = useId().replaceAll(':', '');
   const [symbolDraft, setSymbolDraft] = useState('');
   const [symbol, setSymbol] = useState('');
   const [agentDraft, setAgentDraft] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('');
   const [page, setPage] = useState(0);
   useEffect(() => {
-    const targetPage = decisionRound && highlightDecisionId ? Math.floor((decisionRound - 1) / PAGE_SIZE) : 0;
-    setPage(targetPage);
-  }, [symbol, selectedAgent, tab, competitionId, agentId, highlightDecisionId, decisionRound]);
+    setPage(0);
+  }, [symbol, selectedAgent, tab, competitionId, agentId]);
   const effectiveAgent = agentId ?? selectedAgent;
   const query = { limit: PAGE_SIZE, offset: page * PAGE_SIZE, ...(effectiveAgent ? { agent_id: effectiveAgent } : {}), ...(symbol ? { symbol } : {}) };
   const trades = useQuery({ queryKey: ['competition', competitionId, 'trades', query], queryFn: () => getTradeHistory(competitionId, query), enabled: Boolean(competitionId) && tab === 'Live Trades' });
-  const decisions = useQuery({ queryKey: ['competition', competitionId, 'decisions', query], queryFn: () => getDecisionHistory(competitionId, query), enabled: Boolean(competitionId) && tab === 'Model Chat' });
   const positions = useQuery({ queryKey: ['competition', competitionId, 'positions', query], queryFn: () => getPositionHistory(competitionId, query), enabled: Boolean(competitionId) && tab === 'Positions' });
-  const active = tab === 'Live Trades' ? trades : tab === 'Model Chat' ? decisions : tab === 'Positions' ? positions : undefined;
+  const active = tab === 'Live Trades' ? trades : tab === 'Positions' ? positions : undefined;
   const total = active?.data?.total ?? 0;
   const pageCount = Math.ceil(total / PAGE_SIZE);
   useEffect(() => {
     if (active?.data) setPage((current) => Math.min(current, Math.max(0, pageCount - 1)));
   }, [active?.data, pageCount]);
-  useEffect(() => {
-    if (tab !== 'Model Chat' || !highlightDecisionId || !decisions.data?.items.some((item) => item.id === highlightDecisionId)) return;
-    document.getElementById(`decision-${highlightDecisionId}`)?.scrollIntoView({ block: 'center' });
-  }, [tab, highlightDecisionId, decisions.data]);
-
   function applyFilter(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     setSymbol(symbolDraft.trim().toUpperCase());
   }
 
-  return <section className="activity-panel" aria-labelledby="activity-title">
-    <div className="panel-heading"><div><p className="terminal-eyebrow">COMPETITION RECORD</p><h2 id="activity-title">{tab}</h2></div>{tab !== 'README.TXT' && <form className="filter-control" onSubmit={applyFilter}>
-      {!agentId && agents.length > 0 && <><label htmlFor="activity-agent">Model</label><select id="activity-agent" value={agentDraft} onChange={(event) => { setAgentDraft(event.target.value); setSelectedAgent(event.target.value); }}><option value="">All models</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select></>}
-      <label htmlFor="activity-symbol">Symbol</label><input id="activity-symbol" value={symbolDraft} onChange={(event) => setSymbolDraft(event.target.value)} placeholder="All" maxLength={24} />
+  return <section className="activity-panel" aria-labelledby={`${panelId}-title`}>
+    <div className="panel-heading"><div><p className="terminal-eyebrow">COMPETITION RECORD</p><h2 id={`${panelId}-title`}>{tab}</h2></div>{tab !== 'README.TXT' && tab !== 'Model Chat' && <form className="filter-control" onSubmit={applyFilter}>
+      {!agentId && agents.length > 0 && <><label htmlFor={`${panelId}-agent`}>Model</label><select id={`${panelId}-agent`} value={agentDraft} onChange={(event) => { setAgentDraft(event.target.value); setSelectedAgent(event.target.value); }}><option value="">All models</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select></>}
+      <label htmlFor={`${panelId}-symbol`}>Symbol</label><input id={`${panelId}-symbol`} value={symbolDraft} onChange={(event) => setSymbolDraft(event.target.value)} placeholder="All" maxLength={24} />
       <button type="submit">Apply</button>
     </form>}</div>
-      {tab === 'README.TXT' ? <Readme competitionId={competitionId} /> : active?.isLoading ? <div className="query-state" role="status">Loading records…</div> : active?.error ? <div className="query-error" role="alert">{active.error.message} <button onClick={() => void active.refetch()}>Retry</button></div> : <>
+      {tab === 'README.TXT' ? <Readme competitionId={competitionId} />
+        : tab === 'Model Chat' ? <DecisionFeed competitionId={competitionId} agents={agents} agentId={agentId} badge={agentId ? 'SELECTED ACCOUNT' : undefined} highlightDecisionId={highlightDecisionId} decisionRound={decisionRound} idPrefix={`${panelId}-feed`} />
+          : active?.isLoading ? <div className="query-state" role="status">Loading records…</div> : active?.error ? <div className="query-error" role="alert">{active.error.message} <button onClick={() => void active.refetch()}>Retry</button></div> : <>
       {tab === 'Live Trades' && <TradesTable rows={trades.data?.items ?? []} competitionId={competitionId} />}
-      {tab === 'Model Chat' && <DecisionsList rows={decisions.data?.items ?? []} highlightDecisionId={highlightDecisionId} />}
       {tab === 'Positions' && <><PositionsTable rows={positions.data?.items ?? []} /><FundingSection competitionId={competitionId} agentId={effectiveAgent} symbol={symbol} /></>}
       {active?.isFetching && <p className="complete-history-note" role="status">Updating this page…</p>}
       {pageCount > 1 && <div className="history-pagination"><span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}</span><div><button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button><button disabled={page + 1 >= pageCount} onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}>Next</button></div></div>}
@@ -149,10 +146,7 @@ function FundingEvidenceRecord({ evidence }: { evidence: FundingEvidence }): Rea
     let current = true;
     setActualHash(null);
     if (decoded?.bytes) {
-      void crypto.subtle.digest('SHA-256', decoded.bytes).then((digest) => {
-        const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
-        if (current) setActualHash(hex);
-      }).catch(() => { if (current) setActualHash('unavailable'); });
+      void sha256Hex(decoded.bytes).then((hash) => { if (current) setActualHash(hash); });
     }
     return () => { current = false; };
   }, [decoded?.bytes]);
@@ -182,69 +176,8 @@ function FundingEvidenceRecord({ evidence }: { evidence: FundingEvidence }): Rea
   </div>;
 }
 
-function DecisionsList({ rows, highlightDecisionId }: { rows: Decision[]; highlightDecisionId?: string }): React.JSX.Element {
-  if (!rows.length) return <div className="query-state">No model decisions match this filter.</div>;
-  return <div className="decision-list">{rows.map((decision) => <DecisionRecord key={decision.id} decision={decision} highlighted={decision.id === highlightDecisionId} />)}</div>;
-}
-
-function DecisionRecord({ decision, highlighted }: { decision: Decision; highlighted: boolean }): React.JSX.Element {
-  const [open, setOpen] = useState(false);
-  const artifact = useQuery({ queryKey: ['artifact', decision.id], queryFn: () => getArtifact(decision.id), enabled: open });
-  const promptArtifact = artifact.data ? decodeBase64Safely(artifact.data.prompt_bytes_base64) : null;
-  const outputArtifact = artifact.data?.output_publicly_releasable ? decodeBase64Safely(artifact.data.output_bytes_base64) : null;
-  const usage = Object.entries(decision.usage).map(([name, value]) => `${name}: ${value}`).join(' · ') || 'Not reported';
-  return <article id={`decision-${decision.id}`} className={`decision-record${highlighted ? ' decision-record--linked' : ''}`}>
-    <button className="decision-toggle" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-      <span><b>{decision.agent_name}</b><small>{decision.provider} · {decision.model} · round {decision.round}</small></span>
-      <span className="decision-action">{decision.action ?? 'No action'} {decision.symbol ?? ''} {decision.quantity ?? ''}</span>
-      <span className="decision-hashes">Prompt {shortHash(decision.prompt_sha256)} · Output {shortHash(decision.output_sha256)}</span>
-      <span aria-hidden="true">{open ? '−' : '+'}</span>
-    </button>
-    {decision.justification && <p className="decision-justification">{decision.justification}</p>}
-    {open && <div className="decision-detail">
-      <dl className="decision-evidence"><div><dt>Validation</dt><dd>{decision.validation_status}</dd></div><div><dt>Execution result</dt><dd>{decision.execution_result ?? 'Not reported'}</dd></div><div><dt>Error code</dt><dd>{decision.error_code ?? 'None reported'}</dd></div><div><dt>Provider HTTP status</dt><dd>{decision.provider_status_code ?? 'Not reported'}</dd></div><div><dt>Latency</dt><dd>{decision.latency_ms === null || decision.latency_ms === undefined ? 'Not reported' : `${decision.latency_ms} ms`}</dd></div><div><dt>Estimated provider cost</dt><dd>{decision.estimated_cost_usd ? money(decision.estimated_cost_usd) : 'Not reported'}</dd></div><div><dt>Provider usage</dt><dd>{usage}</dd></div></dl>
-      {decision.validation_errors.length > 0 && <section className="proposal-evidence"><h3>Validation details</h3><ul>{decision.validation_errors.map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}</ul></section>}
-      {decision.proposals.length > 0 && <section className="proposal-evidence"><h3>Recorded proposals</h3>{decision.proposals.map((proposal, index) => <article key={`${proposal.symbol}-${index}`}><header><strong>{proposal.action} {proposal.symbol}</strong><span>Risk: {proposal.risk_decision ?? 'Not evaluated'}</span></header><p>{proposal.justification}</p><dl className="decision-evidence"><div><dt>Quantity</dt><dd>{proposal.quantity}</dd></div><div><dt>Confidence</dt><dd>{proposal.confidence ?? 'Not reported'}</dd></div><div><dt>Leverage</dt><dd>{proposal.leverage ?? 'Not reported'}</dd></div><div><dt>Stop / take profit</dt><dd>{proposal.stop_loss ?? '—'} / {proposal.take_profit ?? '—'}</dd></div><div><dt>Invalidation</dt><dd>{proposal.invalidation ?? 'Not reported'}</dd></div></dl>{proposal.risk_reasons.length > 0 && <ul>{proposal.risk_reasons.map((reason, reasonIndex) => <li key={`${reasonIndex}-${reason}`}>{reason}</li>)}</ul>}</article>)}</section>}
-      {artifact.isLoading && <p role="status">Loading exact artifact bytes…</p>}
-      {artifact.error && <div className="query-error" role="alert">{artifact.error.message} <button onClick={() => void artifact.refetch()}>Retry</button></div>}
-      {(promptArtifact?.bytes || outputArtifact?.bytes) && <div className="artifact-grid">
-        {promptArtifact?.bytes && artifact.data && <ArtifactText title="Prompt bytes" bytes={promptArtifact.bytes} hash={artifact.data.prompt_sha256} />}
-        {outputArtifact?.bytes && artifact.data && <ArtifactText title="Provider output bytes" bytes={outputArtifact.bytes} hash={artifact.data.output_sha256} />}
-      </div>}
-      {promptArtifact?.error && <p className="query-error" role="alert">Prompt artifact could not be decoded: {promptArtifact.error}</p>}
-      {outputArtifact?.error && <p className="query-error" role="alert">Provider output could not be decoded: {outputArtifact.error}</p>}
-      {artifact.data && !artifact.data.output_publicly_releasable && <p className="availability-note">Provider output withheld from public display. SHA-256 {artifact.data.output_sha256} remains available for audit.</p>}
-    </div>}
-  </article>;
-}
-
-function ArtifactText({ title, bytes, hash }: { title: string; bytes: Uint8Array; hash: string }): React.JSX.Element {
-  const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-  function download(): void {
-    const blob = new Blob([bytes], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url; anchor.download = `${title.toLowerCase().replace(/\s+/g, '-')}-${hash}.bin`;
-    anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
-  }
-  return <section className="artifact-block"><div><h3>{title}</h3><button className="small-button" onClick={download}>Download original bytes</button></div><code>SHA-256 {hash}</code><pre>{text || '[Empty artifact]'}</pre></section>;
-}
-
-function decodeBase64Safely(value: string): { bytes: Uint8Array | null; error: string | null } {
-  try {
-    const binary = atob(value);
-    return { bytes: Uint8Array.from(binary, (character) => character.charCodeAt(0)), error: null };
-  } catch (error) {
-    return { bytes: null, error: error instanceof Error ? error.message : 'Invalid base64 data' };
-  }
-}
-
-function shortHash(value: string | null): string {
-  return value ? `${value.slice(0, 12)}…` : 'Not stored';
-}
-
 function Readme({ competitionId }: { competitionId: string }): React.JSX.Element {
-  const rules = useQuery({ queryKey: ['competition', competitionId, 'rules'], queryFn: () => getCompetitionRules(competitionId), enabled: Boolean(competitionId) });
+  const rules = useRulesArtifact(competitionId);
   return <div className="readme-content">
     <h3>Reading this competition</h3>
     <p>Records are served by the public API. Finished paper runs use saved market and account records; their source label identifies the run. They are not a live trading session.</p>
@@ -264,61 +197,4 @@ function Readme({ competitionId }: { competitionId: string }): React.JSX.Element
       : rules.error ? <div className="query-error" role="alert">{rules.error.message} <button onClick={() => void rules.refetch()}>Retry rules</button></div>
         : rules.data ? <RulesEvidence artifact={rules.data} /> : null}
   </div>;
-}
-
-function RulesEvidence({ artifact }: { artifact: RulesArtifact }): React.JSX.Element {
-  const decoded = useMemo(() => artifact.bytes_base64 ? decodeBase64Safely(artifact.bytes_base64) : { bytes: null, error: null }, [artifact.bytes_base64]);
-  const [actualHash, setActualHash] = useState<string | null>(null);
-  useEffect(() => {
-    let current = true;
-    setActualHash(null);
-    if (decoded.bytes) {
-      void crypto.subtle.digest('SHA-256', decoded.bytes).then((digest) => {
-        const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
-        if (current) setActualHash(hex);
-      }).catch(() => { if (current) setActualHash('unavailable'); });
-    }
-    return () => { current = false; };
-  }, [decoded.bytes]);
-  const hashMatches = actualHash === artifact.sha256;
-
-  function download(): void {
-    if (!decoded.bytes || !hashMatches || artifact.bytes_withheld) return;
-    const blob = new Blob([decoded.bytes], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `competition-rules-${artifact.sha256}.json`;
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
-  }
-
-  const policy = artifact.public;
-  const facts: Array<[string, string]> = [
-    ['Profile', policy.profile],
-    ['Symbols', policy.symbols.join(', ')],
-    ['Starting virtual capital', money(policy.initial_balance)],
-    ['Round / response deadline', `${policy.round_seconds}s / ${policy.response_deadline_seconds}s`],
-    ['Quote age / set skew limits', `${policy.quote_max_age_seconds}s / ${policy.quote_set_max_skew_seconds}s`],
-    ['Maximum leverage', `${policy.leverage_max}×`],
-    ['Commission / slippage', `${decimal(Number(policy.commission_rate) * 100, 3)}% / ${policy.slippage_bps} bps`],
-    ['Daily loss / drawdown limits', `${money(policy.max_daily_loss)} / ${decimal(Number(policy.max_drawdown_fraction) * 100, 2)}%`],
-    ['Maintenance margin / liquidation fee', `${decimal(Number(policy.maintenance_margin_rate) * 100, 2)}% / ${decimal(Number(policy.liquidation_fee_rate) * 100, 2)}%`],
-    ['Funding method', `${policy.funding_mode} · ${policy.funding_rate_basis} · ${policy.funding_price_basis}`],
-    ['Risk policy', policy.risk_policy_version],
-    ['Evidence schemas', `snapshot ${policy.snapshot_schema_version} · proposal ${policy.proposal_schema_version} · public ${policy.public_evidence_schema_version} · ${policy.market_window_candles} candles`],
-  ];
-  if (policy.inference_budget_usd !== null) facts.push(['Inference budget', money(policy.inference_budget_usd)]);
-  if (policy.fixture_source) facts.push(['Fixture source', policy.fixture_source]);
-
-  return <section className="rules-evidence" aria-label="Public rules evidence">
-    <div className="rules-evidence-heading"><strong>SHA-256</strong><code>{artifact.sha256}</code></div>
-    {actualHash !== null && <p className={hashMatches ? 'evidence-hash-ok' : 'query-error'} role={hashMatches ? 'status' : 'alert'}>{hashMatches ? 'Exact stored rules bytes verified.' : actualHash === 'unavailable' ? 'Rules hash verification is unavailable.' : 'Stored rules bytes do not match the reported SHA-256.'}</p>}
-    <dl>{facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-    {artifact.withheld_fields && <p className="availability-note">The API omitted fields outside the safe public projection.</p>}
-    {artifact.bytes_withheld ? <p className="availability-note">Exact rules bytes are withheld because the stored record contains fields the public contract does not recognize.</p>
-      : decoded.error ? <p className="query-error" role="alert">Exact rules bytes could not be decoded: {decoded.error}</p>
-        : decoded.bytes ? <button className="small-button" onClick={download} disabled={!hashMatches}>Download exact frozen rules bytes</button>
-          : <p className="availability-note">The API did not return exact frozen rule bytes.</p>}
-  </section>;
 }

@@ -28,15 +28,19 @@ export type EquityChartData = PublicSchema['EquityChartDTO'];
 export type EquityRange = 'ALL' | '72H' | '24H';
 
 export type HistoryQuery = { limit: number; offset: number; agent_id?: string; symbol?: string };
+type PositionHistoryQuery = HistoryQuery & { include_closed?: boolean };
 
 const client = createClient<paths>({ baseUrl: '/api/v1/public' });
 
 async function requireData<T>(result: { data?: T; error?: unknown; response: Response }): Promise<T> {
   if (result.error !== undefined) {
-    const message = typeof result.error === 'object' && result.error !== null && 'detail' in result.error
+    const detail = typeof result.error === 'object' && result.error !== null && 'detail' in result.error
       ? String(result.error.detail)
-      : `${result.response.status} ${result.response.statusText}`;
-    throw new Error(message || 'The public API request failed');
+      : null;
+    if (detail) throw new Error(detail);
+    const status = result.response.status;
+    if (status >= 500) throw new Error(`The public API answered ${status} without a detail message.`);
+    throw new Error(`${status} ${result.response.statusText}` || 'The public API request failed');
   }
   if (result.data === undefined) throw new Error('The API returned an empty response');
   return result.data;
@@ -86,9 +90,9 @@ export function getTradeHistory(id: string, query: HistoryQuery): Promise<TradeP
   }).then(requireData);
 }
 
-export function getPositionHistory(id: string, query: HistoryQuery): Promise<PositionPage> {
+export function getPositionHistory(id: string, query: PositionHistoryQuery): Promise<PositionPage> {
   return client.GET('/competitions/{competition_id}/positions', {
-    params: { path: { competition_id: id }, query: { ...query, include_closed: true } },
+    params: { path: { competition_id: id }, query: { ...query, include_closed: query.include_closed ?? true } },
   }).then(requireData);
 }
 

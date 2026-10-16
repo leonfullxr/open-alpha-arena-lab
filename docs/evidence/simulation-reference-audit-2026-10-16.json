@@ -1,0 +1,60 @@
+{
+  "checked_at": "2026-10-16",
+  "url": "https://www.alphaarena.ai/",
+  "method": "Computed styles, DOM rectangles and interactions inspected with isolated Chrome DevTools AXI sessions; user-supplied screenshot used as the selected visual reference.",
+  "reference_screenshot": "/tmp/open-alpha-arena-simulation-reference-2026-10-15.png",
+  "browser_chrome_excluded": true,
+  "header_px": 58,
+  "combined_run_ticker_band_px": 45,
+  "narrative_column_px": 672,
+  "narrative_type_px": {
+    "font": 16,
+    "line_height": 24
+  },
+  "font_family": "IBM Plex Mono",
+  "chat_type_px": {
+    "font": 13,
+    "line_height": 21.125
+  },
+  "nav_type_px": {
+    "font": 14,
+    "letter_spacing": 1.4
+  },
+  "sidebar_geometry": [
+    {
+      "viewport": [
+        1920,
+        1080
+      ],
+      "width": 500,
+      "left": 1420
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "width": 380,
+      "left": 1060
+    },
+    {
+      "viewport": [
+        1363,
+        936
+      ],
+      "width": 380,
+      "left": 983
+    },
+    {
+      "viewport": [
+        1024,
+        768
+      ],
+      "width": 320,
+      "left": 704
+    }
+  ],
+  "scroll": "Sidebar has its own vertical scroll area.",
+  "interaction": "Aggregate root displays narrative and model chat; selecting a competition changes activity controls and run context. The ended reference does not establish the intended behavior of an active equity chart.",
+  "adaptation": "Open Alpha Arena identity, actual paper-run profiles, crypto quotes, public-safe decisions and evidence. Competition equity charts remain available; mobile preserves readable stacked activity."
+}

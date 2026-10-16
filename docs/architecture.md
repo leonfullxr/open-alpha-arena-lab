@@ -1,6 +1,6 @@
 # Architecture and fixed decisions
 
-React, TypeScript and Vite provide separately loaded landing, simulation and admin entries. Original canvas/SVG artwork follows the measured layout in the local nine-page reference PDF. Newsreader is self-hosted under OFL. Landing has no API dependency. No third-party Alpha Arena source, brand assets or proprietary font files are copied.
+React, TypeScript and Vite provide separately loaded landing, simulation and admin entries. Original canvas/SVG artwork follows the measured layout in the local nine-page reference PDF. The landing uses self-hosted Newsreader and the simulation uses self-hosted IBM Plex Mono; both are distributed under OFL. Landing has no API dependency. No third-party Alpha Arena source, brand assets or proprietary font files are copied.
 
 FastAPI and PostgreSQL run on Debian with independent collector, scheduler and executor entrypoints. SQLAlchemy transactions, database uniqueness, row locks and worker fencing protect durable state. Decimal is authoritative for quantities, prices, fees, funding, collateral and PnL. Only paper execution exists.
 

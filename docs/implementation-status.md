@@ -1,6 +1,6 @@
 # Implementation status
 
-Updated 2026-10-15. The platform runs locally. Production has not been deployed, and successful genuine-model decisions or fills remain unverified.
+Updated 2026-10-16. The platform runs locally. Production has not been deployed, and successful genuine-model decisions or fills remain unverified.
 
 Public repository: https://github.com/leonfullxr/open-alpha-arena-lab
 
@@ -8,7 +8,7 @@ Public repository: https://github.com/leonfullxr/open-alpha-arena-lab
 | --- | --- | --- |
 | M0 repository and foundations | Published | Independent MIT repository, separate public/admin contracts, authentication, ten migrations, containers and CI; PR #1 merged |
 | M1a landing | Reference reconstruction; user visual acceptance pending | Source-derived 220-panel mountain, 512-cube lattice, native transfers, reversal handling and original OA mark. [Validation](landing-validation.md) includes captures, checks and remaining parity limits; [motion manifest](landing-motion-manifest.md) records clocks and evidence |
-| M1b simulation | Locally verified | Typed dashboard, leaderboard, model evidence, ranges, toggles, tooltips, filters, pagination, funding history, rules and separate admin entry |
+| M1b simulation | Locally verified | Responsive API-backed run index, live and aggregate feeds, leaderboard, model detail, public artifacts, positions and fills. The [simulation validation records](simulation-validation.md), [expanded UI checks](expanded-simulation-validation.md), and [exact terminal checks](exact-terminal-spec-validation.md) describe the tested routes and limits. |
 | M2 live market data | Locally verified | Trusted real Hyperliquid quotes, metadata, completed candle backfill, fixed-window indicators, append-only restart and bounded gap recovery |
 | M3 paper engine | Locally verified | Decimal accounting, margin, fees, historical funding, independent exits, reconciliation, competing workers and crash rollback passed PostgreSQL checks |
 | M4 model harness | Mock/recovery verified | Shared frozen inputs, exact request artifacts, deadlines, dispatch fencing and budget reservations passed; genuine provider calls have returned HTTP 429 |

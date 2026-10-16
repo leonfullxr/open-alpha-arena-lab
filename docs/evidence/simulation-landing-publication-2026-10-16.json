@@ -1,0 +1,78 @@
+{
+  "checked_at": "2026-10-16T07:17:52.267Z",
+  "url": "https://open-alpha-arena-landing.l-elliottfuller.workers.dev",
+  "merged_main": "548e2e9239aff70063ed01e98f7c50d822c0f669",
+  "pull_requests": [
+    {
+      "number": 2,
+      "state": "MERGED",
+      "checks_passed": 3
+    },
+    {
+      "number": 3,
+      "state": "MERGED",
+      "checks_passed": 3
+    }
+  ],
+  "publication_gate": "Already passed and merged on 2026-10-15; verified public release on 2026-10-16. No gate restarted and no deployment changed.",
+  "scope": "Frontend only. Hosted API and admin remain intentionally unconfigured.",
+  "paths": [
+    {
+      "path": "/",
+      "status": 200,
+      "expected_status": 200,
+      "bytes": 5229,
+      "sha256": "9bebcb3344fe462b13d5c9ba5da2d3f82b9c5151c22c9c3678ade5e4ac0aa15e",
+      "passed": true
+    },
+    {
+      "path": "/simulation",
+      "status": 200,
+      "expected_status": 200,
+      "bytes": 5229,
+      "sha256": "9bebcb3344fe462b13d5c9ba5da2d3f82b9c5151c22c9c3678ade5e4ac0aa15e",
+      "passed": true
+    },
+    {
+      "path": "/simulation/competition/c1",
+      "status": 200,
+      "expected_status": 200,
+      "bytes": 5229,
+      "sha256": "9bebcb3344fe462b13d5c9ba5da2d3f82b9c5151c22c9c3678ade5e4ac0aa15e",
+      "passed": true
+    },
+    {
+      "path": "/admin/",
+      "status": 403,
+      "expected_status": 403,
+      "bytes": 33,
+      "sha256": "96c427e34b727809958499aadb414f157d697e075eb8c7052418cad930b762ad",
+      "passed": true
+    },
+    {
+      "path": "/admin-assets/not-found.js",
+      "status": 403,
+      "expected_status": 403,
+      "bytes": 33,
+      "sha256": "96c427e34b727809958499aadb414f157d697e075eb8c7052418cad930b762ad",
+      "passed": true
+    },
+    {
+      "path": "/api/v1/public/status",
+      "status": 503,
+      "expected_status": 503,
+      "bytes": 34,
+      "sha256": "49af8255068717589c43464768b613b40b1c519e0d3faa91cb68592cccb6b151",
+      "passed": true
+    },
+    {
+      "path": "/api/v1/public/private",
+      "status": 404,
+      "expected_status": 404,
+      "bytes": 21,
+      "sha256": "d2dfdc9511fbeaa0701d1f8730f4989313b062ca1b61a2bd8bed8f4f5d654b5d",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

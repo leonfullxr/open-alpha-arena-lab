@@ -49,4 +49,4 @@ PostgreSQL integration checks require a migrated disposable database through `TE
 
 The [implementation record](docs/implementation-status.md) lists actual checks and unfinished work. Read the [architecture](docs/architecture.md), [paper accounting policy](docs/accounting-policy.md), [security boundaries](docs/security.md), and [source audit](docs/reference-audit.md). Cloudflare production deployment remains subject to build review.
 
-Original code and artwork use the [MIT license](LICENSE). Newsreader retains its bundled [OFL license](apps/web/public/fonts/OFL.txt). No reference project's source code, proprietary fonts or captured datasets are redistributed.
+Original code and artwork use the [MIT license](LICENSE). Newsreader retains its bundled [OFL license](apps/web/public/fonts/OFL.txt), and IBM Plex Mono its [OFL license](apps/web/public/fonts/IBM-Plex-OFL.txt). No reference project's source code, proprietary fonts or captured datasets are redistributed.
