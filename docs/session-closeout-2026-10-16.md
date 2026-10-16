@@ -34,4 +34,4 @@ Detailed evidence lives in [public API error validation](error-handling-validati
 
 Plan the backend release separately. Review and provision the origin, limiter, Access, Tunnel, database, and required secrets before deploying the backend. Then verify the public API and admin boundary against that deployment. Do not treat the Workers.dev landing environment as production API service.
 
-The landing uses bundled Signifier files retrieved from the public reference homepage. [Font source notes](../apps/web/public/fonts/SOURCES.md) record the source and assert no redistribution license for Signifier. The Newsreader and IBM Plex Mono OFL files apply only to those separately bundled fonts.
+The [font source notes](../apps/web/public/fonts/SOURCES.md) record font provenance and license scope.

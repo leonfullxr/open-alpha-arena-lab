@@ -1,14 +1,10 @@
 # Validation results
 
-This record distinguishes primary checks from delegate reports. The approved landing and simulation frontend are live on the persistent Workers.dev host. The backend and proposed custom-domain route are not configured; the hosted public API returns a safe non-retryable 503. Current release evidence appears in the [session closeout](session-closeout-2026-10-16.md); the older counts below describe their original historical runs.
+This record distinguishes primary checks from delegate reports. Current release status appears in the [session closeout](session-closeout-2026-10-16.md); the older counts below describe their original historical runs.
 
 ## Current merged release checks
 
-The current release passed 20 deterministic browser checks for safe API failure copy, missing configuration, malformed and empty error bodies, 429 cooldowns, scoped 404 states, healthy empty data, stale data, manual recovery, and mobile layout. Separate HTTP and asset-hash checks verified seven routes and exact SHA-256 matches for 30 hosted assets. Browser checks at 1920 px desktop and 390 px mobile found no horizontal overflow. Manual retry requested failed data again, and the simulation displayed no fabricated rows.
-
-The latest focused backend checks passed 18 Worker tests and 3 FastAPI boundary tests. Ruff, strict mypy over 56 files, and the frontend build passed. All three PR checks and the full main CI run passed. An independent browser replay preserved eight recorded paper fills through an injected 503 and manual recovery. That check made no provider calls and no real orders.
-
-The hosted public endpoint currently returns `503` with `rate_limit_unavailable`, `retryable: false`, and the detail "The research data service is not connected yet." The admin route returns `403`; an unknown API route returns `404`. No backend bindings, secrets, Access resources, DNS, Tunnel, database, or provider configuration were deployed. See the [error handling validation guide](error-handling-validation.md), [branding validation](branding-validation-2026-10-16.md), and [session closeout](session-closeout-2026-10-16.md).
+The current release checks and hosted endpoint results are recorded in the [session closeout](session-closeout-2026-10-16.md), with detail in the [error handling validation guide](error-handling-validation.md) and [branding validation](branding-validation-2026-10-16.md).
 
 ## Earlier primary platform checks
 
