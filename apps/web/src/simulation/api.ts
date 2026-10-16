@@ -82,7 +82,7 @@ async function requireData<T>(request: Promise<ApiResult<T>>): Promise<T> {
     result = await request;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new PublicApiError('The public service returned an unreadable response. Please try again shortly.', 'invalid-response', undefined, undefined, false);
+      throw new PublicApiError('The public service returned an unreadable response. Please try again shortly.', 'invalid-response', undefined, undefined, true);
     }
     if (error instanceof TypeError) {
       throw new PublicApiError('The public service could not be reached. Check your connection and retry.', 'offline', undefined, undefined, true);
@@ -100,7 +100,7 @@ async function requireData<T>(request: Promise<ApiResult<T>>): Promise<T> {
     throw new PublicApiError(message, kind, status, body.code, retryable, retryAfterMs);
   }
   if (result.data === undefined) {
-    throw new PublicApiError('The public service returned an empty response. Please retry.', 'invalid-response');
+    throw new PublicApiError('The public service returned an empty response. Please retry.', 'invalid-response', undefined, undefined, true);
   }
   return result.data;
 }
