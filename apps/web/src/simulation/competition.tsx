@@ -1,7 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getCompetition, getCompetitionMetrics, getEquityChart, getLeaderboard, type Benchmark, type EquityRange } from './api';
+import { getCompetition, getCompetitionMetrics, getEquityChart, getLeaderboard, nextPollInterval, retryPollInterval, type Benchmark, type EquityRange } from './api';
 import { ActivityPanel, type ActivityTab } from './activity';
 import { modelToneClass, profileTag } from './colors';
 import { EquityChart } from './equity-chart';
@@ -19,7 +19,11 @@ export default function CompetitionPage(): React.JSX.Element {
     queryKey: ['competition', competitionId],
     queryFn: () => getCompetition(competitionId),
     enabled: Boolean(competitionId),
-    refetchInterval: (query) => ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? 5_000 : false,
+    refetchInterval: (query) => {
+      const recoveryInterval = retryPollInterval(query.state.error);
+      if (recoveryInterval !== false) return recoveryInterval;
+      return ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? nextPollInterval(5_000, query.state.error) : false;
+    },
   });
   const competition = competitionQuery.data;
   const leaderboard = useQuery({ queryKey: ['competition', competitionId, 'leaderboard'], queryFn: () => getLeaderboard(competitionId), enabled: Boolean(competitionId) });
@@ -40,7 +44,7 @@ export default function CompetitionPage(): React.JSX.Element {
     tabRefs.current[nextIndex]?.focus();
   }
 
-  return <QueryState loading={competitionQuery.isLoading} error={competitionQuery.error} retry={() => void competitionQuery.refetch()}>
+  return <QueryState loading={competitionQuery.isLoading} error={competitionQuery.error} stale={Boolean(competitionQuery.data)} retry={() => void competitionQuery.refetch()}>
     {competition && <>
       <header className="run-header">
         <div className="run-title">
@@ -54,7 +58,7 @@ export default function CompetitionPage(): React.JSX.Element {
           <Link className="terminal-button" to={`/simulation/${encodeURIComponent(competition.id)}/leaderboard`}>FULL LEADERBOARD →</Link>
         </div>
       </header>
-      <QueryState loading={equity.isLoading} error={equity.error} retry={() => void equity.refetch()} empty={equity.data?.items.length === 0 ? 'The API has no equity points for this competition.' : undefined}>
+      <QueryState loading={equity.isLoading} error={equity.error} stale={Boolean(equity.data)} retry={() => void equity.refetch()} empty={equity.data?.items.length === 0 ? 'The API has no equity points for this competition.' : undefined}>
         {equity.data && <EquityChart agents={competition.agents} rows={equity.data.items} initialBalance={competition.initial_balance} sampleCount={equity.data.total_raw} sampled={equity.data.sampled} range={chartRange} onRangeChange={setChartRange} benchmark={benchmark} />}
       </QueryState>
       <section className="accounts-panel" aria-label="Model accounts">
@@ -62,7 +66,7 @@ export default function CompetitionPage(): React.JSX.Element {
           <div><p className="terminal-eyebrow">ACCOUNT VALUE · RANKED BY MARKED EQUITY</p><h2>MODEL ACCOUNTS</h2></div>
           <span className="panel-count">{competition.agents.length} ACCOUNTS</span>
         </div>
-        <QueryState loading={leaderboard.isLoading} error={leaderboard.error} retry={() => void leaderboard.refetch()} empty={leaderboard.data?.length === 0 ? 'The API has no ranked accounts for this competition yet.' : undefined}>
+        <QueryState loading={leaderboard.isLoading} error={leaderboard.error} stale={Boolean(leaderboard.data)} retry={() => void leaderboard.refetch()} empty={leaderboard.data?.length === 0 ? 'The API has no ranked accounts for this competition yet.' : undefined}>
         {leaderboard.data && <div className="table-scroll accounts-table"><table><thead><tr>
           <th>RANK</th><th>MODEL</th><th>PROVIDER / MODEL ID</th><th>EQUITY</th><th>RETURN</th><th>REALIZED</th><th>UNREALIZED</th><th>FEES</th><th>FUNDING</th><th>ORDERS</th><th>WIN RATE</th>
         </tr></thead><tbody>

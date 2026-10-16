@@ -1,0 +1,177 @@
+{
+  "created_at": "2026-10-16T17:44:23.650Z",
+  "passed": true,
+  "origin": "http://127.0.0.1:33351",
+  "fixture_mode": "local deterministic API; no financial rows",
+  "no_database_mutation": true,
+  "no_paid_provider_calls": true,
+  "checks": [
+    {
+      "name": "500-json",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA",
+      "status_request_count": 2
+    },
+    {
+      "name": "503-transient",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA",
+      "status_request_count": 3
+    },
+    {
+      "name": "503-not-configured",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The research data service is not connected yet.\nRETRY PUBLIC DATA",
+      "status_request_count": 4
+    },
+    {
+      "name": "502-html",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA",
+      "status_request_count": 5
+    },
+    {
+      "name": "429-rate-limit",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The public service is receiving a lot of requests. Please wait a moment and retry.\nRETRY PUBLIC DATA",
+      "status_request_count": 6
+    },
+    {
+      "name": "focus-within-retry-after-does-not-refetch-rate-limited-query",
+      "passed": true,
+      "retry_after_seconds": 1,
+      "requests_before_focus": 6,
+      "requests_after_focus": 6
+    },
+    {
+      "name": "network-drop-through-vite-proxy",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA",
+      "status_request_count": 7
+    },
+    {
+      "name": "empty-500",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA",
+      "status_request_count": 8
+    },
+    {
+      "name": "malformed-json-500",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA",
+      "status_request_count": 9
+    },
+    {
+      "name": "html-body-json-content-type-502",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA",
+      "status_request_count": 10
+    },
+    {
+      "name": "malformed-json",
+      "passed": true,
+      "route": "/simulation",
+      "notice": "The public service returned an unreadable response. Please try again shortly.\nRETRY PUBLIC DATA",
+      "status_request_count": 11
+    },
+    {
+      "name": "404-stays-in-record-scope-without-shell-banner",
+      "passed": true,
+      "route": "/simulation/unknown-public-record",
+      "notice_count": 0,
+      "body_excerpt": "Skip to content\nOPEN ALPHA ARENA LAB\nLIVE\nLEADERBOARD\nMODELS\nBLOG\nABOUT\nGITHUB ↗\nAGGREGATE INDEX\nDATA DELAYED\n\nRUN UNAVAILABLE · UNKNOWN-PUBLIC-RECORD\n\nThis public record could not be found.\nRetry\nTRADES\nMODELCHAT\nPOSITIONS\nCOMP DETAILS\nThis public record could not be found.\nOPEN ALPHA ARENA LAB\nPaper trading only · public evidence · no live orders\nMETHODOLOGY\nADMIN\nGITHUB ↗"
+    },
+    {
+      "name": "terminal-route-simulation",
+      "passed": true,
+      "route": "/simulation",
+      "terminal_shell": {
+        "header": true,
+        "main": true,
+        "context": true
+      },
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA"
+    },
+    {
+      "name": "terminal-route-leaderboard",
+      "passed": true,
+      "route": "/simulation/fixture-run/leaderboard",
+      "terminal_shell": {
+        "header": true,
+        "main": true,
+        "context": true
+      },
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA"
+    },
+    {
+      "name": "terminal-route-fixture-agent",
+      "passed": true,
+      "route": "/simulation/fixture-run/models/fixture-agent",
+      "terminal_shell": {
+        "header": true,
+        "main": true,
+        "context": true
+      },
+      "notice": "The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA"
+    },
+    {
+      "name": "mobile-terminal-shell-no-horizontal-overflow",
+      "passed": true,
+      "route": "/simulation/fixture-run/models/fixture-agent",
+      "layout": {
+        "viewport": 390,
+        "document": 390,
+        "notice": {
+          "x": 0,
+          "y": 58,
+          "width": 390,
+          "height": 87,
+          "top": 58,
+          "right": 390,
+          "bottom": 145,
+          "left": 0
+        },
+        "markWidth": 22
+      }
+    },
+    {
+      "name": "retry-requests-failed-data-again-and-recovers",
+      "passed": true,
+      "status_requests_before": 16,
+      "status_requests_after": 17,
+      "remaining_table_rows": 0,
+      "empty_record_message_visible": true
+    },
+    {
+      "name": "missing-service-configuration-does-not-auto-retry",
+      "passed": true,
+      "notice": "The research data service is not connected yet.\nRETRY PUBLIC DATA",
+      "status_requests": 1
+    },
+    {
+      "name": "focus-during-retry-cooldown-does-not-refetch",
+      "passed": true,
+      "competition_requests_before_recovery": 20,
+      "competition_requests_after_recovery": 20,
+      "status_requests_before_recovery": 19,
+      "status_requests_after_recovery": 19,
+      "stale_notice": "Some displayed values are from the last successful refresh. The public simulation service is temporarily unavailable. Please try again shortly.\nRETRY PUBLIC DATA"
+    },
+    {
+      "name": "manual-retry-recovers-all-stale-query-data",
+      "passed": true,
+      "competition_requests": 21,
+      "status_requests": 19,
+      "empty_state_visible": true
+    }
+  ]
+}

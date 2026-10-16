@@ -1,8 +1,9 @@
 import React, { Suspense, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import '../simulation.css';
+import { createSimulationQueryClient } from './query-client';
 import { SimulationShell } from './shell';
 
 const DirectoryPage = React.lazy(() => import('./directory'));
@@ -15,12 +16,7 @@ function LegacyBlogRedirect(): React.JSX.Element {
   return <div className="page-loading" role="status">Opening methodology…</div>;
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 2_000 },
-    mutations: { retry: 0 },
-  },
-});
+const queryClient = createSimulationQueryClient();
 
 export function mount(): void {
   const rootElement = document.getElementById('root');

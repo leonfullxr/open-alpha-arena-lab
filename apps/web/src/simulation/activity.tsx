@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { getFundingEvidence, getFundingHistory, getPositionHistory, getTradeHistory, type Agent, type FundingEvidence, type FundingPayment, type Position, type Trade } from './api';
 import { DecisionFeed } from './chat';
 import { RulesEvidence, useRulesArtifact } from './rules';
-import { decimal, decodeBase64Safely, money, sha256Hex, shortHash, timestamp } from './ui';
+import { decimal, decodeBase64Safely, money, QueryState, sha256Hex, shortHash, timestamp } from './ui';
 
 export type ActivityTab = 'Live Trades' | 'Model Chat' | 'Positions' | 'README.TXT';
 const PAGE_SIZE = 20;
@@ -49,13 +49,13 @@ export function ActivityPanel({ tab, competitionId, agentId, agents = [], highli
     </form>}</div>
       {tab === 'README.TXT' ? <Readme competitionId={competitionId} />
         : tab === 'Model Chat' ? <DecisionFeed competitionId={competitionId} agents={agents} agentId={agentId} badge={agentId ? 'SELECTED ACCOUNT' : undefined} highlightDecisionId={highlightDecisionId} decisionRound={decisionRound} idPrefix={`${panelId}-feed`} />
-          : active?.isLoading ? <div className="query-state" role="status">Loading records…</div> : active?.error ? <div className="query-error" role="alert">{active.error.message} <button onClick={() => void active.refetch()}>Retry</button></div> : <>
+          : active?.isLoading ? <div className="query-state" role="status">Loading records…</div> : <QueryState error={active?.error} stale={active?.data !== undefined} retry={() => { if (active) void active.refetch(); }}><>
       {tab === 'Live Trades' && <TradesTable rows={trades.data?.items ?? []} competitionId={competitionId} />}
       {tab === 'Positions' && <><PositionsTable rows={positions.data?.items ?? []} /><FundingSection competitionId={competitionId} agentId={effectiveAgent} symbol={symbol} /></>}
       {active?.isFetching && <p className="complete-history-note" role="status">Updating this page…</p>}
       {pageCount > 1 && <div className="history-pagination"><span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}</span><div><button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button><button disabled={page + 1 >= pageCount} onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}>Next</button></div></div>}
       <p className="complete-history-note">Showing server-filtered records{effectiveAgent ? ` for ${agents.find((agent) => agent.id === effectiveAgent)?.name ?? 'this model'}` : ''}{symbol ? ` for ${symbol}` : ''}; {total} records match.</p>
-    </>}
+    </></QueryState>}
   </section>;
 }
 
@@ -108,12 +108,11 @@ function FundingSection({ competitionId, agentId, symbol }: { competitionId: str
   return <section className="funding-section" aria-labelledby="funding-title">
     <div className="funding-heading"><div><p className="terminal-eyebrow">ACCOUNTING EVIDENCE</p><h3 id="funding-title">Funding history</h3></div><span>{total} records</span></div>
     {funding.isLoading ? <div className="query-state" role="status">Loading funding records…</div>
-      : funding.error ? <div className="query-error" role="alert">{funding.error.message} <button onClick={() => void funding.refetch()}>Retry funding</button></div>
-        : <>
+      : <QueryState error={funding.error} stale={funding.data !== undefined} retry={() => void funding.refetch()}>
           <FundingTable rows={funding.data?.items ?? []} />
           {pageCount > 1 && <div className="history-pagination"><span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}</span><div><button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button><button disabled={page + 1 >= pageCount} onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}>Next</button></div></div>}
           <p className="complete-history-note">Funding entries are server-filtered with the model and symbol filters above. Amounts and evidence appear only when returned by the API.</p>
-        </>}
+      </QueryState>}
   </section>;
 }
 
@@ -194,7 +193,8 @@ function Readme({ competitionId }: { competitionId: string }): React.JSX.Element
     <h3>Frozen competition rules</h3>
     <p>The rules record describes the limits, execution assumptions, funding policy, and evidence schema applied to this competition. The SHA-256 is checked against the exact stored bytes. Unrecorded rule fields stay identified as withheld by the API.</p>
     {rules.isLoading ? <div className="query-state" role="status">Loading frozen rules…</div>
-      : rules.error ? <div className="query-error" role="alert">{rules.error.message} <button onClick={() => void rules.refetch()}>Retry rules</button></div>
-        : rules.data ? <RulesEvidence artifact={rules.data} /> : null}
+      : <QueryState error={rules.error} stale={rules.data !== undefined} retry={() => void rules.refetch()}>
+        {rules.data ? <RulesEvidence artifact={rules.data} /> : null}
+      </QueryState>}
   </div>;
 }

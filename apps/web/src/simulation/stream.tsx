@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Competition } from './api';
+import { canAutomaticallyRetry, type Competition } from './api';
 
 const CompetitionStreamContext = createContext<'paused' | 'connected' | 'reconnecting'>('paused');
 
@@ -19,8 +19,15 @@ export function useCompetitionStream(competition: Competition | undefined): 'pau
   useEffect(() => {
     if (!competition) { setState('paused'); return undefined; }
     const refresh = (): void => {
-      void queryClient.invalidateQueries({ queryKey: ['competition', competition.id] });
-      void queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      const keys: readonly unknown[][] = [['competition', competition.id], ['competitions']];
+      for (const queryKey of keys) {
+        const queries = queryClient.getQueryCache().findAll({ queryKey });
+        for (const query of queries) {
+          const error = query.state.error;
+          if (!canAutomaticallyRetry(error, query.state.errorUpdatedAt)) continue;
+          void queryClient.invalidateQueries({ queryKey: query.queryKey, exact: true });
+        }
+      }
     };
     if (competition.state === 'PAUSED') {
       setState('paused');

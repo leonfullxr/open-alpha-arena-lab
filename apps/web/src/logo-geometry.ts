@@ -10,12 +10,12 @@ export const LOGO_CUBE_FLIGHT = 0.45;
 export const LOGO_ROW_FADE = 0.03;
 
 export const LOGO_FAMILY_RGBS = [
-  [96, 169, 107],
-  [223, 97, 101],
-  [250, 195, 91],
-  [81, 135, 178],
-  [240, 122, 81],
-  [118, 118, 114],
+  [11, 11, 12],
+  [11, 11, 12],
+  [11, 11, 12],
+  [0, 161, 94],
+  [0, 161, 94],
+  [0, 161, 94],
 ] as const;
 
 export type LogoSquare = {
@@ -83,7 +83,11 @@ export function segmentLogoSquares(bitmap: LogoBitmap): LogoSquare[] {
         nearestFamily = familyIndex;
       }
     }
-    familyAtPixel[pixel] = nearestFamily;
+    const x = pixel % width;
+    const y = (pixel - x) / width;
+    const isBracket = nearestFamily < 3;
+    const band = Math.min(2, Math.floor((isBracket ? y / height : x / width) * 3));
+    familyAtPixel[pixel] = (isBracket ? 0 : 3) + band;
   }
 
   const visited = new Uint8Array(pixelCount);

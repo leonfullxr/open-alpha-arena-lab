@@ -1,16 +1,36 @@
+import { createContext, useContext, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { isPublicApiError, type PublicApiError } from './api';
 
-export function QueryState({ loading, error, retry, empty, children }: {
+const ApiAvailabilityContext = createContext<{ error?: PublicApiError; hasStaleData: boolean }>({ hasStaleData: false });
+
+export function ApiAvailabilityProvider({ error, hasStaleData, children }: { error?: PublicApiError; hasStaleData: boolean; children: ReactNode }): React.JSX.Element {
+  return <ApiAvailabilityContext.Provider value={{ error, hasStaleData }}>{children}</ApiAvailabilityContext.Provider>;
+}
+
+export function useApiAvailability(): { error?: PublicApiError; hasStaleData: boolean } {
+  return useContext(ApiAvailabilityContext);
+}
+
+export function QueryState({ loading, error, retry, empty, stale, children }: {
   loading?: boolean;
   error?: Error | null;
   retry?: () => void;
   empty?: string;
+  stale?: boolean;
   children?: React.ReactNode;
 }): React.JSX.Element {
+  const availability = useApiAvailability();
   if (loading) return <div className="query-state" role="status">Loading public records…</div>;
-  if (error) return <div className="query-error" role="alert"><span>{error.message}</span>{retry && <button onClick={retry}>Retry</button>}</div>;
+  if (error && availability.error && isPublicApiError(error) && isOutageKind(error)) return stale ? <>{children}</> : <></>;
+  if (error && !stale) return <div className="query-error" role="status"><span>{error.message}</span>{retry && <button aria-label="Retry public data" onClick={retry}>Retry</button>}</div>;
+  if (error && stale) return <><div className="query-stale" role="status"><span>Showing the last available data. {error.message}</span>{retry && <button aria-label="Retry public data" onClick={retry}>Retry</button>}</div>{children}</>;
   if (empty) return <div className="query-state">{empty}</div>;
   return <>{children}</>;
+}
+
+function isOutageKind(error: PublicApiError): boolean {
+  return error.kind === 'service' || error.kind === 'rate-limit' || error.kind === 'offline' || error.kind === 'invalid-response';
 }
 
 export function StatusBadge({ state }: { state: string }): React.JSX.Element {

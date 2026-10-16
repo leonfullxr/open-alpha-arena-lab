@@ -254,6 +254,10 @@ describe("edge request boundaries", () => {
       new Request("https://arena.test/api/v1/public/status"),
       makeEnv({ ARENA_RATE_LIMITER: undefined }),
     );
+    const unavailableBinding = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/status"),
+      makeEnv({ ARENA_RATE_LIMITER: { limit: vi.fn(async () => { throw new Error("private limiter failure"); }) } }),
+    );
     const limited = await worker.fetch(
       new Request("https://arena.test/api/v1/public/status"),
       makeEnv({ ARENA_RATE_LIMITER: { limit: vi.fn(async () => ({ success: false })) } }),
@@ -262,8 +266,99 @@ describe("edge request boundaries", () => {
     expect(accepted.status).toBe(200);
     expect(denied.status).toBe(400);
     expect(missingBinding.status).toBe(503);
+    expect(await missingBinding.json()).toEqual({
+      error: "rate_limit_unavailable",
+      detail: "The research data service is not connected yet.",
+      retryable: false,
+    });
+    expect(missingBinding.headers.get("retry-after")).toBe(null);
+    expect(unavailableBinding.status).toBe(503);
+    expect(await unavailableBinding.json()).toEqual({
+      error: "rate_limit_unavailable",
+      detail: "Request protection is temporarily unavailable. Please retry shortly.",
+      retryable: true,
+    });
+    expect(unavailableBinding.headers.get("retry-after")).toBe("5");
     expect(limited.status).toBe(429);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns additive safe metadata for Worker and origin failures", async () => {
+    const originFetch = vi.fn()
+      .mockResolvedValueOnce(new Response("<html>private upstream error</html>", {
+        status: 500,
+        headers: { "content-type": "text/html" },
+      }))
+      .mockResolvedValueOnce(new Response("database details", {
+        status: 503,
+        headers: { "retry-after": "17" },
+      }))
+      .mockRejectedValueOnce(new Error("private network detail"));
+    vi.stubGlobal("fetch", originFetch);
+    const env = makeEnv();
+
+    const upstream500 = await worker.fetch(new Request("https://arena.test/api/v1/public/status"), env);
+    const upstream503 = await worker.fetch(new Request("https://arena.test/api/v1/public/status"), env);
+    const networkFailure = await worker.fetch(new Request("https://arena.test/api/v1/public/status"), env);
+    const absentOriginBinding = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/status"),
+      makeEnv({ ARENA_ORIGIN_TOKEN: "" }),
+    );
+    const limited = await worker.fetch(
+      new Request("https://arena.test/api/v1/public/status"),
+      makeEnv({ ARENA_RATE_LIMITER: { limit: vi.fn(async () => ({ success: false })) } }),
+    );
+
+    expect(upstream500.status).toBe(500);
+    expect(await upstream500.json()).toEqual({
+      error: "origin_error",
+      detail: "The service could not complete this request. Please retry shortly.",
+      retryable: true,
+    });
+    expect(upstream500.headers.get("retry-after")).toBe("5");
+    expect(upstream503.status).toBe(503);
+    expect(await upstream503.json()).toEqual({
+      error: "origin_unavailable",
+      detail: "The service is temporarily unavailable. Please retry shortly.",
+      retryable: true,
+    });
+    expect(upstream503.headers.get("retry-after")).toBe("17");
+    expect(networkFailure.status).toBe(502);
+    expect(await networkFailure.json()).toEqual({
+      error: "origin_unavailable",
+      detail: "The service is temporarily unavailable. Please retry shortly.",
+      retryable: true,
+    });
+    expect(absentOriginBinding.status).toBe(503);
+    expect(await absentOriginBinding.json()).toEqual({
+      error: "origin_unavailable",
+      detail: "The research data service is not connected yet.",
+      retryable: false,
+    });
+    expect(absentOriginBinding.headers.get("retry-after")).toBe(null);
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toEqual({
+      error: "rate_limit_exceeded",
+      detail: "Too many requests. Please retry shortly.",
+      retryable: true,
+    });
+    expect(limited.headers.get("retry-after")).toBe("30");
+  });
+
+  it("converts unexpected Worker exceptions into a safe retryable 500", async () => {
+    const env = makeEnv({ ASSETS: {
+      ...makeEnv().ASSETS,
+      fetch: vi.fn(async () => { throw new Error("private asset detail"); }),
+    } });
+    const response = await worker.fetch(new Request("https://arena.test/"), env);
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: "internal_error",
+      detail: "The service could not complete this request.",
+      retryable: true,
+    });
+    expect(response.headers.get("retry-after")).toBe("5");
   });
 
   it("rewrites simulation routes to the canonical landing path and sends a restrictive CSP", async () => {
@@ -463,9 +558,17 @@ describe("edge request boundaries", () => {
     expect(stream.body).toBe(source);
     expect(await stream.text()).toBe("data: one\n\n");
     expect(redirect.status).toBe(502);
-    expect(await redirect.json()).toEqual({ error: "origin_unavailable" });
-    expect(failure.status).toBe(502);
-    expect(await failure.text()).not.toContain("database password leaked");
+    expect(await redirect.json()).toEqual({
+      error: "origin_unavailable",
+      detail: "The service is temporarily unavailable. Please retry shortly.",
+      retryable: true,
+    });
+    expect(failure.status).toBe(500);
+    expect(await failure.json()).toEqual({
+      error: "origin_error",
+      detail: "The service could not complete this request. Please retry shortly.",
+      retryable: true,
+    });
   });
 });
 

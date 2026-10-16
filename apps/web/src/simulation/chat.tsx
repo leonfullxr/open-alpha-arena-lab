@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { getArtifact, getDecisionHistory, getEvents, type Agent, type Decision } from './api';
 import { modelMarker, modelToneClass } from './colors';
-import { decodeBase64Safely, money, shortHash } from './ui';
+import { decodeBase64Safely, money, QueryState, shortHash } from './ui';
 
 export const CHAT_PAGE_SIZE = 10;
 const EVENT_PAGE_SIZE = 100;
@@ -152,14 +152,15 @@ export function DecisionFeed({
       </form>
     </div>
     {query.isLoading ? <div className="query-state" role="status">Loading model decisions…</div>
-      : query.error ? <div className="query-error" role="alert">{query.error.message} <button onClick={() => void query.refetch()}>Retry decisions</button></div>
-        : rows.length === 0 ? <div className="query-state">{emptyMessage}</div>
+      : <QueryState error={query.error} stale={query.data !== undefined} retry={() => void query.refetch()}>
+        {rows.length === 0 ? <div className="query-state">{emptyMessage}</div>
           : <>
             <div className="chat-feed">
               {rows.map((decision) => <ChatCard key={decision.id} decision={decision} agents={agents} times={times} badge={badge} competitionId={competitionId} idPrefix={feedId} highlighted={decision.id === highlightDecisionId} />)}
             </div>
             {pageCount > 1 && <div className="history-pagination"><span>{page * CHAT_PAGE_SIZE + 1}–{Math.min((page + 1) * CHAT_PAGE_SIZE, total)} of {total}</span><div><button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>PREV</button><button disabled={page + 1 >= pageCount} onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}>NEXT</button></div></div>}
           </>}
+      </QueryState>}
   </>;
 }
 
