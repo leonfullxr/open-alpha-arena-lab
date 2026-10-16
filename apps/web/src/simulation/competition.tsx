@@ -64,7 +64,7 @@ export default function CompetitionPage(): React.JSX.Element {
         </div>
         <QueryState loading={leaderboard.isLoading} error={leaderboard.error} retry={() => void leaderboard.refetch()} empty={leaderboard.data?.length === 0 ? 'The API has no ranked accounts for this competition yet.' : undefined}>
         {leaderboard.data && <div className="table-scroll accounts-table"><table><thead><tr>
-          <th>RANK</th><th>MODEL</th><th>PROVIDER / MODEL ID</th><th>EQUITY</th><th>RETURN</th><th>REALIZED</th><th>UNREALIZED</th><th>FEES</th><th>FUNDING</th><th>FILLS</th><th>WIN RATE</th>
+          <th>RANK</th><th>MODEL</th><th>PROVIDER / MODEL ID</th><th>EQUITY</th><th>RETURN</th><th>REALIZED</th><th>UNREALIZED</th><th>FEES</th><th>FUNDING</th><th>ORDERS</th><th>WIN RATE</th>
         </tr></thead><tbody>
           {rows.map((row, index) => {
             const metric = metrics.data?.agents.find((item) => item.agent_id === row.agent_id);
