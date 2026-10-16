@@ -158,11 +158,10 @@ function FillsPanel({ competition }: { competition: Competition }): React.JSX.El
     <div className="panel-heading"><div><p className="terminal-eyebrow">RECORDED EXECUTIONS</p><h2 id="rail-fills-title">Trade fills</h2></div><span className="panel-count">{total} API RECORDS</span></div>
     <p className="complete-history-note">These rows are individual fill records returned by the API; they do not imply a closed round-trip trade.</p>
     {fills.isLoading ? <div className="query-state" role="status">Loading fill records…</div>
-      : fills.error ? <div className="query-error" role="alert">{fills.error.message} <button onClick={() => void fills.refetch()}>Retry</button></div>
-        : <>
+      : <QueryState error={fills.error} stale={fills.data !== undefined} retry={() => void fills.refetch()}>
           <FillTable rows={fills.data?.items ?? []} />
           {pageCount > 1 && <div className="history-pagination"><span>{page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {total} fills</span><div><button disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>PREV</button><button disabled={page + 1 >= pageCount} onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}>NEXT</button></div></div>}
-        </>}
+      </QueryState>}
   </section>;
 }
 
@@ -206,16 +205,18 @@ function RunDetails({ competition }: { competition: Competition }): React.JSX.El
     </section>
     <section className="run-metrics"><h2>RUN METRICS</h2>
       {metrics.isLoading ? <p className="run-note" role="status">Loading run metrics…</p>
-        : metrics.error ? <p className="run-note" role="alert">{metrics.error.message} <button className="small-button" onClick={() => void metrics.refetch()}>RETRY</button></p>
-          : metrics.data ? <ul>{metrics.data.agents.map((agent) => <li key={agent.agent_id}><span>{competition.agents.find((item) => item.id === agent.agent_id)?.name ?? agent.agent_id}</span><span>{percent(agent.win_rate_pct)} win rate · {agent.winning_trades} wins · {agent.closed_trades} closed trades</span></li>)}</ul>
+        : <QueryState error={metrics.error} stale={metrics.data !== undefined} retry={() => void metrics.refetch()}>
+          {metrics.data ? <ul>{metrics.data.agents.map((agent) => <li key={agent.agent_id}><span>{competition.agents.find((item) => item.id === agent.agent_id)?.name ?? agent.agent_id}</span><span>{percent(agent.win_rate_pct)} win rate · {agent.winning_trades} wins · {agent.closed_trades} closed trades</span></li>)}</ul>
             : <p className="run-note">The API returned no run metrics.</p>}
+        </QueryState>}
       {metrics.data?.benchmark && <p className="run-note">{metrics.data.benchmark.label}: {money(metrics.data.benchmark.equity)} · {percent(metrics.data.benchmark.roi_pct)} · {metrics.data.benchmark.symbol}</p>}
     </section>
     <p className="run-note"><Link to={`/simulation/${encodeURIComponent(competition.id)}/leaderboard`}>OPEN THE FULL LEADERBOARD →</Link></p>
     <section className="run-rules"><h2>FROZEN RULES</h2>
       {rules.isLoading ? <p className="run-note" role="status">Loading rule artifact…</p>
-        : rules.error ? <p className="query-error" role="alert">{rules.error.message} <button onClick={() => void rules.refetch()}>Retry rules</button></p>
-          : rules.data ? <RulesEvidence artifact={rules.data} /> : <p className="run-note">The API returned no rule artifact.</p>}
+        : <QueryState error={rules.error} stale={rules.data !== undefined} retry={() => void rules.refetch()}>
+          {rules.data ? <RulesEvidence artifact={rules.data} /> : <p className="run-note">The API returned no rule artifact.</p>}
+        </QueryState>}
     </section>
     <p className="run-note"><Link to={`/simulation/${encodeURIComponent(competition.id)}`}>OPEN THE LIVE CHART AND FULL RUN RECORD →</Link></p>
   </div>;

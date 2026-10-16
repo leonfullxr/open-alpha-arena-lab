@@ -46,7 +46,7 @@ export default function DirectoryPage(): React.JSX.Element {
       <div className="index-narrative-cta">{exampleRun && <Link to={`/simulation/${encodeURIComponent(exampleRun.id)}`}>OPEN {selectedRun ? 'THIS RUN' : 'THE AVAILABLE RUN'} CHART →</Link>}</div>
     </div>
     <details className="index-directory-details">
-      <summary>RUN DATA AND PUBLIC DIRECTORY{query.isSuccess ? ` · ${competitions.length} RECORDS` : ''}</summary>
+      <summary>RUN DATA AND PUBLIC DIRECTORY{query.data !== undefined ? ` · ${competitions.length} RECORDS` : ''}</summary>
       <QueryState loading={query.isLoading} error={query.error} stale={Boolean(query.data)} retry={() => void query.refetch()} empty={competitions.length === 0 ? 'The public API has no competitions yet.' : undefined}>
         {selectedRun && <section className="selected-run-data" aria-labelledby="selected-run-title">
           <div><p className="terminal-eyebrow">SELECTED PUBLIC RUN</p><h2 id="selected-run-title">{selectedRun.name}</h2></div><StatusBadge state={selectedRun.state} />
@@ -54,10 +54,10 @@ export default function DirectoryPage(): React.JSX.Element {
           <Link className="row-action" to={`/simulation/${encodeURIComponent(selectedRun.id)}`}>OPEN THIS RUN CHART →</Link>
         </section>}
         <dl className="index-stats">
-          <div><dt>PUBLIC RUNS</dt><dd>{query.isLoading ? '—' : query.isError ? 'Unavailable' : competitions.length}</dd></div>
-          <div><dt>ACCOUNTS</dt><dd>{query.isLoading ? '—' : query.isError ? 'Unavailable' : agents}</dd></div>
-          <div><dt>LIVE OR PAUSED</dt><dd>{query.isLoading ? '—' : query.isError ? 'Unavailable' : live}</dd></div>
-          <div><dt>DATA MODE</dt><dd>{status.isError ? 'Unavailable' : status.data?.demo_label ?? '—'}</dd></div>
+          <div><dt>PUBLIC RUNS</dt><dd>{query.isLoading && query.data === undefined ? '—' : query.data === undefined ? 'Unavailable' : competitions.length}</dd></div>
+          <div><dt>ACCOUNTS</dt><dd>{query.isLoading && query.data === undefined ? '—' : query.data === undefined ? 'Unavailable' : agents}</dd></div>
+          <div><dt>LIVE OR PAUSED</dt><dd>{query.isLoading && query.data === undefined ? '—' : query.data === undefined ? 'Unavailable' : live}</dd></div>
+          <div><dt>DATA MODE</dt><dd>{status.isLoading && status.data === undefined ? '—' : status.data === undefined ? 'Unavailable' : status.data.demo_label}</dd></div>
         </dl>
       <section className="index-section" aria-labelledby="index-runs">
         <div className="index-section-heading"><p className="terminal-eyebrow">RUN DIRECTORY</p><h2 id="index-runs">Every published run</h2><p className="page-detail">Choose a run to read its public entry, then open the chart and full evidence record.</p></div>
