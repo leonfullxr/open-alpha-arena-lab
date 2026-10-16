@@ -127,6 +127,18 @@ async function apiChecks() {
   const { body: artifact } = await getJson(decision.artifact_url);
   const promptBytes = Buffer.from(artifact.prompt_bytes_base64, 'base64');
   const outputBytes = Buffer.from(artifact.output_bytes_base64, 'base64');
+  let expectedUserPromptHash = null;
+  try {
+    const request = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(promptBytes));
+    if (Array.isArray(request.messages) && request.messages.every((message) => message && typeof message.role === 'string')) {
+      const userMessages = request.messages.filter((message) => message.role === 'user');
+      if (userMessages.length && userMessages.every((message) => typeof message.content === 'string')) {
+        expectedUserPromptHash = sha256(Buffer.from(userMessages.map((message) => message.content).join('\n'), 'utf8'));
+      }
+    }
+  } catch {
+    expectedUserPromptHash = null;
+  }
   const promptHash = sha256(promptBytes);
   const outputHash = sha256(outputBytes);
   record('artifact-download-hashes-match',
@@ -223,6 +235,7 @@ async function apiChecks() {
         decision_id: decision.id,
         prompt_sha256: promptHash,
         output_sha256: outputHash,
+        user_prompt_sha256: expectedUserPromptHash,
       },
     },
     api_status: state.body,
@@ -389,6 +402,17 @@ async function browserChecks(apiEvidence) {
   const expanded = evaluate(`JSON.stringify((()=>{const e=document.querySelector('button[aria-label^="Expand public evidence"]');if(!e)return false;window.__evidenceExpander=e;e.focus();e.click();return true})())`);
   record('chat-evidence-expands', expanded);
   await waitFor('JSON.stringify({download:[...document.querySelectorAll(".artifact-block button")].some(b=>b.textContent.trim()==="DOWNLOAD")})', (value) => value.download, 'expanded artifact DOWNLOAD control');
+  const promptPresentation = await evaluate(`(async()=>{const digest=async value=>{const bytes=new TextEncoder().encode(value);const result=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));return [...result].map(byte=>byte.toString(16).padStart(2,'0')).join('')};const user=document.querySelector('.chat-user-prompt pre');const request=document.querySelector('.artifact-block pre');return JSON.stringify({userHash:user?await digest(user.textContent):null,unavailable:document.querySelector('.chat-user-prompt')?.innerText.includes('extraction is unavailable')??false,requestHash:request?await digest(request.textContent):null,label:[...document.querySelectorAll('.chat-detail summary')].some(e=>e.textContent.trim()==='PUBLIC REQUEST ARTIFACT · EXACT SENT BYTES')})})()`);
+  record('user-prompt-is-separated-from-exact-public-request',
+    apiEvidence.baseline.artifact.user_prompt_sha256 === null
+      ? promptPresentation.unavailable && promptPresentation.userHash === null
+      : promptPresentation.userHash === apiEvidence.baseline.artifact.user_prompt_sha256,
+    { user_prompt_extracted: !promptPresentation.unavailable, request_label_present: promptPresentation.label },
+  );
+  record('exact-public-request-artifact-remains-readable',
+    promptPresentation.requestHash === apiEvidence.baseline.artifact.prompt_sha256 && promptPresentation.label,
+    { sha256: promptPresentation.requestHash, expected_sha256: apiEvidence.baseline.artifact.prompt_sha256 },
+  );
   const focusOnExpand = evaluate('JSON.stringify(document.activeElement===window.__evidenceExpander)');
   evaluate('JSON.stringify((()=>{window.__evidenceExpander.click();return true})())');
   const collapsed = await waitFor('JSON.stringify({blocks:document.querySelectorAll(".artifact-block").length,focused:document.activeElement===window.__evidenceExpander})', (value) => value.blocks === 0 && value.focused, 'artifact collapses without losing focus');

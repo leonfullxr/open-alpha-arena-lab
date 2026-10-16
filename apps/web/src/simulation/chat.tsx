@@ -9,6 +9,31 @@ export const CHAT_PAGE_SIZE = 10;
 const EVENT_PAGE_SIZE = 100;
 const MAX_EVENT_PAGES = 6;
 
+export function extractUserPrompt(requestBytes: Uint8Array): string | null {
+  let request: unknown;
+  try {
+    request = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(requestBytes));
+  } catch {
+    return null;
+  }
+  if (!request || typeof request !== 'object' || !('messages' in request) || !Array.isArray(request.messages)) return null;
+  const messages = request.messages;
+  if (!messages.every((message) => message && typeof message === 'object' && 'role' in message && typeof message.role === 'string')) return null;
+  const userMessages = messages.filter((message) => message.role === 'user');
+  if (!userMessages.length) return null;
+  const content: string[] = [];
+  for (const message of userMessages) {
+    if (!('content' in message)) return null;
+    if (typeof message.content === 'string') content.push(message.content);
+    else if (Array.isArray(message.content)) {
+      const textParts = message.content.filter((part) => part && typeof part === 'object' && 'type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string');
+      if (!textParts.length) return null;
+      content.push(...textParts.map((part) => part.text));
+    } else return null;
+  }
+  return content.join('\n');
+}
+
 /**
  * Decisions carry a round but no wall-clock time. The public event stream
  * records when each decision happened, so the feed shows a real timestamp
@@ -181,6 +206,7 @@ function ChatCard({ decision, agents, times, badge, competitionId, idPrefix, hig
 function ChatDetail({ decision, competitionId }: { decision: Decision; competitionId: string }): React.JSX.Element {
   const artifact = useQuery({ queryKey: ['artifact', decision.id], queryFn: () => getArtifact(decision.id) });
   const promptArtifact = artifact.data ? decodeBase64Safely(artifact.data.prompt_bytes_base64) : null;
+  const userPrompt = promptArtifact?.bytes ? extractUserPrompt(promptArtifact.bytes) : null;
   const outputArtifact = artifact.data?.output_publicly_releasable ? decodeBase64Safely(artifact.data.output_bytes_base64) : null;
   const usage = Object.entries(decision.usage).map(([name, value]) => `${name}: ${value}`).join(' · ') || 'Not reported';
 
@@ -218,7 +244,15 @@ function ChatDetail({ decision, competitionId }: { decision: Decision; competiti
     {artifact.isLoading && <p role="status">Loading exact artifact bytes…</p>}
     {artifact.error && <div className="query-error" role="alert">{artifact.error.message} <button onClick={() => void artifact.refetch()}>Retry artifacts</button></div>}
     {(promptArtifact?.bytes || outputArtifact?.bytes) && <div className="artifact-grid">
-      {promptArtifact?.bytes && artifact.data && <details className="chat-block chat-disclosure" open><summary>USER_PROMPT · EXACT ARTIFACT BYTES</summary><ArtifactText title="User prompt bytes" bytes={promptArtifact.bytes} hash={artifact.data.prompt_sha256} /></details>}
+      {promptArtifact?.bytes && artifact.data && <>
+        <section className="chat-block chat-user-prompt"><h3>USER_PROMPT</h3>
+          {userPrompt === null ? <p>User prompt extraction is unavailable for this request shape. No prompt text is inferred.</p> : <pre>{userPrompt || '[Empty user prompt]'}</pre>}
+        </section>
+        <details className="chat-block chat-disclosure"><summary>PUBLIC REQUEST ARTIFACT · EXACT SENT BYTES</summary>
+          <p className="public-evidence-scope">Exact public-safe provider request bytes, including system and user messages where supplied. The SHA-256 and download preserve the full request artifact.</p>
+          <ArtifactText title="Public request artifact" bytes={promptArtifact.bytes} hash={artifact.data.prompt_sha256} />
+        </details>
+      </>}
       {outputArtifact?.bytes && artifact.data && <ArtifactText title="Public provider output bytes" bytes={outputArtifact.bytes} hash={artifact.data.output_sha256} />}
     </div>}
     {promptArtifact?.error && <p className="query-error" role="alert">Prompt artifact could not be decoded: {promptArtifact.error}</p>}
