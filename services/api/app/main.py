@@ -43,9 +43,11 @@ def _error_response(
 ) -> JSONResponse:
     response_headers = dict(headers or {})
     retryable = status_code in {429, 500, 502, 503, 504}
-    if retryable and status_code in {429, 500, 503} and "retry-after" not in {
-        key.lower() for key in response_headers
-    }:
+    if (
+        retryable
+        and status_code in {429, 500, 503}
+        and "retry-after" not in {key.lower() for key in response_headers}
+    ):
         response_headers["Retry-After"] = "5"
     response_headers.setdefault("Cache-Control", "no-store")
     return JSONResponse(
@@ -61,8 +63,7 @@ async def public_http_error(_: Request, exc: HTTPException) -> JSONResponse:
         error = "internal_error" if exc.status_code == 500 else "service_unavailable"
         detail = (
             "Competition rules evidence unavailable"
-            if exc.status_code == 503
-            and exc.detail == "Competition rules evidence unavailable"
+            if exc.status_code == 503 and exc.detail == "Competition rules evidence unavailable"
             else "The service could not complete this request."
         )
         return _error_response(
