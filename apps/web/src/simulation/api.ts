@@ -28,6 +28,7 @@ export type EquityChartData = PublicSchema['EquityChartDTO'];
 export type EquityRange = 'ALL' | '72H' | '24H';
 
 export type HistoryQuery = { limit: number; offset: number; agent_id?: string; symbol?: string };
+type PositionHistoryQuery = HistoryQuery & { include_closed?: boolean };
 
 const client = createClient<paths>({ baseUrl: '/api/v1/public' });
 
@@ -89,9 +90,9 @@ export function getTradeHistory(id: string, query: HistoryQuery): Promise<TradeP
   }).then(requireData);
 }
 
-export function getPositionHistory(id: string, query: HistoryQuery): Promise<PositionPage> {
+export function getPositionHistory(id: string, query: PositionHistoryQuery): Promise<PositionPage> {
   return client.GET('/competitions/{competition_id}/positions', {
-    params: { path: { competition_id: id }, query: { ...query, include_closed: true } },
+    params: { path: { competition_id: id }, query: { ...query, include_closed: query.include_closed ?? true } },
   }).then(requireData);
 }
 

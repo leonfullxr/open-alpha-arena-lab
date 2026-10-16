@@ -270,11 +270,11 @@ async function getLastTrades({ competitionId, agentId }: { competitionId: string
 }
 
 async function getAllPositions({ competitionId, agentId }: { competitionId: string; agentId: string }): Promise<{ items: Position[]; total: number; complete: boolean }> {
-  const firstPage = await getPositionHistory(competitionId, { limit: POSITION_PAGE_SIZE, offset: 0, agent_id: agentId });
+  const firstPage = await getPositionHistory(competitionId, { limit: POSITION_PAGE_SIZE, offset: 0, agent_id: agentId, include_closed: false });
   const items = [...firstPage.items];
   const total = firstPage.total;
   while (items.length < total && items.length < 100_000) {
-    const nextPage = await getPositionHistory(competitionId, { limit: POSITION_PAGE_SIZE, offset: items.length, agent_id: agentId });
+    const nextPage = await getPositionHistory(competitionId, { limit: POSITION_PAGE_SIZE, offset: items.length, agent_id: agentId, include_closed: false });
     if (nextPage.items.length === 0) break;
     items.push(...nextPage.items);
   }

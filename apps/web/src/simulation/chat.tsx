@@ -26,9 +26,8 @@ export function extractUserPrompt(requestBytes: Uint8Array): string | null {
     if (!('content' in message)) return null;
     if (typeof message.content === 'string') content.push(message.content);
     else if (Array.isArray(message.content)) {
-      const textParts = message.content.filter((part) => part && typeof part === 'object' && 'type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string');
-      if (!textParts.length) return null;
-      content.push(...textParts.map((part) => part.text));
+      if (!message.content.length || !message.content.every((part) => part && typeof part === 'object' && 'type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string')) return null;
+      content.push(...message.content.map((part) => part.text));
     } else return null;
   }
   return content.join('\n');
@@ -245,9 +244,9 @@ function ChatDetail({ decision, competitionId }: { decision: Decision; competiti
     {artifact.error && <div className="query-error" role="alert">{artifact.error.message} <button onClick={() => void artifact.refetch()}>Retry artifacts</button></div>}
     {(promptArtifact?.bytes || outputArtifact?.bytes) && <div className="artifact-grid">
       {promptArtifact?.bytes && artifact.data && <>
-        <section className="chat-block chat-user-prompt"><h3>USER_PROMPT</h3>
+        <details className="chat-block chat-disclosure chat-user-prompt" open><summary>USER_PROMPT</summary>
           {userPrompt === null ? <p>User prompt extraction is unavailable for this request shape. No prompt text is inferred.</p> : <pre>{userPrompt || '[Empty user prompt]'}</pre>}
-        </section>
+        </details>
         <details className="chat-block chat-disclosure"><summary>PUBLIC REQUEST ARTIFACT · EXACT SENT BYTES</summary>
           <p className="public-evidence-scope">Exact public-safe provider request bytes, including system and user messages where supplied. The SHA-256 and download preserve the full request artifact.</p>
           <ArtifactText title="Public request artifact" bytes={promptArtifact.bytes} hash={artifact.data.prompt_sha256} />

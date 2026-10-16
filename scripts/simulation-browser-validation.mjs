@@ -21,6 +21,7 @@ const screenshotDir = path.join(root, 'docs/screenshots');
 const apiOnly = process.argv.includes('--api-only');
 const includeFixtures = process.argv.includes('--fixtures');
 const functionalOnly = process.argv.includes('--functional-only');
+const focusedReviewFixes = process.argv.includes('--focused-review-fixes');
 const checks = [];
 let browserSessionStarted = false;
 
@@ -132,9 +133,17 @@ async function apiChecks() {
     const request = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(promptBytes));
     if (Array.isArray(request.messages) && request.messages.every((message) => message && typeof message.role === 'string')) {
       const userMessages = request.messages.filter((message) => message.role === 'user');
-      if (userMessages.length && userMessages.every((message) => typeof message.content === 'string')) {
-        expectedUserPromptHash = sha256(Buffer.from(userMessages.map((message) => message.content).join('\n'), 'utf8'));
-      }
+      const content = [];
+      const representable = userMessages.length > 0 && userMessages.every((message) => {
+        if (typeof message.content === 'string') {
+          content.push(message.content);
+          return true;
+        }
+        if (!Array.isArray(message.content) || !message.content.length || !message.content.every((part) => part && part.type === 'text' && typeof part.text === 'string')) return false;
+        content.push(...message.content.map((part) => part.text));
+        return true;
+      });
+      if (representable) expectedUserPromptHash = sha256(Buffer.from(content.join('\n'), 'utf8'));
     }
   } catch {
     expectedUserPromptHash = null;
@@ -280,11 +289,12 @@ async function browserChecks(apiEvidence) {
     `JSON.stringify({url:location.pathname,search:location.search,heading:document.querySelector("main h1")?.textContent.trim(),chatCards:document.querySelectorAll("aside .chat-card").length})`,
     (value) => value.url === '/simulation'
       && value.search.includes(competitionId)
-      && value.heading === 'Open Alpha Arena Lab simulation'
+      && value.heading === 'Open Alpha Arena Lab live research notes'
       && value.chatCards === 10,
     'selected-run narrative and model chat rail',
   );
   for (const [width, height] of viewports) {
+    if (focusedReviewFixes) break;
     if (functionalOnly) break;
     axi('resize', String(width), String(height));
     const metrics = evaluate('JSON.stringify({width:innerWidth,height:innerHeight,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,context:(()=>{const r=document.querySelector(".arena-context")?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,height:r.height}:null})(),tabs:(()=>{const r=document.querySelector(".arena-rail-tabs")?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,height:r.height}:null})()})');
@@ -308,7 +318,7 @@ async function browserChecks(apiEvidence) {
   );
   const screenshots = [];
   for (const [width, height] of viewports) {
-    if (functionalOnly) break;
+    if (functionalOnly || focusedReviewFixes) break;
     axi('resize', String(width), String(height));
     const metrics = evaluate('JSON.stringify({width:innerWidth,height:innerHeight,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,context:(()=>{const r=document.querySelector(".arena-context")?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,height:r.height}:null})(),tabs:(()=>{const r=document.querySelector(".arena-rail-tabs")?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,height:r.height}:null})()})');
     record(`competition-viewport-${width}x${height}-no-document-overflow`,
@@ -322,6 +332,7 @@ async function browserChecks(apiEvidence) {
   }
 
   for (const item of routes) {
+    if (focusedReviewFixes) break;
     const url = new URL(item.route, web).href;
     axi('resize', '1920', '1080');
     axi('open', url);
@@ -329,7 +340,7 @@ async function browserChecks(apiEvidence) {
       'JSON.stringify({url:location.pathname,hasMain:!!document.querySelector("main"),heading:document.querySelector("main h1")?.textContent.trim(),runLinks:[...document.querySelectorAll(".run-table a.run-name")].map(a=>a.href),chartRows:document.querySelectorAll(".equity-line").length,accountRows:document.querySelectorAll(".accounts-panel tbody tr").length,leaderboardRows:document.querySelectorAll(".leaderboard-table tbody tr").length,modelRows:document.querySelectorAll(".model-chart .equity-line").length})',
       (value) => value.url === item.route
         && value.hasMain
-        && (item.name !== 'run-index' || value.heading === 'Open Alpha Arena Lab simulation' && value.runLinks.some((href) => href.endsWith(competitionId)))
+        && (item.name !== 'run-index' || value.heading === 'Open Alpha Arena Lab live research notes' && value.runLinks.some((href) => href.endsWith(competitionId)))
         && (item.name !== 'competition' || value.heading.toLowerCase() === apiEvidence.baseline.name.toLowerCase() && value.chartRows === apiEvidence.baseline.model_names.length)
         && (item.name !== 'leaderboard' || value.heading === 'LEADERBOARD' && value.leaderboardRows === apiEvidence.baseline.model_names.length)
         && (item.name !== 'model-profile' || value.heading === apiEvidence.baseline.model_names[0].toUpperCase() && value.modelRows === 1),
@@ -402,12 +413,12 @@ async function browserChecks(apiEvidence) {
   const expanded = evaluate(`JSON.stringify((()=>{const e=document.querySelector('button[aria-label^="Expand public evidence"]');if(!e)return false;window.__evidenceExpander=e;e.focus();e.click();return true})())`);
   record('chat-evidence-expands', expanded);
   await waitFor('JSON.stringify({download:[...document.querySelectorAll(".artifact-block button")].some(b=>b.textContent.trim()==="DOWNLOAD")})', (value) => value.download, 'expanded artifact DOWNLOAD control');
-  const promptPresentation = await evaluate(`(async()=>{const digest=async value=>{const bytes=new TextEncoder().encode(value);const result=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));return [...result].map(byte=>byte.toString(16).padStart(2,'0')).join('')};const user=document.querySelector('.chat-user-prompt pre');const request=document.querySelector('.artifact-block pre');return JSON.stringify({userHash:user?await digest(user.textContent):null,unavailable:document.querySelector('.chat-user-prompt')?.innerText.includes('extraction is unavailable')??false,requestHash:request?await digest(request.textContent):null,label:[...document.querySelectorAll('.chat-detail summary')].some(e=>e.textContent.trim()==='PUBLIC REQUEST ARTIFACT · EXACT SENT BYTES')})})()`);
+  const promptPresentation = await evaluate(`(async()=>{const digest=async value=>{const bytes=new TextEncoder().encode(value);const result=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));return [...result].map(byte=>byte.toString(16).padStart(2,'0')).join('')};const disclosure=document.querySelector('.chat-user-prompt');const user=disclosure?.querySelector('pre');const request=document.querySelector('.artifact-block pre');return JSON.stringify({userHash:user?await digest(user.textContent):null,unavailable:disclosure?.innerText.includes('extraction is unavailable')??false,userDisclosure:disclosure?.querySelector('summary')?.textContent.trim()==='USER_PROMPT'&&disclosure.open,requestHash:request?await digest(request.textContent):null,label:[...document.querySelectorAll('.chat-detail summary')].some(e=>e.textContent.trim()==='PUBLIC REQUEST ARTIFACT · EXACT SENT BYTES')})})()`);
   record('user-prompt-is-separated-from-exact-public-request',
     apiEvidence.baseline.artifact.user_prompt_sha256 === null
-      ? promptPresentation.unavailable && promptPresentation.userHash === null
-      : promptPresentation.userHash === apiEvidence.baseline.artifact.user_prompt_sha256,
-    { user_prompt_extracted: !promptPresentation.unavailable, request_label_present: promptPresentation.label },
+      ? promptPresentation.unavailable && promptPresentation.userHash === null && promptPresentation.userDisclosure
+      : promptPresentation.userHash === apiEvidence.baseline.artifact.user_prompt_sha256 && promptPresentation.userDisclosure,
+    { user_prompt_extracted: !promptPresentation.unavailable, user_prompt_disclosure_open: promptPresentation.userDisclosure, request_label_present: promptPresentation.label },
   );
   record('exact-public-request-artifact-remains-readable',
     promptPresentation.requestHash === apiEvidence.baseline.artifact.prompt_sha256 && promptPresentation.label,
@@ -434,6 +445,41 @@ async function browserChecks(apiEvidence) {
     { filename: download.filename, size: download.size, captured_byte_length: download.byteLength, sha256: actualDownloadHash, expected_sha256: apiEvidence.baseline.artifact.prompt_sha256 },
   );
   evaluate('JSON.stringify((()=>{if(window.__downloadAudit){URL.createObjectURL=window.__downloadAudit.createObjectURL;HTMLAnchorElement.prototype.click=window.__downloadAudit.anchorClick;delete window.__downloadAudit}return true})())');
+
+  const multimodalSetup = evaluate(`JSON.stringify((()=>{const card=document.querySelectorAll('.chat-card')[1];const button=card?.querySelector('button[aria-label^="Expand public evidence"]');if(!button)return false;const decisionId=card.id.slice(card.id.lastIndexOf('-decision-')+'-decision-'.length);window.__artifactMock={fetch:window.fetch.bind(window),decisionId,button,intercepted:0};window.fetch=async(input,init)=>{const target=typeof input==='string'?input:input.url;const response=await window.__artifactMock.fetch(input,init);if(!target.includes('/decisions/'+window.__artifactMock.decisionId+'/artifact'))return response;window.__artifactMock.intercepted++;const artifact=await response.json();const request=JSON.stringify({messages:[{role:'system',content:'SYSTEM CONTENT MUST NOT APPEAR AS USER_PROMPT'},{role:'user',content:[{type:'text',text:'visible user text'},{type:'image_url',image_url:{url:'data:image/png;base64,AA=='}}]}]});artifact.prompt_bytes_base64=btoa(request);artifact.prompt_sha256='0'.repeat(64);return new Response(JSON.stringify(artifact),{status:200,headers:{'Content-Type':'application/json'}})};button.click();return true})())`);
+  record('multimodal-prompt-fixture-is-installed', multimodalSetup);
+  const multimodalState = await waitFor('JSON.stringify((()=>{const disclosure=document.querySelectorAll(".chat-user-prompt")[1];return {unavailable:disclosure?.innerText.includes("extraction is unavailable"),hasPrompt:!!disclosure?.querySelector("pre"),intercepted:window.__artifactMock?.intercepted??0,open:disclosure?.open}})())',
+    (value) => value.unavailable && !value.hasPrompt && value.intercepted > 0,
+    'mixed text and image user prompt is unavailable',
+  );
+  const multimodalDisclosure = evaluate('JSON.stringify((()=>{const details=document.querySelectorAll(".chat-user-prompt")[1];if(!details)return null;const summary=details.querySelector("summary");summary.click();const closed=!details.open&&!details.innerText.includes("extraction is unavailable");summary.click();return {closed,reopened:details.open,summary:summary.textContent.trim()}})())');
+  record('multimodal-user-prompt-is-withheld-in-accessible-disclosure',
+    multimodalState.unavailable && !multimodalState.hasPrompt && multimodalDisclosure?.closed && multimodalDisclosure.reopened && multimodalDisclosure.summary === 'USER_PROMPT',
+    { intercepted_artifacts: multimodalState.intercepted, disclosure: multimodalDisclosure },
+  );
+  evaluate('JSON.stringify((()=>{if(window.__artifactMock){window.fetch=window.__artifactMock.fetch;delete window.__artifactMock}return true})())');
+
+  if (focusedReviewFixes) {
+    const focusedCompetitionRoute = `/simulation/${competitionId}`;
+    axi('open', new URL(focusedCompetitionRoute, web).href);
+    await waitFor('JSON.stringify({path:location.pathname,main:!!document.querySelector("main")})', (value) => value.path === focusedCompetitionRoute && value.main, 'competition view for focused position check');
+    evaluate('JSON.stringify((()=>{window.__positionFetch=window.fetch.bind(window);window.__positionRequests=[];window.fetch=(input,init)=>{const target=typeof input==="string"?input:input.url;if(target.includes("/positions?"))window.__positionRequests.push(target);return window.__positionFetch(input,init)};return true})())');
+    const overviewRoute = `/simulation/${competitionId}/models/${apiEvidence.baseline.model_ids[0]}`;
+    record('model-link-opens-active-position-overview', clickHref(overviewRoute));
+    const openOnlyRequest = await waitFor('JSON.stringify(window.__positionRequests?.find(url=>new URL(url,location.origin).searchParams.get("include_closed")==="false")??null)', (value) => typeof value === 'string', 'model overview requests open positions only');
+    record('model-overview-uses-open-only-position-pages', new URL(openOnlyRequest, web).searchParams.get('include_closed') === 'false', { request: openOnlyRequest });
+    record('return-to-run-chat-for-position-history-check', clickHref(`/simulation?run=${encodeURIComponent(competitionId)}`));
+    await waitFor(`JSON.stringify({url:location.pathname,run:location.search.includes(${JSON.stringify(competitionId)})})`, (value) => value.url === '/simulation' && value.run, 'selected run before position history check');
+    record('position-history-tab-opens', clickText('[aria-label="Activity views"] [role="tab"]', 'POSITIONS'));
+    const allPositionsRequest = await waitFor('JSON.stringify(window.__positionRequests?.find(url=>new URL(url,location.origin).searchParams.get("include_closed")==="true")??null)', (value) => typeof value === 'string', 'competition position history includes closed records');
+    record('competition-position-history-keeps-closed-records', new URL(allPositionsRequest, web).searchParams.get('include_closed') === 'true', { request: allPositionsRequest });
+    evaluate('JSON.stringify((()=>{if(window.__positionFetch){window.fetch=window.__positionFetch;delete window.__positionFetch;delete window.__positionRequests}return true})())');
+
+    axi('open', new URL('/simulation/blog', web).href);
+    const legacyBlog = await waitFor('JSON.stringify({path:location.pathname,hash:location.hash,methodology:!!document.querySelector("#methodology"),heading:document.querySelector("#methodology #data-title")?.textContent.trim(),landing:!!document.querySelector(".landing-content")})', (value) => value.path === '/' && value.hash === '#methodology' && value.methodology && value.landing, 'legacy blog performs full landing navigation to methodology');
+    record('legacy-blog-reaches-landing-methodology-dom', legacyBlog.heading === 'A traceable record', legacyBlog);
+    return { routes: [narrativeRoute, focusedCompetitionRoute, overviewRoute, '/simulation/blog'], interactions: 'user prompt extraction and disclosure, exact request hash and download, mixed multimodal withholding, open-only and full position query modes, full-document landing methodology redirect' };
+  }
 
   // Keyboard navigation must move focus and selection through both tab sets.
   evaluate('JSON.stringify((()=>{document.getElementById("rail-tab-chat")?.focus();return true})())');
@@ -480,6 +526,24 @@ async function browserChecks(apiEvidence) {
   axi('press', 'ArrowRight');
   const recordTab = await waitFor('JSON.stringify({selected:document.querySelector(".competition-record-tabs [aria-selected=true]")?.textContent.trim(),focus:document.activeElement?.textContent.trim()})', (value) => value.selected === 'POSITIONS' && value.focus === 'POSITIONS', 'competition record tabs ArrowRight');
   record('competition-tabs-support-arrow-key-navigation', true, recordTab);
+
+  evaluate('JSON.stringify((()=>{window.__positionFetch=window.fetch.bind(window);window.__positionRequests=[];window.fetch=(input,init)=>{const target=typeof input==="string"?input:input.url;if(target.includes("/positions?"))window.__positionRequests.push(target);return window.__positionFetch(input,init)};return true})())');
+  const overviewRoute = `/simulation/${competitionId}/models/${apiEvidence.baseline.model_ids[0]}`;
+  record('model-link-opens-active-position-overview', clickHref(overviewRoute));
+  const openOnlyRequest = await waitFor('JSON.stringify(window.__positionRequests?.find(url=>new URL(url,location.origin).searchParams.get("include_closed")==="false")??null)',
+    (value) => typeof value === 'string',
+    'model overview requests open positions only',
+  );
+  record('model-overview-uses-open-only-position-pages', new URL(openOnlyRequest, web).searchParams.get('include_closed') === 'false', { request: openOnlyRequest });
+  record('return-to-run-chat-for-position-history-check', clickHref(`/simulation?run=${encodeURIComponent(competitionId)}`));
+  await waitFor(`JSON.stringify({url:location.pathname,run:location.search.includes(${JSON.stringify(competitionId)})})`, (value) => value.url === '/simulation' && value.run, 'selected run before position history check');
+  record('position-history-tab-opens', clickText('[aria-label="Activity views"] [role="tab"]', 'POSITIONS'));
+  const allPositionsRequest = await waitFor('JSON.stringify(window.__positionRequests?.find(url=>new URL(url,location.origin).searchParams.get("include_closed")==="true")??null)',
+    (value) => typeof value === 'string',
+    'competition position history includes closed records',
+  );
+  record('competition-position-history-keeps-closed-records', new URL(allPositionsRequest, web).searchParams.get('include_closed') === 'true', { request: allPositionsRequest });
+  evaluate('JSON.stringify((()=>{if(window.__positionFetch){window.fetch=window.__positionFetch;delete window.__positionFetch;delete window.__positionRequests}return true})())');
 
   // Model deep links have one id per node and every explicit label resolves.
   for (const modelId of apiEvidence.baseline.model_ids) {
@@ -558,13 +622,20 @@ async function browserChecks(apiEvidence) {
     record('rules-api-503-is-visible-and-retryable', unavailable.text.includes('Retry rules'), { fixture_id: rulesUnavailable.id, source_label: rulesUnavailable.source_label, text: unavailable.text });
   }
 
+  axi('open', new URL('/simulation/blog', web).href);
+  const legacyBlog = await waitFor('JSON.stringify({path:location.pathname,hash:location.hash,methodology:!!document.querySelector("#methodology"),heading:document.querySelector("#methodology #data-title")?.textContent.trim(),landing:!!document.querySelector(".landing-content")})',
+    (value) => value.path === '/' && value.hash === '#methodology' && value.methodology && value.landing,
+    'legacy blog performs full landing navigation to methodology',
+  );
+  record('legacy-blog-reaches-landing-methodology-dom', legacyBlog.heading === 'A traceable record', legacyBlog);
+
   return {
     viewport_sizes: viewports.map(([width, height]) => `${width}x${height}`),
     directory_screenshot: 'simulation-directory-1920x1080.png',
     narrative_screenshots: viewports.map(([width, height]) => `simulation-narrative-${width}x${height}.png`),
     competition_screenshots: screenshots,
     routes,
-    interactions: 'filters, pagination, artifact button/blob SHA-256, keyboard tabs, ranges, series, pointer mapping, palette, model DOM ids/labels, isolated rules verification failure, injected SSE failure/remount recovery',
+    interactions: 'filters, pagination, artifact button/blob SHA-256, multimodal prompt withholding and disclosure, open-only versus full position queries, full landing methodology redirect, keyboard tabs, ranges, series, pointer mapping, palette, model DOM ids/labels, isolated rules verification failure, injected SSE failure/remount recovery',
   };
 }
 
