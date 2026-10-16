@@ -2,7 +2,7 @@ import { useCallback, useMemo, useSyncExternalStore, type ReactNode } from 'reac
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BrandMark } from '../branding';
-import { getCompetition, getCompetitions, getStatus, getTicker, isPublicApiError, nextPollInterval } from './api';
+import { getCompetition, getCompetitions, getStatus, getTicker, isPublicApiError, nextPollInterval, retryPollInterval } from './api';
 import { ActivityRail } from './rail';
 import { profileTag } from './colors';
 import { CompetitionStreamProvider, useCompetitionStream } from './stream';
@@ -35,13 +35,25 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
     queryKey: ['competition', requestedRun ?? ''],
     queryFn: () => getCompetition(requestedRun ?? ''),
     enabled: Boolean(requestedRun),
-    refetchInterval: (query) => ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? nextPollInterval(5_000, query.state.error) : false,
+    refetchInterval: (query) => {
+      const recoveryInterval = retryPollInterval(query.state.error);
+      if (recoveryInterval !== false) return recoveryInterval;
+      return ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? nextPollInterval(5_000, query.state.error) : false;
+    },
   });
   const scopedCompetition = scoped.data;
   const selected = requestedRun ? scopedCompetition : competitionsInDisplayOrder[0];
   const refreshMarket = selected?.state === 'RUNNING' || selected?.state === 'PAUSED';
-  const status = useQuery({ queryKey: ['status'], queryFn: getStatus, refetchInterval: refreshMarket ? (query) => nextPollInterval(5_000, query.state.error) : false });
-  const ticker = useQuery({ queryKey: ['ticker', requestedRun ?? 'aggregate'], queryFn: () => getTicker(requestedRun ? selected?.id : undefined), enabled: !requestedRun || Boolean(selected), refetchInterval: refreshMarket ? (query) => nextPollInterval(5_000, query.state.error) : false });
+  const status = useQuery({ queryKey: ['status'], queryFn: getStatus, refetchInterval: (query) => {
+    const recoveryInterval = retryPollInterval(query.state.error);
+    if (recoveryInterval !== false) return recoveryInterval;
+    return refreshMarket ? nextPollInterval(5_000, query.state.error) : false;
+  } });
+  const ticker = useQuery({ queryKey: ['ticker', requestedRun ?? 'aggregate'], queryFn: () => getTicker(requestedRun ? selected?.id : undefined), enabled: !requestedRun || Boolean(selected), refetchInterval: (query) => {
+    const recoveryInterval = retryPollInterval(query.state.error);
+    if (recoveryInterval !== false) return recoveryInterval;
+    return refreshMarket ? nextPollInterval(5_000, query.state.error) : false;
+  } });
   const streamState = useCompetitionStream(requestedRun ? selected : undefined);
   const routeCompetitionPath = pathCompetition ? `/simulation/${encodeURIComponent(pathCompetition)}` : undefined;
   const narrativePath = selected ? `/simulation?run=${encodeURIComponent(selected.id)}` : '/simulation';

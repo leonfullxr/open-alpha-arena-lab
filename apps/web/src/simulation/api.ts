@@ -52,11 +52,16 @@ export function isPublicApiError(error: unknown): error is PublicApiError {
   return error instanceof PublicApiError;
 }
 
+export function retryPollInterval(error: unknown): number | false {
+  if (!isPublicApiError(error) || !error.retryable) return false;
+  return retryCooldownMs(error);
+}
+
 export function nextPollInterval(defaultMs: number, error: unknown): number | false {
-  if (!isPublicApiError(error)) return defaultMs;
-  if (!error.retryable) return false;
-  if (error.kind === 'service' || error.kind === 'rate-limit' || error.kind === 'offline') return retryCooldownMs(error);
-  return Math.max(defaultMs, error.retryAfterMs ?? 0);
+  const retryInterval = retryPollInterval(error);
+  if (retryInterval !== false) return retryInterval;
+  if (isPublicApiError(error)) return false;
+  return defaultMs;
 }
 
 export function canAutomaticallyRetry(error: unknown, errorUpdatedAt: number): boolean {
@@ -66,9 +71,7 @@ export function canAutomaticallyRetry(error: unknown, errorUpdatedAt: number): b
 }
 
 function retryCooldownMs(error: PublicApiError): number {
-  return error.kind === 'service' || error.kind === 'rate-limit' || error.kind === 'offline'
-    ? Math.max(30_000, error.retryAfterMs ?? 0)
-    : error.retryAfterMs ?? 0;
+  return Math.max(30_000, error.retryAfterMs ?? 0);
 }
 
 type ApiResult<T> = { data?: T; error?: unknown; response: Response };

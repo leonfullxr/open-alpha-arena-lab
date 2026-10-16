@@ -1,7 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getCompetition, getCompetitionMetrics, getEquityChart, getLeaderboard, type Benchmark, type EquityRange } from './api';
+import { getCompetition, getCompetitionMetrics, getEquityChart, getLeaderboard, nextPollInterval, retryPollInterval, type Benchmark, type EquityRange } from './api';
 import { ActivityPanel, type ActivityTab } from './activity';
 import { modelToneClass, profileTag } from './colors';
 import { EquityChart } from './equity-chart';
@@ -19,7 +19,11 @@ export default function CompetitionPage(): React.JSX.Element {
     queryKey: ['competition', competitionId],
     queryFn: () => getCompetition(competitionId),
     enabled: Boolean(competitionId),
-    refetchInterval: (query) => ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? 5_000 : false,
+    refetchInterval: (query) => {
+      const recoveryInterval = retryPollInterval(query.state.error);
+      if (recoveryInterval !== false) return recoveryInterval;
+      return ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? nextPollInterval(5_000, query.state.error) : false;
+    },
   });
   const competition = competitionQuery.data;
   const leaderboard = useQuery({ queryKey: ['competition', competitionId, 'leaderboard'], queryFn: () => getLeaderboard(competitionId), enabled: Boolean(competitionId) });
