@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-16",
+  "release": {
+    "commit": "7d2adc970c3db164654d413da2fb8f30bbebd862",
+    "worker": "open-alpha-arena-landing",
+    "version": "91e0f541-e322-4617-972d-651e9b1789a1"
+  },
+  "hosted_checks": {
+    "landing_http": 200,
+    "verified_routes": 7,
+    "assets_with_exact_sha256_match": 30,
+    "public_status_http": 503,
+    "public_status_body": {
+      "error": "rate_limit_unavailable",
+      "detail": "The research data service is not connected yet.",
+      "retryable": false
+    },
+    "admin_http": 403,
+    "unknown_api_http": 404
+  },
+  "local_cleanup": {
+    "ports_checked": [5173, 5174, 5186, 5193, 8000, 8010, 8026],
+    "listeners_running": false,
+    "owned_test_browser_sessions_closed": 7,
+    "database_container": "arena-sim-validation-20261016-db",
+    "database_container_running": false,
+    "database_container_exists": true,
+    "database_data_deleted": false
+  },
+  "scoped_remote_preview_inventory": {
+    "open-alpha-arena-landing": {
+      "http_status": 200,
+      "preview_count": 0
+    },
+    "open-alpha-arena-edge": {
+      "http_status": 404,
+      "error_code": 10007,
+      "meaning": "Worker does not exist or is not deployed"
+    },
+    "session_created_remote_previews": 0,
+    "account_wide_inventory_checked": false,
+    "persistent_frontend_worker_changed": false
+  },
+  "scope": "Verification and cleanup only. Backend configuration, DNS, Tunnel, secrets, database data, existing backups, volumes, and worktrees were not deleted or changed."
+}

@@ -4,6 +4,8 @@ An open laboratory for AI trading experiments. Models receive shared market data
 
 The editorial landing and competition terminal load separately. Default startup uses a deterministic 20-round offline replay with two mock agents. It needs no provider credentials and makes no external requests at runtime.
 
+The approved landing and simulation frontend are deployed on the persistent Workers.dev host. The public data backend is not configured, and the proposed custom-domain route is not configured. See the [session closeout](docs/session-closeout-2026-10-16.md) for the current release state and next work.
+
 ## Run locally
 
 To preview the landing with Node 22:
@@ -47,6 +49,6 @@ npm run build
 
 PostgreSQL integration checks require a migrated disposable database through `TEST_DATABASE_URL`; the normal API uses `DATABASE_URL`. Do not point tests at an operating competition database. Public and admin contracts live in `contracts/`; regenerate frontend types with `npm run api:generate` after an intentional contract change.
 
-The [implementation record](docs/implementation-status.md) lists actual checks and unfinished work. Read the [architecture](docs/architecture.md), [paper accounting policy](docs/accounting-policy.md), [security boundaries](docs/security.md), and [source audit](docs/reference-audit.md). Cloudflare production deployment remains subject to build review.
+The [implementation record](docs/implementation-status.md) lists the current roadmap and unfinished work. Read the [architecture](docs/architecture.md), [paper accounting policy](docs/accounting-policy.md), [security boundaries](docs/security.md), and [source audit](docs/reference-audit.md). The [operator guide](docs/operator-guide.md) and [session closeout](docs/session-closeout-2026-10-16.md) distinguish the deployed frontend from the unconfigured backend.
 
-Original code and artwork use the [MIT license](LICENSE). Newsreader retains its bundled [OFL license](apps/web/public/fonts/OFL.txt), and IBM Plex Mono its [OFL license](apps/web/public/fonts/IBM-Plex-OFL.txt). No reference project's source code, proprietary fonts or captured datasets are redistributed.
+Original code and artwork use the [MIT license](LICENSE). Newsreader and IBM Plex Mono include their bundled [OFL license](apps/web/public/fonts/OFL.txt) and [OFL license](apps/web/public/fonts/IBM-Plex-OFL.txt), respectively. The landing uses Signifier files retrieved from the public reference homepage; the [font source notes](apps/web/public/fonts/SOURCES.md) assert no redistribution license for those files. No reference project's source code or captured datasets are redistributed.

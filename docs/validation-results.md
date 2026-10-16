@@ -1,8 +1,16 @@
 # Validation results
 
-This record distinguishes primary checks from delegate reports. Production has not been deployed; final acceptance remains in [implementation status](implementation-status.md).
+This record distinguishes primary checks from delegate reports. The approved landing and simulation frontend are live on the persistent Workers.dev host. The backend and proposed custom-domain route are not configured; the hosted public API returns a safe non-retryable 503. Current release evidence appears in the [session closeout](session-closeout-2026-10-16.md); the older counts below describe their original historical runs.
 
-## Primary platform checks
+## Current merged release checks
+
+The current release passed 20 deterministic browser checks for safe API failure copy, missing configuration, malformed and empty error bodies, 429 cooldowns, scoped 404 states, healthy empty data, stale data, manual recovery, and mobile layout. Separate HTTP and asset-hash checks verified seven routes and exact SHA-256 matches for 30 hosted assets. Browser checks at 1920 px desktop and 390 px mobile found no horizontal overflow. Manual retry requested failed data again, and the simulation displayed no fabricated rows.
+
+The latest focused backend checks passed 18 Worker tests and 3 FastAPI boundary tests. Ruff, strict mypy over 56 files, and the frontend build passed. All three PR checks and the full main CI run passed. An independent browser replay preserved eight recorded paper fills through an injected 503 and manual recovery. That check made no provider calls and no real orders.
+
+The hosted public endpoint currently returns `503` with `rate_limit_unavailable`, `retryable: false`, and the detail "The research data service is not connected yet." The admin route returns `403`; an unknown API route returns `404`. No backend bindings, secrets, Access resources, DNS, Tunnel, database, or provider configuration were deployed. See the [error handling validation guide](error-handling-validation.md), [branding validation](branding-validation-2026-10-16.md), and [session closeout](session-closeout-2026-10-16.md).
+
+## Earlier primary platform checks
 
 The primary ran the complete backend suite after the independent-review corrections against a fresh disposable PostgreSQL database migrated through all ten Alembic revisions: **128 passed**. Four additional provider-status negative parameters were then added; that focused suite passed all five cases. This includes the twenty-round/two-agent worker competition, a subprocess restart after round ten, exact ledger reconciliation, competing execution workers, stale fences, crash rollback, immutable evidence, safe public exports and authorization. Ruff, strict mypy over 56 implementation files, generated contracts, web type checking/build, fifteen Worker tests and Wrangler's deployment dry run passed. Alembic reported no schema drift. The remaining test warning comes from upstream Starlette/httpx compatibility; the Alembic path separator is now explicit.
 
@@ -12,7 +20,7 @@ The genuine five-round/two-model smoke finished with ten terminal HTTP 429 respo
 
 Both production npm audits returned zero findings. The Python audit found one development-only pytest advisory, duplicated by the advisory feed. The constraint was raised to `>=9.0.3,<10`, the lock resolved pytest 9.1.1, and the repeat installed-package audit returned no known vulnerabilities. These are dated dependency checks, not a guarantee against unknown vulnerabilities.
 
-## Finance and authentication mutations
+## Historical mutation checks
 
 The primary ran each deliberate wrong implementation in an isolated checkout and restored source bytes after every run. The original required-claim mutation survived because tests supplied null claims instead of omitting them; signed-token omission tests now kill it. All eighteen mutations below are killed.
 
