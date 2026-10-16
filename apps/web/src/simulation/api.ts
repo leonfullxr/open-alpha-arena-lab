@@ -55,7 +55,7 @@ export function isPublicApiError(error: unknown): error is PublicApiError {
 export function nextPollInterval(defaultMs: number, error: unknown): number | false {
   if (!isPublicApiError(error)) return defaultMs;
   if (!error.retryable) return false;
-  if (error.kind === 'service' || error.kind === 'rate-limit') return retryCooldownMs(error);
+  if (error.kind === 'service' || error.kind === 'rate-limit' || error.kind === 'offline') return retryCooldownMs(error);
   return Math.max(defaultMs, error.retryAfterMs ?? 0);
 }
 
@@ -66,7 +66,7 @@ export function canAutomaticallyRetry(error: unknown, errorUpdatedAt: number): b
 }
 
 function retryCooldownMs(error: PublicApiError): number {
-  return error.kind === 'service' || error.kind === 'rate-limit'
+  return error.kind === 'service' || error.kind === 'rate-limit' || error.kind === 'offline'
     ? Math.max(30_000, error.retryAfterMs ?? 0)
     : error.retryAfterMs ?? 0;
 }
