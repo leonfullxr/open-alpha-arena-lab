@@ -42,8 +42,8 @@ def _error_response(
     *, status_code: int, error: str, detail: str, headers: Mapping[str, str] | None = None
 ) -> JSONResponse:
     response_headers = dict(headers or {})
-    retryable = status_code in {429, 502, 503, 504}
-    if retryable and status_code in {429, 503} and "retry-after" not in {
+    retryable = status_code in {429, 500, 502, 503, 504}
+    if retryable and status_code in {429, 500, 503} and "retry-after" not in {
         key.lower() for key in response_headers
     }:
         response_headers["Retry-After"] = "5"

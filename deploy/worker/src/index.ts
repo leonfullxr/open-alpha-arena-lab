@@ -50,7 +50,7 @@ function json(
   code: string,
   options: { detail?: string; retryAfter?: string; retryable?: boolean } = {},
 ): Response {
-  const retryable = options.retryable ?? (status === 429 || status === 502 || status === 503 || status === 504);
+  const retryable = options.retryable ?? (status === 429 || status === 500 || status === 502 || status === 503 || status === 504);
   const headers = new Headers({ "cache-control": "no-store" });
   if (options.retryAfter !== undefined) headers.set("retry-after", options.retryAfter);
   else if (status === 429) headers.set("retry-after", "30");

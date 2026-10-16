@@ -59,8 +59,9 @@ def test_public_unexpected_exception_is_safe_500_and_expected_http_errors_keep_s
         assert unexpected.json() == {
             "error": "internal_error",
             "detail": "The service could not complete this request.",
-            "retryable": False,
+            "retryable": True,
         }
+        assert unexpected.headers["retry-after"] == "5"
         assert "PRIVATE_EXCEPTION_CANARY" not in unexpected.text
     finally:
         public_app.dependency_overrides.pop(get_db, None)

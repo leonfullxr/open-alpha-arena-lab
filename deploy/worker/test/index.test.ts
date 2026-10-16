@@ -345,7 +345,7 @@ describe("edge request boundaries", () => {
     expect(limited.headers.get("retry-after")).toBe("30");
   });
 
-  it("converts unexpected Worker exceptions into a safe non-retryable 500", async () => {
+  it("converts unexpected Worker exceptions into a safe retryable 500", async () => {
     const env = makeEnv({ ASSETS: {
       ...makeEnv().ASSETS,
       fetch: vi.fn(async () => { throw new Error("private asset detail"); }),
@@ -356,8 +356,9 @@ describe("edge request boundaries", () => {
     expect(await response.json()).toEqual({
       error: "internal_error",
       detail: "The service could not complete this request.",
-      retryable: false,
+      retryable: true,
     });
+    expect(response.headers.get("retry-after")).toBe("5");
   });
 
   it("rewrites simulation routes to the canonical landing path and sends a restrictive CSP", async () => {
