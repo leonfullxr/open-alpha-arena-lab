@@ -79,7 +79,7 @@ export default function LeaderboardPage(): React.JSX.Element {
     </header>
 
     {metrics.error && <div className="lb-alert" role="status">Account metrics unavailable: {metrics.error.message}. Leaderboard equity and order data remain available.</div>}
-    <QueryState loading={competitions.isLoading || rowsQuery.isLoading} error={competitions.error ?? rowsQuery.error} retry={() => void (competitions.isError ? competitions.refetch() : rowsQuery.refetch())} empty={rowsQuery.data?.length === 0 ? 'No leaderboard rows are available for this competition.' : !competitionId && !competitions.isLoading ? 'The API has no competitions yet.' : undefined}>
+    <QueryState loading={(competitions.isLoading && !competitions.data) || (rowsQuery.isLoading && !rowsQuery.data)} error={competitions.error ?? rowsQuery.error} stale={Boolean(competitions.data && rowsQuery.data)} retry={() => void (competitions.isError && !competitions.data ? competitions.refetch() : rowsQuery.refetch())} empty={rowsQuery.data?.length === 0 ? 'No leaderboard rows are available for this competition.' : !competitionId && !competitions.isLoading ? 'The API has no competitions yet.' : undefined}>
       {selected && rowsQuery.data && <>
         <div className="lb-tabs" role="tablist" aria-label="Leaderboard metrics">
           <button ref={overallTab} type="button" role="tab" id="lb-tab-overall" aria-selected={tab === 'overall'} aria-controls="lb-panel-overall" tabIndex={tab === 'overall' ? 0 : -1} onClick={() => setTab('overall')} onKeyDown={moveTab}>OVERALL STATS</button>

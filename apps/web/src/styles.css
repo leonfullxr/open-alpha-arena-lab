@@ -40,7 +40,8 @@ a { color: inherit; }
 .skip-link:focus { transform: translateY(0); }
 .site-header { position: relative; z-index: 5; }
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: var(--header-height); padding-block: 32px; }
-.brand-link { display: inline-flex; align-items: center; width: 28px; height: 28px; border-radius: 6.4px; }
+.brand-link { display: inline-flex; align-items: center; width: 178px; height: 66px; border-radius: 6.4px; }
+.brand-lockup { display: block; width: 100%; height: auto; }
 .brand-mark { width: 28px; height: 28px; display: block; overflow: hidden; }
 .site-header nav { display: flex; align-items: center; gap: 4px; margin-right: -12px; }
 .nav-link { height: 28px; display: inline-flex; align-items: center; gap: 4px; border-radius: 6.4px; padding: 0 12px; font-size: 13px; line-height: 18.85px; text-decoration: none; color: var(--muted); transition: background-color 150ms cubic-bezier(.4,0,.2,1), color 150ms cubic-bezier(.4,0,.2,1), transform 150ms cubic-bezier(.4,0,.2,1); }
@@ -148,7 +149,10 @@ h1, h2 { font-weight: 450; }
   .family-legend { column-gap: 16px; }
   .team-art { order: 1; align-self: center; width: 66.666667%; }
 }
-@media (max-width: 639px) { :root { --page-gutter: 24px; } }
+@media (max-width: 639px) {
+  :root { --page-gutter: 24px; }
+  .brand-link { width: 124px; height: 46px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .hero-reveal { animation: none; }
   .chart-wrap.is-chart-landed .chart-label { opacity: 1; animation: none; }

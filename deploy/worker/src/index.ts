@@ -33,8 +33,38 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const FORWARDED_REQUEST_HEADERS = ["accept", "accept-language", "content-type", "origin", "if-none-match", "if-modified-since", "range", "last-event-id"];
 const FORWARDED_RESPONSE_HEADERS = ["accept-ranges", "cache-control", "content-disposition", "content-length", "content-range", "content-type", "etag", "last-modified", "retry-after", "vary"];
 
-function json(status: number, code: string): Response {
-  return Response.json({ error: code }, { status, headers: { "cache-control": "no-store" } });
+const ERROR_DETAILS: Record<string, string> = {
+  not_found: "The requested resource was not found.",
+  method_not_allowed: "This method is not allowed for the requested resource.",
+  query_limit_exceeded: "One or more query parameters are invalid or exceed the allowed limits.",
+  origin_unavailable: "The service is temporarily unavailable. Please retry shortly.",
+  origin_error: "The service could not complete this request. Please retry shortly.",
+  rate_limit_exceeded: "Too many requests. Please retry shortly.",
+  rate_limit_unavailable: "Request protection is temporarily unavailable. Please retry shortly.",
+  admin_access_required: "Administrator access is required.",
+  internal_error: "The service could not complete this request.",
+};
+
+function json(
+  status: number,
+  code: string,
+  options: { detail?: string; retryAfter?: string; retryable?: boolean } = {},
+): Response {
+  const retryable = options.retryable ?? (status === 429 || status === 502 || status === 503 || status === 504);
+  const headers = new Headers({ "cache-control": "no-store" });
+  if (options.retryAfter !== undefined) headers.set("retry-after", options.retryAfter);
+  else if (status === 429) headers.set("retry-after", "30");
+  else if (retryable && (status === 502 || status === 503 || status === 504 || status === 500)) {
+    headers.set("retry-after", "5");
+  }
+  return Response.json(
+    {
+      error: code,
+      detail: options.detail ?? ERROR_DETAILS[code] ?? "The request could not be completed.",
+      retryable,
+    },
+    { status, headers },
+  );
 }
 
 function safePath(pathname: string): boolean {
@@ -163,7 +193,10 @@ function responseHeaders(upstream: Headers, isEventStream: boolean): Headers {
 
 async function proxy(request: Request, url: URL, env: Env, verifiedAdminToken?: string): Promise<Response> {
   if (!env.ARENA_ORIGIN_TOKEN || !env.CF_ACCESS_CLIENT_ID || !env.CF_ACCESS_CLIENT_SECRET) {
-    return json(503, "origin_unavailable");
+    return json(503, "origin_unavailable", {
+      detail: "The research data service is not connected yet.",
+      retryable: false,
+    });
   }
 
   const headers = new Headers();
@@ -189,7 +222,14 @@ async function proxy(request: Request, url: URL, env: Env, verifiedAdminToken?: 
     return json(502, "origin_unavailable");
   }
   if (upstream.status >= 300 && upstream.status < 400) return json(502, "origin_unavailable");
-  if (upstream.status >= 500) return json(502, "origin_unavailable");
+  if (upstream.status >= 500) {
+    const upstreamRetryAfter = upstream.headers.get("retry-after") ?? undefined;
+    return json(
+      upstream.status,
+      upstream.status === 503 ? "origin_unavailable" : "origin_error",
+      { retryAfter: upstreamRetryAfter, retryable: true },
+    );
+  }
 
   const isEventStream = url.pathname.endsWith("/stream");
   return new Response(upstream.body, {
@@ -199,7 +239,12 @@ async function proxy(request: Request, url: URL, env: Env, verifiedAdminToken?: 
 }
 
 async function checkRateLimit(env: Env, key: string): Promise<Response | null> {
-  if (!env.ARENA_RATE_LIMITER) return json(503, "rate_limit_unavailable");
+  if (!env.ARENA_RATE_LIMITER) {
+    return json(503, "rate_limit_unavailable", {
+      detail: "The research data service is not connected yet.",
+      retryable: false,
+    });
+  }
   try {
     const result = await env.ARENA_RATE_LIMITER.limit({ key });
     return result.success ? null : json(429, "rate_limit_exceeded");

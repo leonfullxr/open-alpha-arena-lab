@@ -90,7 +90,11 @@ try {
   assert.equal(unknownApi.status, 404, 'unlisted public APIs should remain hidden');
   const unconfiguredApi = await request('/api/v1/public/status');
   assert.equal(unconfiguredApi.status, 503, 'public APIs should fail closed without the rate-limit binding');
-  assert.deepEqual(await unconfiguredApi.json(), { error: 'rate_limit_unavailable' });
+  assert.deepEqual(await unconfiguredApi.json(), {
+    error: 'rate_limit_unavailable',
+    detail: 'The research data service is not connected yet.',
+    retryable: false,
+  });
 
   console.log(`Wrangler asset-runtime routing checks passed on ${origin}.`);
 } finally {

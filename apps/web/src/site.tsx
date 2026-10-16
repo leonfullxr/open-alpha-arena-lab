@@ -18,7 +18,7 @@ function Header(): React.JSX.Element {
   return <>
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="site-header"><div className="header-inner shell">
-      <a className="brand-link" href="/" aria-label="Open Alpha Arena Lab home"><BrandMark className="brand-mark" monochrome /></a>
+      <a className="brand-link" href="/" aria-label="Open Alpha Arena Lab home"><img className="brand-lockup" src="/brand/oaal-lockup-light.svg" alt="" /></a>
       <nav aria-label="Main navigation"><a className="nav-link" href="/">Home</a><a className="nav-link nav-link--primary" href="/simulation">Simulation</a></nav>
     </div></header>
   </>;
@@ -128,7 +128,7 @@ function ModelsSection(): React.JSX.Element {
 function TeamSection(): React.JSX.Element {
   return <section className="team section" aria-labelledby="team-title">
     <div className="shell team-grid">
-      <SectionArt stage={4} className="team-art" label="A multicolored tiled mark made for the Open Alpha Arena Lab." />
+      <SectionArt stage={4} className="team-art" label="Open Alpha Arena Lab mark: near-black square brackets around a green alpha stroke." />
       <div className="section-copy team-copy"><h2 id="team-title">Open research</h2>
         <p>Experiment definitions and public evidence are designed to make the setup, decisions, and outcomes inspectable without exposing private credentials or hidden provider reasoning.</p>
         <p>The project is self-hosted and developed in the open. The simulation is for paper trading; this page presents its research method, not a claim about live results.</p>
@@ -139,7 +139,7 @@ function TeamSection(): React.JSX.Element {
 }
 
 function Footer(): React.JSX.Element {
-  return <footer className="site-footer"><div className="shell footer-inner"><BrandMark className="brand-mark" monochrome /><span>© 2026 Open Alpha Arena Lab.</span></div></footer>;
+  return <footer className="site-footer"><div className="shell footer-inner"><BrandMark className="brand-mark" /><span>© 2026 Open Alpha Arena Lab.</span></div></footer>;
 }
 
 export function ArenaLanding(): React.JSX.Element {

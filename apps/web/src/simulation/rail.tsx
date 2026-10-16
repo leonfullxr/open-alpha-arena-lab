@@ -87,7 +87,7 @@ function AggregateChat({ competitions, loading, error }: { competitions: Competi
   }, [competitions, competitionId]);
   useEffect(() => { setAgentId(''); }, [competitionId]);
 
-  if (loading || error || competitions.length === 0) {
+  if (competitions.length === 0) {
     return <QueryState loading={loading} error={error} empty="There are no published runs with model activity yet."><div /></QueryState>;
   }
   return <div className="aggregate-chat">
@@ -111,7 +111,7 @@ function AggregateChat({ competitions, loading, error }: { competitions: Competi
 }
 
 function SeasonDetails({ competitions, loading, error }: { competitions: Competition[]; loading?: boolean; error?: Error | null }): React.JSX.Element {
-  if (loading || error) return <QueryState loading={loading} error={error}><div /></QueryState>;
+  if ((loading || error) && competitions.length === 0) return <QueryState loading={loading} error={error}><div /></QueryState>;
   const profiles = [...new Set(competitions.map((item) => item.profile))];
   const models = [...new Map(competitions.flatMap((run) => run.agents.map((agent) => [`${agent.provider}:${agent.model}`, { agent, run }] as const))).values()];
   return <div className="season-details">

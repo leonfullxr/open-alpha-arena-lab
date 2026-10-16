@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getCompetitions, getStatus, type Competition } from './api';
 import { modelToneClass, profileTag } from './colors';
-import { AgentLink, money, QueryState, StatusBadge, timestamp } from './ui';
+import { AgentLink, money, QueryState, StatusBadge, timestamp, useApiAvailability } from './ui';
 
 const PROFILE_NOTES: Record<string, string> = {
   alpha_2025_baseline: 'Runs in this baseline profile share a fixed market snapshot, prompt, rules, symbol universe and execution quote set. Comparisons inside this profile stay directly comparable.',
@@ -13,6 +13,7 @@ export default function DirectoryPage(): React.JSX.Element {
   const location = useLocation();
   const query = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions });
   const status = useQuery({ queryKey: ['status'], queryFn: getStatus });
+  const availability = useApiAvailability();
   const competitions = [...(query.data ?? [])].sort((left, right) => Number(isTestFixture(left.source_label)) - Number(isTestFixture(right.source_label)));
   const baseline = competitions.filter((item) => item.profile === 'alpha_2025_baseline');
   const extended = competitions.filter((item) => item.profile === 'research_extended');
@@ -26,7 +27,7 @@ export default function DirectoryPage(): React.JSX.Element {
   return <>
     <h1 className="visually-hidden">Open Alpha Arena Lab live research notes</h1>
     <div className="index-narrative">
-      <div className="index-notice" role="status">
+      {!(query.isError && availability.error && !exampleRun && !selectedRun) && <div className="index-notice" role="status">
         {selectedRun
           ? <p><b>RUN STATUS · {selectedRun.state}:</b> {selectedRun.name} · {selectedRun.profile} · {selectedRun.source_label} · {selectedRun.agents.length} {selectedRun.agents.length === 1 ? 'account' : 'accounts'}. All balances are virtual.</p>
           : exampleRun
@@ -34,9 +35,9 @@ export default function DirectoryPage(): React.JSX.Element {
             : query.isLoading
               ? <p><b>PUBLIC RUN STATUS:</b> Loading run records from the public API.</p>
               : query.isError
-                ? <p><b>PUBLIC RUN STATUS:</b> The public API did not return run records. Retry from the directory below.</p>
+                ? availability.error ? null : <p><b>PUBLIC RUN STATUS:</b> Run records could not be loaded. Retry from the directory below.</p>
                 : <p><b>PUBLIC RUN STATUS:</b> The public API has not published a run yet. All balances in this lab are virtual.</p>}
-      </div>
+      </div>}
       <article className="index-prose">
         <p>Open Alpha Arena Lab runs controlled paper experiments. Within the baseline profile, accounts share a frozen market snapshot, prompt, rules, symbol universe and execution quote set. Every proposal passes risk checks before it can reach a virtual balance; decisions, fills, fees and funding entries stay attached to their run record.</p>
         <p>The laboratory separates two tracks. The baseline fixes its manifest before a run, so accounts inside it remain directly comparable. Extended research may change tools, strategies, assets or execution policy, and is reported separately from the baseline.</p>
@@ -46,7 +47,7 @@ export default function DirectoryPage(): React.JSX.Element {
     </div>
     <details className="index-directory-details">
       <summary>RUN DATA AND PUBLIC DIRECTORY{query.isSuccess ? ` · ${competitions.length} RECORDS` : ''}</summary>
-      <QueryState loading={query.isLoading} error={query.error} retry={() => void query.refetch()} empty={competitions.length === 0 ? 'The public API has no competitions yet.' : undefined}>
+      <QueryState loading={query.isLoading} error={query.error} stale={Boolean(query.data)} retry={() => void query.refetch()} empty={competitions.length === 0 ? 'The public API has no competitions yet.' : undefined}>
         {selectedRun && <section className="selected-run-data" aria-labelledby="selected-run-title">
           <div><p className="terminal-eyebrow">SELECTED PUBLIC RUN</p><h2 id="selected-run-title">{selectedRun.name}</h2></div><StatusBadge state={selectedRun.state} />
           <dl><div><dt>Profile</dt><dd><code>{selectedRun.profile}</code></dd></div><div><dt>Source</dt><dd>{selectedRun.source_label}</dd></div><div><dt>Window</dt><dd>{selectedRun.started_at ? `${timestamp(selectedRun.started_at)} → ${selectedRun.ended_at ? timestamp(selectedRun.ended_at) : 'open'}` : 'Not started'}</dd></div><div><dt>Accounts</dt><dd>{selectedRun.agents.map((agent) => agent.name).join(' · ') || 'None listed'}</dd></div></dl>

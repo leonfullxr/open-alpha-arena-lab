@@ -65,10 +65,10 @@ export function ModelDetailPage(): React.JSX.Element {
     enabled: Boolean(competition && agentId),
   });
 
-  if (modelQuery.isLoading || competitionsQuery.isLoading) {
+  if ((modelQuery.isLoading && !modelQuery.data) || (competitionsQuery.isLoading && !competitionsQuery.data)) {
     return <div className="md-page"><QueryState loading /></div>;
   }
-  if (modelQuery.error || competitionsQuery.error) {
+  if ((modelQuery.error && !modelQuery.data) || (competitionsQuery.error && !competitionsQuery.data)) {
     return <div className="md-page"><QueryState error={modelQuery.error ?? competitionsQuery.error} retry={() => void (modelQuery.isError ? modelQuery.refetch() : competitionsQuery.refetch())} /></div>;
   }
   if (!model) return <div className="md-page"><QueryState empty="This model account was not returned by the public API." /></div>;
@@ -169,7 +169,7 @@ export function ModelDetailPage(): React.JSX.Element {
     <section className="md-section md-chart-section" aria-label="Equity chart">
       <details className="md-disclosure">
         <summary><span>ACCOUNT EQUITY CHART</span><small>Open the recorded chart and range controls</small></summary>
-        <QueryState loading={equity.isLoading} error={equity.error} retry={() => void equity.refetch()} empty={equity.data?.items.filter((record) => record.agent_id === model.id).length === 0 ? 'No account equity records are available.' : undefined}>
+        <QueryState loading={equity.isLoading} error={equity.error} stale={Boolean(equity.data)} retry={() => void equity.refetch()} empty={equity.data?.items.filter((record) => record.agent_id === model.id).length === 0 ? 'No account equity records are available.' : undefined}>
           {equity.data && agent && <EquityChart agents={[agent]} colorAgents={competition.agents} rows={equity.data.items.filter((record) => record.agent_id === model.id)} initialBalance={competition.initial_balance} sampleCount={equity.data.total_raw} sampled={equity.data.sampled} range={chartRange} onRangeChange={setChartRange} />}
           {equity.data && !agent && <div className="md-state">No competition agent row is available for this account chart.</div>}
         </QueryState>
