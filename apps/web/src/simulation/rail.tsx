@@ -12,13 +12,13 @@ type RailTab = 'chat' | 'details' | 'fills' | 'positions';
 type RailMode = 'aggregate' | 'run';
 
 const AGGREGATE_TABS = [
-  { id: 'chat', label: 'MODEL CHAT' },
+  { id: 'chat', label: 'MODELCHAT' },
   { id: 'details', label: 'SEASON DETAILS' },
 ] as const satisfies ReadonlyArray<{ id: RailTab; label: string }>;
 
 const RUN_TABS = [
-  { id: 'fills', label: 'COMPLETED FILLS' },
-  { id: 'chat', label: 'MODEL CHAT' },
+  { id: 'fills', label: 'TRADES' },
+  { id: 'chat', label: 'MODELCHAT' },
   { id: 'positions', label: 'POSITIONS' },
   { id: 'details', label: 'COMP DETAILS' },
 ] as const satisfies ReadonlyArray<{ id: RailTab; label: string }>;
@@ -153,7 +153,7 @@ function FillsPanel({ competition }: { competition: Competition }): React.JSX.El
   useEffect(() => { setPage((current) => Math.min(current, Math.max(0, pageCount - 1))); }, [pageCount]);
 
   return <section className="rail-fills" aria-labelledby="rail-fills-title">
-    <div className="panel-heading"><div><p className="terminal-eyebrow">RECORDED EXECUTIONS</p><h2 id="rail-fills-title">Completed fills</h2></div><span className="panel-count">{total} API RECORDS</span></div>
+    <div className="panel-heading"><div><p className="terminal-eyebrow">RECORDED EXECUTIONS</p><h2 id="rail-fills-title">Trade fills</h2></div><span className="panel-count">{total} API RECORDS</span></div>
     <p className="complete-history-note">These rows are individual fill records returned by the API; they do not imply a closed round-trip trade.</p>
     {fills.isLoading ? <div className="query-state" role="status">Loading fill records…</div>
       : fills.error ? <div className="query-error" role="alert">{fills.error.message} <button onClick={() => void fills.refetch()}>Retry</button></div>

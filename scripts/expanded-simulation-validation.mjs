@@ -10,7 +10,8 @@ const root = process.cwd();
 const api = new URL(process.env.SIMULATION_API_BASE_URL ?? 'http://127.0.0.1:8026/api/v1/public');
 const web = new URL(process.env.SIMULATION_BASE_URL ?? 'http://127.0.0.1:5186');
 const session = process.env.CHROME_DEVTOOLS_AXI_SESSION ?? 'arena-lab-expanded-tests';
-const evidenceFile = path.join(root, 'docs/evidence/expanded-simulation-validation-2026-10-16.json');
+const artifactPrefix = process.env.SIMULATION_ARTIFACT_PREFIX ?? 'expanded-simulation';
+const evidenceFile = path.resolve(root, process.env.SIMULATION_EVIDENCE_FILE ?? 'docs/evidence/expanded-simulation-validation-2026-10-16.json');
 const screenshotDir = path.join(root, 'docs/screenshots');
 const sourceDir = process.env.SIMULATION_REFERENCE_DIR ?? path.join(root, 'logos/site');
 const checks = [];
@@ -130,8 +131,8 @@ async function main() {
       }
     }
     if (view.action === 'selected-run-chat') {
-      await waitFor('JSON.stringify({tabs:[...document.querySelectorAll(".arena-rail-tabs [role=tab]")].map(t=>t.textContent.trim()),cards:document.querySelectorAll(".chat-card").length})',
-        (value) => value.tabs.includes('COMPLETED FILLS') && value.tabs.includes('POSITIONS') && value.cards === 10, 'selected run activity rail');
+      await waitFor('JSON.stringify({tabs:[...document.querySelectorAll(".arena-rail-tabs [role=tab]")].map(t=>t.textContent.trim()),ids:[...document.querySelectorAll(".arena-rail-tabs [role=tab]")].map(t=>t.id),cards:document.querySelectorAll(".chat-card").length})',
+        (value) => value.ids.includes('rail-tab-fills') && value.ids.includes('rail-tab-chat') && value.ids.includes('rail-tab-positions') && value.cards === 10, 'selected run activity rail');
       evaluate('JSON.stringify((()=>{document.querySelector(".chat-expand")?.click();return true})())');
       await waitFor('JSON.stringify({detail:!!document.querySelector(".chat-detail"),prompt:document.body.textContent.includes("USER_PROMPT"),trading:document.body.textContent.includes("TRADING_DECISIONS")})',
         (value) => value.detail && value.prompt && value.trading, 'selected-run chat public prompt and proposal disclosures');
@@ -182,7 +183,7 @@ async function main() {
         record('leaderboard-average-13-column-table-fits-desktop-container', fits && tableFit.columns === 13, tableFit);
       }
     }
-    const filename = `expanded-simulation-${view.key}-1920x1080.png`;
+    const filename = `${artifactPrefix}-${view.key}-1920x1080.png`;
     axi('screenshot', path.join('docs/screenshots', filename));
     const sourceBytes = await readFile(path.join(sourceDir, view.source));
     screenshots.push({ filename, route, source: view.source, source_sha256: sha256(sourceBytes), source_bytes: sourceBytes.length, adaptation: view.note });
@@ -203,7 +204,7 @@ async function main() {
     const fit = metrics.documentWidth <= width + 1 && metrics.bodyWidth <= width + 1 && metrics.liveLink?.visible && metrics.liveLink.right <= width + 1 && railFits;
     record(`live-layout-${width}x${height}-navigation-and-rail-fit`, fit, metrics);
     if (width === 390) {
-      const filename = 'expanded-simulation-live-mobile-390x844.png';
+      const filename = `${artifactPrefix}-live-mobile-390x844.png`;
       axi('screenshot', path.join('docs/screenshots', filename));
       layoutScreenshots.push(filename);
     }
@@ -222,7 +223,7 @@ async function main() {
     const fit = metrics.documentWidth <= width + 1 && metrics.bodyWidth <= width + 1 && metrics.nav?.visible && metrics.nav.right <= width + 1 && (width !== 1920 || Math.abs(metrics.page.width - 1568) <= 2) && (width !== 390 || metrics.table?.scroll > metrics.table?.client && metrics.table.right <= width + 1);
     record(`leaderboard-layout-${width}x${height}-max-width-and-table-fit`, fit, metrics);
     if (width === 390) {
-      const filename = 'expanded-simulation-leaderboard-mobile-390x844.png';
+      const filename = `${artifactPrefix}-leaderboard-mobile-390x844.png`;
       axi('screenshot', path.join('docs/screenshots', filename));
       layoutScreenshots.push(filename);
     }
@@ -404,7 +405,7 @@ async function main() {
   open(modelRoute);
   await waitFor('JSON.stringify({path:location.pathname,fills:!!document.querySelector(".md-fill-table")})', (value) => value.path === modelRoute && value.fills, 'model page before mobile capture');
   axi('resize', '390', '844');
-  const modelMobile = 'expanded-simulation-model-mobile-390x844.png';
+  const modelMobile = `${artifactPrefix}-model-mobile-390x844.png`;
   axi('screenshot', path.join('docs/screenshots', modelMobile));
   layoutScreenshots.push(modelMobile);
 
@@ -432,7 +433,7 @@ async function main() {
   const averageMobileTable = await waitFor('JSON.stringify((()=>{const wrap=document.querySelector("#lb-panel-advanced .lb-table-wrap");const rect=wrap?.getBoundingClientRect();return {documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,client:wrap?.clientWidth,scroll:wrap?.scrollWidth,right:rect?.right,columns:wrap?.querySelector("table:not(.lb-detail-table) tbody tr")?.children.length}})())',
     (value) => value.columns === 13, 'average advanced mobile table');
   record('leaderboard-average-mobile-table-scrolls-locally', averageMobileTable.documentWidth <= 391 && averageMobileTable.bodyWidth <= 391 && averageMobileTable.scroll > averageMobileTable.client && averageMobileTable.right <= 391, averageMobileTable);
-  const averageMobileScreenshot = 'expanded-simulation-leaderboard-mobile-390x844.png';
+  const averageMobileScreenshot = `${artifactPrefix}-leaderboard-mobile-390x844.png`;
   axi('screenshot', path.join('docs/screenshots', averageMobileScreenshot));
 
   const network = axi('network');

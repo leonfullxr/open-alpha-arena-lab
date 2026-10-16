@@ -1,7 +1,7 @@
 .md-page {
   width: min(100%, 1216px);
   margin: 64px auto 72px;
-  color: #353d49;
+  color: var(--ink);
   font: 400 13px/1.45 var(--mono);
 }
 .md-page > * { min-width: 0; }
@@ -11,8 +11,8 @@
   min-height: 42px;
   align-items: center;
   padding: 0 16px;
-  border: 1px solid #788392;
-  color: #414b59;
+  border: 1px solid var(--hairline);
+  color: var(--link);
   text-decoration: none;
   font-size: 14px;
   letter-spacing: .03em;
@@ -25,7 +25,7 @@
   max-width: 100%;
   margin: 0 0 12px;
   padding: 8px 16px 7px;
-  border: 1px solid #151515;
+  border: 1px solid var(--ink);
   background: rgba(255,255,255,.24);
 }
 .md-profile-badge {
@@ -66,17 +66,17 @@
 .md-account-line > span { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 7px; color: #535b67; font-size: 13px; letter-spacing: .01em; }
 .md-account-line strong { color: #222832; font-size: 14px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .md-account-line small { flex-basis: 100%; color: #828994; font-size: 8px; line-height: 1.3; }
-.md-summary { display: grid; min-height: 92px; grid-template-columns: repeat(3,minmax(0,1fr)); margin-bottom: 12px; border: 1px solid #151515; }
+.md-summary { display: grid; min-height: 90px; grid-template-columns: repeat(3,minmax(0,1fr)); margin-bottom: 12px; border: 1px solid var(--ink); }
 .md-summary-metric { display: flex; min-width: 0; flex-direction: column; justify-content: center; gap: 3px; padding: 12px 16px; }
 .md-summary-metric:nth-child(2) { align-items: center; text-align: center; }
 .md-summary-metric:nth-child(3) { align-items: flex-end; text-align: right; }
 .md-summary-metric > span { color: #626b77; font-size: 16px; font-weight: 700; }
 .md-summary-metric strong { color: #5b6470; font-size: 21px; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .md-summary-metric small { color: #9399a1; font-size: 8px; line-height: 1.3; }
-.md-positive { color: #00bf00 !important; }
-.md-negative { color: #ff0000 !important; }
+.md-positive { color: var(--positive) !important; }
+.md-negative { color: var(--negative) !important; }
 .md-insights { display: grid; grid-template-columns: minmax(0,2fr) minmax(250px,1fr); gap: 16px; margin-bottom: 12px; }
-.md-stat-panel { min-width: 0; min-height: 128px; padding: 10px 15px; border: 1px solid #151515; }
+.md-stat-panel { min-width: 0; min-height: 128px; padding: 10px 15px; border: 1px solid var(--ink); }
 .md-performance { display: flex; flex-direction: column; justify-content: center; gap: 4px; }
 .md-metric { min-width: 0; display: flex; align-items: baseline; gap: 7px; }
 .md-metric > span { color: #606975; font-size: 15px; }
@@ -85,7 +85,7 @@
 .md-hold-times { display: grid; align-content: center; gap: 7px; }
 .md-section-kicker { margin: 0 0 2px; color: #444b54; font-size: 10px; font-weight: 700; text-align: center; }
 .md-hold-times .md-metric { justify-content: space-between; }
-.md-section { margin: 0 0 12px; padding: 15px 16px 16px; border: 1px solid #151515; }
+.md-section { margin: 0 0 12px; padding: 15px 16px 16px; border: 1px solid var(--ink); }
 .md-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 14px; }
 .md-section-heading h2 { margin: 2px 0 0; color: #252b33; font-size: 16px; line-height: 1.25; }
 .md-total-upnl { display: flex; align-items: baseline; gap: 7px; color: #505964; font-size: 9px; }
@@ -127,7 +127,7 @@
 .md-method-notes p { margin: 0 0 8px; }
 .md-method-notes p:last-child { margin-bottom: 0; }
 .md-bottom-back { display: flex; justify-content: center; margin: 12px 0 0; }
-.md-bottom-back a { display: inline-flex; min-height: 46px; align-items: center; padding: 0 22px; border: 1px solid #788392; color: #414b59; font-size: 12px; font-weight: 700; text-decoration: none; }
+.md-bottom-back a { display: inline-flex; min-height: 46px; align-items: center; padding: 0 22px; border: 1px solid var(--hairline); color: var(--link); font-size: 12px; font-weight: 700; text-decoration: none; }
 .md-bottom-back a:hover { background: #eef0f2; }
 .md-state { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 42px; padding: 10px; border: 1px solid #d4d7d9; background: rgba(255,255,255,.36); color: #69717b; font-size: 10px; }
 .md-state--error { border-color: #b94242; color: #a32626; }

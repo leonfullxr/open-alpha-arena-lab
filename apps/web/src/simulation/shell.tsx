@@ -75,18 +75,19 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
           <span className="arena-nav-divider" aria-hidden="true" />
           <NavLink to={modelsPath} end>MODELS</NavLink>
           <span className="arena-nav-divider" aria-hidden="true" />
-          <NavLink to="/simulation/blog" end>BLOG</NavLink>
+          <a href="/#methodology">BLOG</a>
           <span className="arena-nav-divider" aria-hidden="true" />
           <a href="/#methodology">ABOUT</a>
         </nav>
-        <a className="arena-utility" href="https://github.com/leonfullxr/open-alpha-arena-lab" target="_blank" rel="noreferrer">GITHUB ↗</a>
+        <div className="arena-utility-group"><span className="arena-nav-divider" aria-hidden="true" /><a className="arena-utility" href="https://github.com/leonfullxr/open-alpha-arena-lab" target="_blank" rel="noreferrer">GITHUB ↗</a></div>
       </div>
-      <div className="arena-band">
+    </header>
+    <div className="arena-band">
         <div className="arena-runs" role="group" aria-label="Competitions">
-          <Link to="/simulation" aria-current={!requestedRun ? 'page' : undefined} className={`arena-run-tab arena-run-tab--index${!requestedRun ? ' active' : ''}`}>RUN INDEX</Link>
-          {competitionsInDisplayOrder.map((competition) => {
+          <Link to="/simulation" aria-current={!requestedRun ? 'page' : undefined} className={`arena-run-tab arena-run-tab--index${!requestedRun ? ' active' : ''}`}>AGGREGATE INDEX</Link>
+          {competitionsInDisplayOrder.map((competition, index) => {
             const active = requestedRun === competition.id;
-            return <Link key={competition.id} title={`${competition.name} · ${competition.source_label}`} to={`/simulation?run=${encodeURIComponent(competition.id)}`} aria-current={active ? 'page' : undefined} className={`arena-run-tab ${competition.profile === 'alpha_2025_baseline' ? 'arena-run-tab--baseline' : 'arena-run-tab--extended'}${active ? ' active' : ''}`}><span className="arena-run-source">{isTestFixture(competition.source_label) ? 'TEST FIXTURE · ' : ''}</span>{competition.name}</Link>;
+            return <Link key={competition.id} title={`${competition.name} · ${competition.source_label}`} to={`/simulation?run=${encodeURIComponent(competition.id)}`} aria-current={active ? 'page' : undefined} className={`arena-run-tab arena-run-tab--competition-${index % 4}${active ? ' active' : ''}`}><span className="arena-run-number">{index + 1}:</span><span className="arena-run-source">{isTestFixture(competition.source_label) ? 'TEST FIXTURE · ' : ''}</span>{competition.name}</Link>;
           })}
         </div>
         <div className="arena-ticker" aria-label="Market ticker">
@@ -102,8 +103,7 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
             {stale && !status.isError && !ticker.isError && <b className="ticker-stale">STALE</b>}
           </div>
         </div>
-      </div>
-    </header>
+    </div>
     {status.isError && <div className="system-notice" role="status"><b>PUBLIC API UNAVAILABLE.</b><span>{status.error.message} The page shell remains usable; run records cannot load.</span><button onClick={() => void status.refetch()}>RETRY</button></div>}
     {ticker.isError && !status.isError && <div className="system-notice" role="alert"><b>MARKET TICKER UNAVAILABLE.</b><span>{ticker.error.message}</span><button onClick={() => void ticker.refetch()}>RETRY</button></div>}
     <CompetitionStreamProvider state={streamState}><div className="arena-body">
