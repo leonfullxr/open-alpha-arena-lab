@@ -1,6 +1,16 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Competition } from './api';
+
+const CompetitionStreamContext = createContext<'paused' | 'connected' | 'reconnecting'>('paused');
+
+export function CompetitionStreamProvider({ state, children }: { state: 'paused' | 'connected' | 'reconnecting'; children: ReactNode }): React.JSX.Element {
+  return <CompetitionStreamContext.Provider value={state}>{children}</CompetitionStreamContext.Provider>;
+}
+
+export function useCompetitionStreamState(): 'paused' | 'connected' | 'reconnecting' {
+  return useContext(CompetitionStreamContext);
+}
 
 export function useCompetitionStream(competition: Competition | undefined): 'paused' | 'connected' | 'reconnecting' {
   const queryClient = useQueryClient();

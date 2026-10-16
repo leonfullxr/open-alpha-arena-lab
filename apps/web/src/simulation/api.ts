@@ -33,10 +33,13 @@ const client = createClient<paths>({ baseUrl: '/api/v1/public' });
 
 async function requireData<T>(result: { data?: T; error?: unknown; response: Response }): Promise<T> {
   if (result.error !== undefined) {
-    const message = typeof result.error === 'object' && result.error !== null && 'detail' in result.error
+    const detail = typeof result.error === 'object' && result.error !== null && 'detail' in result.error
       ? String(result.error.detail)
-      : `${result.response.status} ${result.response.statusText}`;
-    throw new Error(message || 'The public API request failed');
+      : null;
+    if (detail) throw new Error(detail);
+    const status = result.response.status;
+    if (status >= 500) throw new Error(`The public API answered ${status} without a detail message.`);
+    throw new Error(`${status} ${result.response.statusText}` || 'The public API request failed');
   }
   if (result.data === undefined) throw new Error('The API returned an empty response');
   return result.data;
