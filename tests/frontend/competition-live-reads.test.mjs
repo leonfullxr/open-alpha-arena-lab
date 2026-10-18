@@ -177,6 +177,25 @@ test('read options share the competition keys used by live invalidation', () => 
   assert.deepEqual(competitionReadOptions.model(modelId).queryKey, ['model', modelId]);
 });
 
+test('live competition polling recovers missing detail and stops for permanent or finished results', () => {
+  const queryClient = new QueryClient();
+  const options = competitionReadOptions.liveCompetition(competitionId);
+  const query = queryClient.getQueryCache().build(queryClient, options);
+
+  query.setState({ ...query.state, error: new PublicApiError('Unavailable', 'server-error', 503, undefined, true) });
+  assert.equal(options.refetchInterval(query), 30_000);
+
+  query.setState({ ...query.state, error: new PublicApiError('Missing', 'not-found', 404, 'not_found', false) });
+  assert.equal(options.refetchInterval(query), false);
+
+  query.setState({ ...query.state, data: competition('FINISHED'), error: null });
+  assert.equal(options.refetchInterval(query), false);
+
+  query.setState({ ...query.state, data: competition('RUNNING') });
+  assert.equal(options.refetchInterval(query), 5_000);
+  queryClient.clear();
+});
+
 test('a cached selected-competition error does not hide a valid model from another competition', async () => {
   const missingCompetitionId = 'missing-selected-competition';
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });

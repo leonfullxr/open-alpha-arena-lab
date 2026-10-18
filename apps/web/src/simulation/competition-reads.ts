@@ -75,7 +75,7 @@ export const competitionReadOptions = {
   competition: competitionDetailOptions,
   liveCompetition: (id: string) => queryOptions({
     ...competitionDetailOptions(id),
-    refetchInterval: (query) => liveCompetitionStates.some((state) => state === query.state.data?.state)
+    refetchInterval: (query) => liveCompetitionStates.some((state) => state === query.state.data?.state) || !query.state.data
       ? nextPollInterval(liveMarketRefreshMs, query.state.error)
       : false,
   }),
