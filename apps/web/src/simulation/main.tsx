@@ -1,22 +1,23 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '../tokens.css';
 import '../simulation.css';
-import { createSimulationQueryClient } from './query-client';
 import { SimulationShell } from './shell';
 
 const DirectoryPage = React.lazy(() => import('./directory'));
 const CompetitionPage = React.lazy(() => import('./competition'));
 const LeaderboardPage = React.lazy(() => import('./leaderboard'));
 const ModelPage = React.lazy(() => import('./model'));
+const ModelsDirectoryPage = React.lazy(() => import('./models-directory'));
 
-function LegacyBlogRedirect(): React.JSX.Element {
-  useEffect(() => { window.location.replace('/#methodology'); }, []);
-  return <div className="page-loading" role="status">Opening methodology…</div>;
-}
-
-const queryClient = createSimulationQueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 2_000 },
+    mutations: { retry: 0 },
+  },
+});
 
 export function mount(): void {
   const rootElement = document.getElementById('root');
@@ -29,9 +30,9 @@ export function mount(): void {
             <Suspense fallback={<div className="page-loading" role="status">Loading this view…</div>}>
               <Routes>
                 <Route path="/simulation" element={<DirectoryPage />} />
-                <Route path="/simulation/blog" element={<LegacyBlogRedirect />} />
                 <Route path="/simulation/:competitionId" element={<CompetitionPage />} />
                 <Route path="/simulation/:competitionId/leaderboard" element={<LeaderboardPage />} />
+                <Route path="/simulation/:competitionId/models" element={<ModelsDirectoryPage />} />
                 <Route path="/simulation/:competitionId/models/:agentId" element={<ModelPage />} />
                 <Route path="*" element={<Navigate to="/simulation" replace />} />
               </Routes>
