@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 from app.db.models import (
     Account as AccountRow,
@@ -20,38 +18,31 @@ from app.db.models import (
 from app.db.models import (
     Position as PositionRow,
 )
-from app.engine.finance import (
-    Account,
-    Instrument,
-    Quote,
-    Rules,
-    protective_exit,
+from app.engine.finance import Account, Instrument, Quote, Rules, protective_exit
+from app.services.execution._context import (
+    _account,
+    _instruments,
+    _normalize_timestamp,
+    _parse_json,
+    _rules,
+    _string_list,
+    _timedelta_seconds,
+    _timestamp_seconds,
+    _transaction,
 )
+from app.services.execution._effects import (
+    _append_event,
+    _persist_account_row,
+    _persist_engine_result,
+    _sync_position_rows,
+)
+from app.services.execution._receipts import ProtectionCycleReceipt
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-
-if TYPE_CHECKING:
-    from app.services.execution import _Context
-
-
-@dataclass(frozen=True, slots=True)
-class ProtectionCycleReceipt:
-    checked_accounts: int
-    protective_exits: int
 
 
 def run_protective_exit_cycle(db: Session, *, quote_set_id: str) -> ProtectionCycleReceipt:
     """Check open positions even when no inference result or complete quote universe exists."""
-    from app.services.execution import (
-        _account,
-        _instruments,
-        _normalize_timestamp,
-        _parse_json,
-        _rules,
-        _string_list,
-        _transaction,
-    )
-
     checked = exits = 0
     with _transaction(db):
         now_value = db.scalar(select(func.now()))
@@ -136,28 +127,10 @@ def run_protective_exit_cycle(db: Session, *, quote_set_id: str) -> ProtectionCy
                     now=now,
                 )
                 if count:
-                    _persist_account(account_row, account)
+                    _persist_account_row(account_row, account)
                     exits += count
                 checked += 1
     return ProtectionCycleReceipt(checked, exits)
-
-
-def apply_context_protection(
-    db: Session, context: _Context
-) -> tuple[int, Account, tuple[PositionRow, ...]]:
-    """Apply stops using the same accounting path as the independent protection cycle."""
-    return _apply_triggers(
-        db,
-        competition=context.competition,
-        account_row=context.account_row,
-        account=context.account,
-        positions=context.positions,
-        rules=context.rules,
-        instruments=context.instruments,
-        quotes=context.quotes,
-        quote_set_id=context.quote_set_id,
-        now=context.now,
-    )
 
 
 def _apply_triggers(
@@ -173,16 +146,6 @@ def _apply_triggers(
     quote_set_id: str,
     now: datetime,
 ) -> tuple[int, Account, tuple[PositionRow, ...]]:
-    from app.services.execution import (
-        _append_event as append_event,
-    )
-    from app.services.execution import (
-        _persist_engine_result as persist_engine_result,
-    )
-    from app.services.execution import (
-        _sync_position_rows as sync_position_rows,
-    )
-
     count = 0
     for row in positions:
         quote = quotes.get(row.symbol)
@@ -213,7 +176,7 @@ def _apply_triggers(
         if action_result is None:
             continue
         event_name, event_detail = action_result.events[0]
-        append_event(
+        _append_event(
             db,
             competition,
             account_id=account_row.id,
@@ -225,7 +188,7 @@ def _apply_triggers(
             },
             at=now,
         )
-        order = persist_engine_result(
+        order = _persist_engine_result(
             db,
             action_result,
             account_id=account_row.id,
@@ -239,7 +202,7 @@ def _apply_triggers(
         if order is None:
             raise RuntimeError("protective exit has no persisted fill order")
         account = action_result.account
-        positions = sync_position_rows(db, account_row.id, positions, account, row.symbol, now)
+        positions = _sync_position_rows(db, account_row.id, positions, account, row.symbol, now)
         count += 1
     return count, account, positions
 
@@ -257,37 +220,14 @@ def _held_quotes(
 
 
 def _engine_quote(row: MarketQuote, now: datetime) -> Quote:
-    source_at = _normalize(row.source_at)
+    source_at = _normalize_timestamp(row.source_at)
     return Quote(
         row.symbol,
         row.bid,
         row.ask,
         row.mark,
-        _seconds(now - source_at),
-        _seconds(source_at - datetime(1970, 1, 1, tzinfo=UTC)),
+        _timedelta_seconds(now - source_at),
+        _timestamp_seconds(source_at),
     )
 
 
-def _persist_account(row: AccountRow, account: Account) -> None:
-    row.cash = account.cash
-    row.realized_pnl = account.realized_pnl
-    row.fees = account.fees
-    row.funding = account.funding
-    row.reserved_margin = account.reserved_margin
-    row.halted = account.halted
-    row.peak_equity = account.peak_equity
-    row.daily_baseline_equity = account.daily_baseline_equity
-    row.risk_day = account.risk_day
-    row.version += 1
-
-
-def _normalize(value: datetime) -> datetime:
-    if value.tzinfo is None or value.utcoffset() is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
-
-
-def _seconds(value: timedelta) -> Decimal:
-    return Decimal(value.days * 86400 + value.seconds) + Decimal(value.microseconds) / Decimal(
-        1_000_000
-    )

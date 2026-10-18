@@ -38,10 +38,10 @@ from app.market.types import BASELINE_SYMBOLS, InstrumentSpec, MarketQuoteSet
 from app.market.types import MarketQuote as Quote
 from app.services.execution import (
     ExecutionReceipt,
-    _rules,
     execute_job,
     run_protective_exit_cycle,
 )
+from app.services.execution._context import _rules
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.exc import DBAPIError
@@ -465,7 +465,7 @@ def test_postgres_fencing_crash_rollback_and_competing_protective_closes(
         with Session(engine) as stale_db, pytest.raises(ValueError, match="stale"):
             execute_job(stale_db, job_id, fence + 1, quote_set_id)
 
-        import app.services.execution as execution_module
+        import app.services.execution._jobs as execution_module
 
         def fail_after_protection(_db: Session, _context: object) -> None:
             raise RuntimeError("simulated post-protection crash")

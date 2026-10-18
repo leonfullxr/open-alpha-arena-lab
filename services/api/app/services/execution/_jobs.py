@@ -1,13 +1,8 @@
 from __future__ import annotations
 
-import json
 import uuid
-from collections.abc import Iterator
-from contextlib import contextmanager
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
-from typing import Any
 
 from app.db.models import (
     Account as AccountRow,
@@ -16,82 +11,43 @@ from app.db.models import (
     AgentRun,
     Competition,
     DecisionRound,
-    DomainEvent,
-    EquitySample,
     InvocationAttempt,
     InvocationResult,
-    LedgerJournal,
-    LedgerPosting,
     MarketQuote,
     MarketSnapshot,
-    Order,
     QuoteSet,
     RiskEvaluation,
     RoundAgentJob,
     TradeProposal,
 )
 from app.db.models import (
-    Fill as FillRow,
-)
-from app.db.models import (
     Position as PositionRow,
 )
-from app.engine.finance import (
-    Account,
-    Action,
-    EngineResult,
-    FinanceError,
-    Instrument,
-    Position,
-    Quote,
-    Rules,
-    Side,
-    apply_action,
-    equity,
-    rules_from_config,
-    unrealized_pnl,
-)
+from app.engine.finance import Action, EngineResult, FinanceError, Quote, apply_action
 from app.llm.schema import ProposalBatch, ProposalOutputError, parse_proposal_output
+from app.services.execution._context import (
+    _account,
+    _Context,
+    _instruments,
+    _normalize_timestamp,
+    _parse_json,
+    _rules,
+    _string_list,
+    _timedelta_seconds,
+    _timestamp_seconds,
+    _transaction,
+)
+from app.services.execution._effects import (
+    _append_event,
+    _persist_account_and_equity,
+    _persist_engine_result,
+    _sync_position_rows,
+)
+from app.services.execution._protection import _apply_triggers
+from app.services.execution._receipts import ExecutionReceipt
 from app.services.reconciliation import reconcile_ledger
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-
-
-@dataclass(frozen=True, slots=True)
-class ExecutionReceipt:
-    job_id: str
-    account_id: str
-    state: str
-    accepted_proposals: int
-    rejected_proposals: int
-    protective_exits: int
-    idempotent_replay: bool
-
-
-@dataclass(frozen=True, slots=True)
-class ProtectionCycleReceipt:
-    checked_accounts: int
-    protective_exits: int
-
-
-@dataclass(slots=True)
-class _Context:
-    competition: Competition
-    job: RoundAgentJob
-    round: DecisionRound
-    account_row: AccountRow
-    account: Account
-    positions: tuple[PositionRow, ...]
-    rules: Rules
-    symbols: tuple[str, ...]
-    instruments: dict[str, Instrument]
-    instrument_max_leverage: dict[str, int]
-    quotes: dict[str, Quote]
-    quote_trusted: bool
-    quote_set_id: str
-    now: datetime
-    output: bytes
-    protectively_closed_symbols: set[str] = field(default_factory=set)
 
 
 def execute_job(
@@ -341,19 +297,20 @@ def _terminal_replay(db: Session, job_id: str, fence: int) -> ExecutionReceipt |
     )
 
 
-def run_protective_exit_cycle(db: Session, *, quote_set_id: str) -> ProtectionCycleReceipt:
-    """Apply protective orders independently from model responses."""
-    from app.services.execution_protection import run_protective_exit_cycle as run_cycle
-
-    receipt = run_cycle(db, quote_set_id=quote_set_id)
-    return ProtectionCycleReceipt(receipt.checked_accounts, receipt.protective_exits)
-
-
 def _apply_protective_exits(db: Session, context: _Context) -> int:
-    from app.services.execution_protection import apply_context_protection
-
     before = set(context.account.positions)
-    count, context.account, context.positions = apply_context_protection(db, context)
+    count, context.account, context.positions = _apply_triggers(
+        db,
+        competition=context.competition,
+        account_row=context.account_row,
+        account=context.account,
+        positions=context.positions,
+        rules=context.rules,
+        instruments=context.instruments,
+        quotes=context.quotes,
+        quote_set_id=context.quote_set_id,
+        now=context.now,
+    )
     context.protectively_closed_symbols.update(before - set(context.account.positions))
     return count
 
@@ -475,64 +432,6 @@ def _apply_proposals(
     return accepted, rejected
 
 
-def _persist_engine_result(
-    db: Session,
-    result: EngineResult,
-    *,
-    account_id: str,
-    proposal_id: str | None,
-    idempotency_key: str,
-    kind: str,
-    executed_at: datetime,
-    quote_set_id: str,
-    event_sequence: int,
-) -> Order | None:
-    if not result.fills:
-        return None
-    order_id = str(uuid.uuid4())
-    order = Order(
-        id=order_id,
-        account_id=account_id,
-        proposal_id=proposal_id,
-        idempotency_key=idempotency_key,
-        kind=kind,
-        status="FILLED",
-        quote_set_id=quote_set_id,
-        event_sequence=event_sequence,
-    )
-    db.add(order)
-    db.flush()
-    for ordinal, fill in enumerate(result.fills):
-        db.add(
-            FillRow(
-                id=str(uuid.uuid4()),
-                order_id=order_id,
-                symbol=fill.symbol,
-                side=fill.side.value,
-                quantity=fill.quantity,
-                price=fill.price,
-                fee=fill.fee,
-                executed_at=executed_at,
-                ordinal=ordinal,
-            )
-        )
-    journal_id = str(uuid.uuid4())
-    db.add(LedgerJournal(id=journal_id, account_id=account_id, event_key=idempotency_key))
-    db.flush()
-    db.add_all(
-        [
-            LedgerPosting(
-                id=str(uuid.uuid4()),
-                journal_id=journal_id,
-                bucket=posting.bucket,
-                amount=posting.amount,
-            )
-            for posting in result.postings
-        ]
-    )
-    return order
-
-
 def _sync_positions(db: Session, context: _Context, changed_symbol: str) -> None:
     context.positions = _sync_position_rows(
         db,
@@ -543,218 +442,3 @@ def _sync_positions(db: Session, context: _Context, changed_symbol: str) -> None
         context.now,
     )
 
-
-def _sync_position_rows(
-    db: Session,
-    account_id: str,
-    positions: tuple[PositionRow, ...],
-    account: Account,
-    changed_symbol: str,
-    now: datetime,
-) -> tuple[PositionRow, ...]:
-    row_by_symbol = {row.symbol: row for row in positions if row.state == "OPEN"}
-    simulated = account.positions
-    position = simulated.get(changed_symbol)
-    row = row_by_symbol.get(changed_symbol)
-    if position is None:
-        if row is not None:
-            row.state = "CLOSED"
-            row.closed_at = now
-        return positions
-    if row is None:
-        row = PositionRow(
-            id=str(uuid.uuid4()),
-            account_id=account_id,
-            symbol=changed_symbol,
-            side=position.side.value,
-            quantity=position.quantity,
-            average_entry=position.average_entry,
-            reserved_margin=position.reserved_margin,
-            stop_loss=position.stop_loss,
-            take_profit=position.take_profit,
-            state="OPEN",
-            opened_at=now,
-        )
-        db.add(row)
-        return (*positions, row)
-    row.side = position.side.value
-    row.quantity = position.quantity
-    row.average_entry = position.average_entry
-    row.reserved_margin = position.reserved_margin
-    row.stop_loss = position.stop_loss
-    row.take_profit = position.take_profit
-    row.state = "OPEN"
-    return positions
-
-
-def _persist_account_and_equity(db: Session, context: _Context) -> None:
-    account = context.account
-    account_row = context.account_row
-    _persist_account_row(account_row, account)
-    if not context.quote_trusted:
-        return
-    marks = {symbol: quote.mark for symbol, quote in context.quotes.items()}
-    current_equity = equity(account, context.quotes, context.instruments)
-    unrealized = sum(
-        (
-            unrealized_pnl(position, marks[symbol], context.instruments[symbol].contract_multiplier)
-            for symbol, position in account.positions.items()
-        ),
-        Decimal("0"),
-    )
-    db.add(
-        EquitySample(
-            id=str(uuid.uuid4()),
-            account_id=account_row.id,
-            round_index=context.round.round_index,
-            logical_at=context.round.logical_at,
-            equity=current_equity,
-            realized_pnl=account.realized_pnl,
-            unrealized_pnl=unrealized,
-            fees=account.fees,
-            funding=account.funding,
-        )
-    )
-
-
-def _persist_account_row(account_row: AccountRow, account: Account) -> None:
-    account_row.cash = account.cash
-    account_row.realized_pnl = account.realized_pnl
-    account_row.fees = account.fees
-    account_row.funding = account.funding
-    account_row.reserved_margin = account.reserved_margin
-    account_row.halted = account.halted
-    account_row.peak_equity = account.peak_equity
-    account_row.daily_baseline_equity = account.daily_baseline_equity
-    account_row.risk_day = account.risk_day
-    account_row.version += 1
-
-
-def _append_event(
-    db: Session,
-    competition: Competition,
-    *,
-    account_id: str | None,
-    event_type: str,
-    payload: dict[str, Any],
-    at: datetime,
-) -> None:
-    competition.event_seq += 1
-    db.add(
-        DomainEvent(
-            id=str(uuid.uuid4()),
-            competition_id=competition.id,
-            sequence=competition.event_seq,
-            account_id=account_id,
-            event_type=event_type,
-            payload=payload,
-            event_at=at,
-        )
-    )
-
-
-def _account(
-    row: AccountRow, positions: tuple[PositionRow, ...], initial_balance: Decimal
-) -> Account:
-    initial = initial_balance
-    peak = initial
-    return Account(
-        initial_balance=initial,
-        cash=row.cash,
-        positions={
-            position.symbol: Position(
-                position.symbol,
-                Side(position.side),
-                position.quantity,
-                position.average_entry,
-                position.reserved_margin,
-                position.stop_loss,
-                position.take_profit,
-            )
-            for position in positions
-        },
-        realized_pnl=row.realized_pnl,
-        fees=row.fees,
-        funding=row.funding,
-        halted=row.halted,
-        peak_equity=row.peak_equity or peak,
-        daily_baseline_equity=row.daily_baseline_equity or initial,
-        risk_day=row.risk_day,
-    )
-
-
-def _rules(data: dict[str, Any]) -> Rules:
-    return rules_from_config(data)
-
-
-def _instruments(
-    snapshot_bytes: bytes, symbols: tuple[str, ...], rules: Rules
-) -> tuple[dict[str, Instrument], dict[str, int]]:
-    payload = _parse_json(snapshot_bytes)
-    raw_instruments = payload.get("instruments", [])
-    specs: dict[str, tuple[int, int]] = {}
-    if isinstance(raw_instruments, list):
-        for item in raw_instruments:
-            if isinstance(item, dict) and isinstance(item.get("symbol"), str):
-                decimals = item.get("size_decimals")
-                max_leverage = item.get("max_leverage")
-                if (
-                    isinstance(decimals, int)
-                    and not isinstance(decimals, bool)
-                    and 0 <= decimals <= 18
-                    and isinstance(max_leverage, int)
-                    and not isinstance(max_leverage, bool)
-                    and max_leverage >= 1
-                ):
-                    specs[item["symbol"]] = (decimals, max_leverage)
-    instruments: dict[str, Instrument] = {}
-    max_leverages: dict[str, int] = {}
-    for symbol in symbols:
-        decimals, max_leverage = specs.get(symbol, (6, int(rules.max_leverage)))
-        step = Decimal(1).scaleb(-decimals)
-        instruments[symbol] = Instrument(symbol, quantity_step=step, min_quantity=step)
-        max_leverages[symbol] = max_leverage
-    return instruments, max_leverages
-
-
-def _parse_json(body: bytes) -> dict[str, Any]:
-    try:
-        value = json.loads(body)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        raise ValueError("stored canonical JSON is invalid") from None
-    if not isinstance(value, dict):
-        raise ValueError("stored canonical JSON has an invalid shape")
-    return value
-
-
-def _string_list(value: object) -> list[str]:
-    if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
-        raise ValueError("competition symbol universe is invalid")
-    return value
-
-
-def _normalize_timestamp(value: datetime) -> datetime:
-    if value.tzinfo is None or value.utcoffset() is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
-
-
-def _timedelta_seconds(value: Any) -> Decimal:
-    return Decimal(value.days * 86400 + value.seconds) + Decimal(value.microseconds) / Decimal(
-        1_000_000
-    )
-
-
-def _timestamp_seconds(value: datetime) -> Decimal:
-    epoch = datetime(1970, 1, 1, tzinfo=UTC)
-    return _timedelta_seconds(_normalize_timestamp(value) - epoch)
-
-
-@contextmanager
-def _transaction(db: Session) -> Iterator[None]:
-    if db.in_transaction():
-        with db.begin_nested():
-            yield
-        return
-    with db.begin():
-        yield
