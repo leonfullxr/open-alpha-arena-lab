@@ -3,9 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeftRight, ArrowRight, ArrowUpRight, BriefcaseBusiness, MessageSquareText, NotebookText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { ActivityPanel, type ActivityTab } from './activity';
-import { getCompetition, getCompetitionMetrics, getEquityChart, getLeaderboard, type Benchmark, type EquityRange } from './api';
+import { type Benchmark, type EquityRange } from './api';
+import { competitionReadOptions, useCompetitionLiveStatus } from './competition-reads';
 import { EquityChart } from './equity-chart';
-import { useCompetitionStream } from './stream';
 import { AssetIcon } from './asset-action-icons';
 import { AgentLink, DataStatus, decimal, money, PageHeading, profileLabel, QueryState, timestamp } from './ui';
 
@@ -17,17 +17,12 @@ export default function CompetitionPage(): React.JSX.Element {
   const [tab, setTab] = useState<ActivityTab>('Live trades');
   const [chartRange, setChartRange] = useState<EquityRange>('ALL');
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const competitionQuery = useQuery({
-    queryKey: ['competition', competitionId],
-    queryFn: () => getCompetition(competitionId),
-    enabled: Boolean(competitionId),
-    refetchInterval: (query) => ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? 5_000 : false,
-  });
+  const competitionQuery = useQuery({ ...competitionReadOptions.liveCompetition(competitionId), enabled: Boolean(competitionId) });
   const competition = competitionQuery.data;
-  const leaderboard = useQuery({ queryKey: ['competition', competitionId, 'leaderboard'], queryFn: () => getLeaderboard(competitionId), enabled: Boolean(competitionId) });
-  const equity = useQuery({ queryKey: ['competition', competitionId, 'chart', chartRange], queryFn: () => getEquityChart(competitionId, chartRange), enabled: Boolean(competitionId) });
-  const metrics = useQuery({ queryKey: ['competition', competitionId, 'metrics'], queryFn: () => getCompetitionMetrics(competitionId), enabled: Boolean(competitionId) });
-  const stream = useCompetitionStream(competition);
+  const leaderboard = useQuery({ ...competitionReadOptions.leaderboard(competitionId), enabled: Boolean(competitionId) });
+  const equity = useQuery({ ...competitionReadOptions.chart(competitionId, chartRange), enabled: Boolean(competitionId) });
+  const metrics = useQuery({ ...competitionReadOptions.metrics(competitionId), enabled: Boolean(competitionId) });
+  const stream = useCompetitionLiveStatus();
   const leading = leaderboard.data?.[0];
   const benchmark = metrics.data?.benchmark;
 

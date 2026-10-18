@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight } from 'lucide-react';
-import { getCompetitionMetrics, getCompetitions, getLeaderboard, type AgentMetrics, type LeaderboardRow } from './api';
-import { useCompetitionStream } from './stream';
+import { type AgentMetrics, type LeaderboardRow } from './api';
+import { competitionReadOptions } from './competition-reads';
 import { AgentLink, decimal, money, PageHeading, profileLabel, QueryState } from './ui';
 
 type SortKey = 'agent_name' | 'equity' | 'roi_pct' | 'realized_pnl' | 'unrealized_pnl' | 'fees' | 'funding' | 'trade_count' | 'win_rate_pct' | 'profit_factor' | 'max_drawdown_pct' | 'sharpe_ratio' | 'average_leverage' | 'current_margin_used' | 'current_gross_exposure';
@@ -22,11 +22,10 @@ const metricViews: Record<Exclude<MetricView, 'custom'>, ColumnKey[]> = {
 export default function LeaderboardPage(): React.JSX.Element {
   const { competitionId = '' } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const competitions = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions });
+  const competitions = useQuery(competitionReadOptions.liveCompetitions());
   const selected = competitions.data?.find((item) => item.id === competitionId);
-  useCompetitionStream(selected);
-  const rowsQuery = useQuery({ queryKey: ['competition', competitionId, 'leaderboard'], queryFn: () => getLeaderboard(competitionId), enabled: Boolean(competitionId) });
-  const metrics = useQuery({ queryKey: ['competition', competitionId, 'metrics'], queryFn: () => getCompetitionMetrics(competitionId), enabled: Boolean(competitionId) });
+  const rowsQuery = useQuery({ ...competitionReadOptions.leaderboard(competitionId), enabled: Boolean(competitionId) });
+  const metrics = useQuery({ ...competitionReadOptions.metrics(competitionId), enabled: Boolean(competitionId) });
   const requestedSort = searchParams.get('sort');
   const sortKey: SortKey = requestedSort && sortKeys.includes(requestedSort as SortKey) ? requestedSort as SortKey : 'equity';
   const descending = searchParams.get('order') !== 'asc';

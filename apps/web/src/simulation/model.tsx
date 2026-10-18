@@ -3,9 +3,9 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, BriefcaseBusiness, MessageSquareText, ReceiptText } from 'lucide-react';
 import { ActivityPanel } from './activity';
-import { getCompetitionMetrics, getCompetitions, getEquityChart, getLeaderboard, getModel, type EquityRange } from './api';
+import { type EquityRange } from './api';
+import { competitionReadOptions } from './competition-reads';
 import { EquityChart } from './equity-chart';
-import { useCompetitionStream } from './stream';
 import { money, PageHeading, QueryState, StatusBadge } from './ui';
 
 const tabs = ['Overview', 'Fills', 'Positions', 'Decisions'] as const;
@@ -22,19 +22,19 @@ export default function ModelPage(): React.JSX.Element {
   const [tab, setTab] = useState<ModelTab>(initialTab);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [chartRange, setChartRange] = useState<EquityRange>('ALL');
-  const modelQuery = useQuery({ queryKey: ['model', agentId], queryFn: () => getModel(agentId), enabled: Boolean(agentId) });
-  const competitionsQuery = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions });
+  const modelQuery = useQuery({ ...competitionReadOptions.model(agentId), enabled: Boolean(agentId) });
+  const competitionsQuery = useQuery(competitionReadOptions.competitions());
   const model = modelQuery.data;
   const publicSettings = model ? Object.entries(model.public_settings).sort(([left], [right]) => left.localeCompare(right)) : [];
   const competition = competitionsQuery.data?.find((item) => item.id === competitionId && item.id === model?.competition_id);
-  const enabled = Boolean(competition);
-  const equity = useQuery({ queryKey: ['competition', competition?.id, 'chart', chartRange], queryFn: () => getEquityChart(competition!.id, chartRange), enabled });
-  const leaderboard = useQuery({ queryKey: ['competition', competition?.id, 'leaderboard'], queryFn: () => getLeaderboard(competition!.id), enabled });
-  const metrics = useQuery({ queryKey: ['competition', competition?.id, 'metrics'], queryFn: () => getCompetitionMetrics(competition!.id), enabled });
+  const enabled = Boolean(competition && competition.id === model?.competition_id);
+  const competitionReadId = enabled ? competition?.id ?? '' : '';
+  const equity = useQuery({ ...competitionReadOptions.chart(competitionReadId, chartRange), enabled });
+  const leaderboard = useQuery({ ...competitionReadOptions.leaderboard(competitionReadId), enabled });
+  const metrics = useQuery({ ...competitionReadOptions.metrics(competitionReadId), enabled });
   const agent = competition?.agents.find((item) => item.id === agentId);
   const account = leaderboard.data?.find((row) => row.agent_id === agentId);
   const risk = metrics.data?.agents.find((row) => row.agent_id === agentId);
-  useCompetitionStream(competition);
 
   useEffect(() => {
     const urlTab = tabs.find((item) => item.toLowerCase() === searchParams.get('tab'));
