@@ -95,7 +95,12 @@ def _validate_evidence_contract(
     source = snapshot.get("source")
     if source == "hyperliquid":
         _require_live_candle_evidence(frozen_rules, snapshot, candles)
-    elif source not in {"mock-worker", "DEMO REPLAY", "fixture-replay-v3"}:
+    elif source not in {
+        "mock-worker",
+        "DEMO REPLAY",
+        "fixture-replay-v3",
+        "fixture-replay-v4",
+    }:
         raise InputEvidenceError("live market input source is not approved")
     elif snapshot.get("candle_error") is not None:
         raise InputEvidenceError("fixture market input contains a candle failure")

@@ -32,7 +32,7 @@ def test_seeded_demo_ledger_reconciles_and_projection_drift_is_reported() -> Non
             competition_id = seed_demo(db, 20)
             initial = reconcile_ledger(db, competition_id=competition_id)
             assert initial.balanced, initial.mismatches
-            assert initial.accounts_checked == 2
+            assert initial.accounts_checked == 6
             assert initial.journals_checked > 0
 
             account = db.scalar(

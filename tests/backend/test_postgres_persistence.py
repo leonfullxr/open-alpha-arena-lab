@@ -62,7 +62,7 @@ def test_postgres_demo_hashes_immutability_balanced_ledger_and_process_restart()
             )
         )
         assert len(snapshots) == 20
-        assert len(attempts) == len(results) == 40
+        assert len(attempts) == len(results) == 120
         assert all(
             hashlib.sha256(row.canonical_bytes).hexdigest() == row.sha256 for row in snapshots
         )
@@ -72,19 +72,27 @@ def test_postgres_demo_hashes_immutability_balanced_ledger_and_process_restart()
         assert all(
             hashlib.sha256(row.output_bytes).hexdigest() == row.output_sha256 for row in results
         )
-        accounts = list(
-            db.scalars(
-                select(Account)
+        account_rows = list(
+            db.execute(
+                select(Account, AgentRun)
                 .join(AgentRun, AgentRun.id == Account.agent_run_id)
                 .where(AgentRun.competition_id == competition_id)
-                .order_by(Account.id)
+                .order_by(AgentRun.manifest_order)
             )
         )
-        assert len(accounts) == 2
+        assert [agent.name for _, agent in account_rows] == [
+            "Atlas",
+            "Vector",
+            "Grok (simulated)",
+            "Gemini (simulated)",
+            "Claude (simulated)",
+            "Codex (simulated)",
+        ]
+        accounts = [account for account, _ in account_rows]
         initial_samples = db.scalar(
             select(func.count()).select_from(EquitySample).where(EquitySample.round_index == 0)
         )
-        assert initial_samples == 2
+        assert initial_samples == 6
         assert all(str(row.cash) != "10000.000000000000000000" for row in accounts)
         snapshot_id, original_hash = snapshots[0].id, snapshots[0].sha256
         account_id = accounts[0].id

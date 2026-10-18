@@ -115,25 +115,26 @@ def _fixture_proposal(
 
 
 def seed_demo(db: Session, rounds: int = 20) -> str:
-    """Create a durable, deterministic fixture replay without rewriting older versions."""
+    """Create a durable, deterministic simulated-model replay without rewriting older versions."""
     if not 1 <= rounds <= 200:
         raise ValueError("rounds must be from 1 through 200")
 
     def fixture_id(name: str) -> str:
-        return stable_id(f"demo:v3:{rounds}:{name}")
+        return stable_id(f"demo:v4:{rounds}:{name}")
 
-    competition_name = f"Offline Paper Arena · fill evidence v3 · {rounds} rounds"
+    competition_name = f"Offline Paper Arena · simulated models v4 · {rounds} rounds"
     existing = db.scalar(select(Competition).where(Competition.name == competition_name))
     if existing:
         return existing.id
 
     rules_json = canonical_profile("alpha_2025_baseline")
-    rules_json["fixture_source"] = "fixture-replay-v3"
+    rules_json["fixture_source"] = "fixture-replay-v4"
     rules_bytes = canonical_json_bytes(rules_json)
     root = Path(__file__).resolve().parents[4]
     prompt_bytes = (root / "prompts/baseline-v1.md").read_bytes()
     competition_id = fixture_id("competition")
-    prompt_id = stable_id("demo:v3:prompt")
+    prompt_id = stable_id("demo:v4:prompt")
+    fixture_now = NOW + timedelta(days=1)
     competition = Competition(
         id=competition_id,
         name=competition_name,
@@ -142,9 +143,9 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
         rules_sha256=sha256_hex(rules_bytes),
         initial_balance=D("10000"),
         state="FINISHED",
-        source_label="DEMO REPLAY · fill evidence v3 · deterministic local fixtures",
-        started_at=NOW,
-        ended_at=NOW + timedelta(seconds=rounds * 180),
+        source_label="DEMO REPLAY · simulated model identities · deterministic local fixtures",
+        started_at=fixture_now,
+        ended_at=fixture_now + timedelta(seconds=rounds * 180),
         event_seq=0,
     )
     db.add(competition)
@@ -154,7 +155,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
             PromptVersion(
                 id=prompt_id,
                 name="baseline",
-                version=3,
+                version=4,
                 template_bytes=prompt_bytes,
                 sha256=sha256_hex(prompt_bytes),
             )
@@ -163,13 +164,25 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
         raise RuntimeError("fixture prompt version is immutable")
     db.flush()
 
+    # These public identities are for interface/replay testing only. Every run
+    # uses MockLLMAdapter and the offline fixture policy; no provider is called.
     agents = [
-        ("atlas", "Atlas", "MockLLMAdapter", "mock-atlas-v3", 0),
-        ("vector", "Vector", "MockLLMAdapter", "mock-vector-v3", 1),
+        ("atlas", "Atlas", "mock-atlas-v4", 0, "BTC", Action.OPEN_LONG, D("0.02")),
+        ("vector", "Vector", "mock-vector-v4", 1, "ETH", Action.OPEN_SHORT, D("0.5")),
+        ("grok", "Grok (simulated)", "grok-4-simulated", 2, "SOL", Action.OPEN_LONG, D("2")),
+        (
+            "gemini", "Gemini (simulated)", "gemini-2.5-pro-simulated", 3,
+            "ETH", Action.OPEN_LONG, D("0.45"),
+        ),
+        (
+            "claude", "Claude (simulated)", "claude-sonnet-4-simulated", 4,
+            "BTC", Action.OPEN_SHORT, D("0.01"),
+        ),
+        ("codex", "Codex (simulated)", "codex-simulated", 5, "XRP", Action.OPEN_LONG, D("1000")),
     ]
     state: dict[str, Account] = {}
     accounts: dict[str, str] = {}
-    for key, name, provider, model, order in agents:
+    for key, name, model, order, _, _, _ in agents:
         run_id, account_id = fixture_id(f"agent:{key}"), fixture_id(f"account:{key}")
         settings_bytes = canonical_json_bytes(
             {
@@ -186,7 +199,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                 competition_id=competition_id,
                 manifest_order=order,
                 name=name,
-                provider=provider,
+                provider="MockLLMAdapter",
                 model=model,
                 model_settings_bytes=settings_bytes,
                 settings_sha256=sha256_hex(settings_bytes),
@@ -207,20 +220,20 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                 halted=False,
                 peak_equity=D("10000"),
                 daily_baseline_equity=D("10000"),
-                risk_day=NOW.date(),
+                risk_day=fixture_now.date(),
                 version=0,
             )
         )
         accounts[key] = account_id
         state[key] = Account.create(D("10000"))
 
-    for key, _, _, _, _ in agents:
+    for key, *_ in agents:
         db.add(
             EquitySample(
                 id=fixture_id(f"equity:0:{key}"),
                 account_id=accounts[key],
                 round_index=0,
-                logical_at=NOW,
+                logical_at=fixture_now,
                 equity=D("10000"),
                 realized_pnl=D("0"),
                 unrealized_pnl=D("0"),
@@ -234,7 +247,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
     rules = _rules()
     seq = 0
     for index in range(1, rounds + 1):
-        at = NOW + timedelta(seconds=index * 180)
+        at = fixture_now + timedelta(seconds=index * 180)
         marks = fixture_prices(index)
         with localcontext() as context:
             context.prec = 60
@@ -250,7 +263,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
             }
         snapshot_payload = {
             "schema_version": 1,
-            "source": "fixture-replay-v3",
+            "source": "fixture-replay-v4",
             "indicator_policy": rules_json["indicator_policy"],
             "indicator_warmup_bars": rules_json["indicator_warmup_bars"],
             "round": index,
@@ -264,7 +277,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
         db.add(
             QuoteSet(
                 id=quote_set_id,
-                source="fixture-replay-v3",
+                source="fixture-replay-v4",
                 captured_at=at,
                 complete=True,
                 max_age_ms=0,
@@ -293,7 +306,7 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
                 id=snapshot_id,
                 canonical_bytes=snapshot_bytes,
                 sha256=snapshot_hash,
-                source_label="fixture-replay-v3",
+                source_label="fixture-replay-v4",
                 captured_at=at,
                 quote_set_id=quote_set_id,
             )
@@ -316,12 +329,10 @@ def seed_demo(db: Session, rounds: int = 20) -> str:
             s: Quote(s, D(quote_payload[s]["bid"]), D(quote_payload[s]["ask"]), marks[s])
             for s in SYMBOLS
         }
-        for key, _, _, model, _ in agents:
+        for key, _, model, _, symbol, open_action, open_quantity in agents:
             account = state[key]
-            symbol = "BTC" if key == "atlas" else "ETH"
             if index % 5 == 1 and symbol not in account.positions:
-                action = Action.OPEN_LONG if key == "atlas" else Action.OPEN_SHORT
-                quantity = D("0.02") if key == "atlas" else D("0.5")
+                action, quantity = open_action, open_quantity
             elif index % 5 == 3 and symbol in account.positions:
                 action, quantity = Action.CLOSE_POSITION, D("0")
             else:
