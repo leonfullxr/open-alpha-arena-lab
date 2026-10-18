@@ -1,123 +1,131 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ArrowLeftRight, ArrowRight, ArrowUpRight, BriefcaseBusiness, MessageSquareText, NotebookText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { getCompetition, getCompetitionMetrics, getEquityChart, getLeaderboard, nextPollInterval, retryPollInterval, type Benchmark, type EquityRange } from './api';
 import { ActivityPanel, type ActivityTab } from './activity';
-import { modelToneClass, profileTag } from './colors';
+import { getCompetition, getCompetitionMetrics, getEquityChart, getLeaderboard, type Benchmark, type EquityRange } from './api';
 import { EquityChart } from './equity-chart';
-import { useCompetitionStreamState } from './stream';
-import { AgentLink, DataStatus, money, percent, QueryState, StatusBadge, timestamp } from './ui';
+import { useCompetitionStream } from './stream';
+import { AssetIcon } from './asset-action-icons';
+import { AgentLink, DataStatus, decimal, money, PageHeading, profileLabel, QueryState, timestamp } from './ui';
 
-const recordTabs: ActivityTab[] = ['Live Trades', 'Positions', 'README.TXT'];
+const tabs: ActivityTab[] = ['Live trades', 'Model chat', 'Positions', 'Research notes'];
+const tabIcons = [ArrowLeftRight, MessageSquareText, BriefcaseBusiness, NotebookText];
 
 export default function CompetitionPage(): React.JSX.Element {
   const { competitionId = '' } = useParams();
+  const [tab, setTab] = useState<ActivityTab>('Live trades');
   const [chartRange, setChartRange] = useState<EquityRange>('ALL');
-  const [recordTab, setRecordTab] = useState<ActivityTab>('Live Trades');
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const competitionQuery = useQuery({
     queryKey: ['competition', competitionId],
     queryFn: () => getCompetition(competitionId),
     enabled: Boolean(competitionId),
-    refetchInterval: (query) => {
-      const recoveryInterval = retryPollInterval(query.state.error);
-      if (recoveryInterval !== false) return recoveryInterval;
-      return ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? nextPollInterval(5_000, query.state.error) : false;
-    },
+    refetchInterval: (query) => ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? 5_000 : false,
   });
   const competition = competitionQuery.data;
   const leaderboard = useQuery({ queryKey: ['competition', competitionId, 'leaderboard'], queryFn: () => getLeaderboard(competitionId), enabled: Boolean(competitionId) });
   const equity = useQuery({ queryKey: ['competition', competitionId, 'chart', chartRange], queryFn: () => getEquityChart(competitionId, chartRange), enabled: Boolean(competitionId) });
   const metrics = useQuery({ queryKey: ['competition', competitionId, 'metrics'], queryFn: () => getCompetitionMetrics(competitionId), enabled: Boolean(competitionId) });
-  const stream = useCompetitionStreamState();
+  const stream = useCompetitionStream(competition);
+  const leading = leaderboard.data?.[0];
   const benchmark = metrics.data?.benchmark;
-  const rows = leaderboard.data ?? [];
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number): void {
-    const nextIndex = event.key === 'ArrowRight' ? (index + 1) % recordTabs.length
-      : event.key === 'ArrowLeft' ? (index + recordTabs.length - 1) % recordTabs.length
+    const nextIndex = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+      : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length
         : event.key === 'Home' ? 0
-          : event.key === 'End' ? recordTabs.length - 1 : null;
+          : event.key === 'End' ? tabs.length - 1 : null;
     if (nextIndex === null) return;
     event.preventDefault();
-    setRecordTab(recordTabs[nextIndex]!);
+    setTab(tabs[nextIndex]!);
     tabRefs.current[nextIndex]?.focus();
   }
 
-  return <QueryState loading={competitionQuery.isLoading} error={competitionQuery.error} stale={Boolean(competitionQuery.data)} retry={() => void competitionQuery.refetch()}>
+  return <QueryState loading={competitionQuery.isLoading} error={competitionQuery.error} retry={() => void competitionQuery.refetch()}>
     {competition && <>
-      <header className="run-header">
-        <div className="run-title">
-          <p className="terminal-eyebrow">{profileTag(competition.profile)} · {competition.source_label}</p>
-          <h1>{competition.name}</h1>
-        </div>
-        <div className="run-header-side">
-          <StatusBadge state={competition.state} />
-          <DataStatus state={competition.state} label={streamLabel(competition.state, stream)} />
-          <span className="run-header-meta">{competition.started_at ? `${timestamp(competition.started_at)} → ${competition.ended_at ? timestamp(competition.ended_at) : 'open'}` : 'Not started'}</span>
-          <Link className="terminal-button" to={`/simulation/${encodeURIComponent(competition.id)}/leaderboard`}>FULL LEADERBOARD →</Link>
-        </div>
-      </header>
-      <QueryState loading={equity.isLoading} error={equity.error} stale={Boolean(equity.data)} retry={() => void equity.refetch()} empty={equity.data?.items.length === 0 ? 'The API has no equity points for this competition.' : undefined}>
-        {equity.data && <EquityChart agents={competition.agents} rows={equity.data.items} initialBalance={competition.initial_balance} sampleCount={equity.data.total_raw} sampled={equity.data.sampled} range={chartRange} onRangeChange={setChartRange} benchmark={benchmark} />}
-      </QueryState>
-      <section className="accounts-panel" aria-label="Model accounts">
-        <div className="panel-heading">
-          <div><p className="terminal-eyebrow">ACCOUNT VALUE · RANKED BY MARKED EQUITY</p><h2>MODEL ACCOUNTS</h2></div>
-          <span className="panel-count">{competition.agents.length} ACCOUNTS</span>
-        </div>
-        <QueryState loading={leaderboard.isLoading} error={leaderboard.error} stale={Boolean(leaderboard.data)} retry={() => void leaderboard.refetch()} empty={leaderboard.data?.length === 0 ? 'The API has no ranked accounts for this competition yet.' : undefined}>
-        {leaderboard.data && <div className="table-scroll accounts-table"><table><thead><tr>
-          <th>RANK</th><th>MODEL</th><th>PROVIDER / MODEL ID</th><th>EQUITY</th><th>RETURN</th><th>REALIZED</th><th>UNREALIZED</th><th>FEES</th><th>FUNDING</th><th>ORDERS</th><th>WIN RATE</th>
-        </tr></thead><tbody>
-          {rows.map((row, index) => {
-            const metric = metrics.data?.agents.find((item) => item.agent_id === row.agent_id);
-            const agent = competition.agents.find((item) => item.id === row.agent_id);
-            return <tr key={row.agent_id}>
-              <td className="tabular">{index + 1}</td>
-              <td><AgentLink id={row.agent_id} name={row.agent_name} model={row.model} competitionId={competition.id} toneClass={modelToneClass(competition.agents, row.agent_id)} /></td>
-              <td className="run-source">{agent ? `${agent.provider} · ${agent.model}` : row.model}</td>
-              <td className="tabular">{money(row.equity)}</td>
-              <td className={Number(row.roi_pct) >= 0 ? 'value-positive' : 'value-negative'}>{percent(row.roi_pct)}</td>
-              <td className="tabular">{money(row.realized_pnl)}</td>
-              <td className="tabular">{money(row.unrealized_pnl)}</td>
-              <td className="tabular">{money(row.fees)}</td>
-              <td className="tabular">{money(row.funding)}</td>
-              <td className="tabular">{row.trade_count}</td>
-              <td className="tabular">{percent(metric?.win_rate_pct)}</td>
-            </tr>;
-          })}
-        </tbody></table></div>
-        }
-        </QueryState>
-        <BenchmarkRow benchmark={benchmark} loading={metrics.isLoading} error={metrics.error} />
+      <PageHeading eyebrow={`${profileLabel(competition.profile)} · ${competition.source_label}`} title={competition.name} detail={`Started ${competition.started_at ? timestamp(competition.started_at) : 'not started'}${competition.ended_at ? ` · finished ${timestamp(competition.ended_at)}` : ''}`}>
+        <Link className="terminal-button" to={`/simulation/${encodeURIComponent(competition.id)}/leaderboard`}>Leaderboard <ArrowRight aria-hidden="true" size={15} /></Link>
+      </PageHeading>
+          <div className="run-status-line"><DataStatus state={competition.state} label={runLabel(competition.state, stream)} /><span>Every account starts with {money(competition.initial_balance)} virtual capital.</span></div>
+      <section className="overview-metrics" aria-label="Competition summary">
+        <Metric label="Competing models" value={String(competition.agents.length)} detail="Independent virtual accounts" />
+        <Metric label="Current leader" value={leading?.agent_name ?? 'Waiting for results'} detail={leading ? `${signedPercent(leading.roi_pct)} return` : 'No ranked account data yet'} />
+        <Metric label="Recorded fills" value={leaderboard.data ? leaderboard.data.reduce((total, row) => total + row.trade_count, 0).toLocaleString() : '—'} detail="Across all model accounts" />
+        <Metric label="Elapsed time" value={elapsed(competition.started_at, competition.ended_at)} detail={competition.state === 'RUNNING' ? 'Simulation clock' : competition.state === 'FINISHED' ? 'Final run duration' : 'Simulation duration'} />
       </section>
-      <section className="competition-records" aria-label="Competition records">
-        <div className="competition-record-tabs" role="tablist" aria-label="Competition records" aria-orientation="horizontal">{recordTabs.map((tab, index) => <button key={tab} ref={(element) => { tabRefs.current[index] = element; }} id={`competition-record-${slug(tab)}`} role="tab" type="button" tabIndex={recordTab === tab ? 0 : -1} aria-selected={recordTab === tab} aria-controls="competition-record-panel" onKeyDown={(event) => handleTabKeyDown(event, index)} onClick={() => setRecordTab(tab)}>{tab === 'Live Trades' ? 'TRADES' : tab === 'README.TXT' ? 'README.TXT' : tab.toUpperCase()}</button>)}</div>
-        <div id="competition-record-panel" role="tabpanel" aria-labelledby={`competition-record-${slug(recordTab)}`}><ActivityPanel key={competition.id} competitionId={competition.id} tab={recordTab} agents={competition.agents} /></div>
+      <div className="dashboard-grid">
+        <div className="dashboard-main">
+          <QueryState loading={equity.isLoading} error={equity.error} retry={() => void equity.refetch()} empty={equity.data?.items.length === 0 ? 'The API has no equity points for this competition.' : undefined}>
+            {equity.data && <EquityChart agents={competition.agents} rows={equity.data.items} initialBalance={competition.initial_balance} sampleCount={equity.data.total_raw} sampled={equity.data.sampled} range={chartRange} onRangeChange={setChartRange} benchmark={benchmark} />}
+          </QueryState>
+          <section className="account-summary" aria-label="Leaderboard preview">
+            <div className="account-summary-heading"><div><p className="terminal-eyebrow">Ranked by marked equity</p><h2>Leaderboard</h2></div><Link className="leaderboard-open" to={`/simulation/${encodeURIComponent(competition.id)}/leaderboard`}>Full analysis <ArrowUpRight aria-hidden="true" size={14} /></Link></div>
+            {leaderboard.isLoading ? <div className="query-state" role="status">Loading account rankings…</div> : leaderboard.error ? <div className="query-error" role="alert">{leaderboard.error.message} <button onClick={() => void leaderboard.refetch()}>Retry</button></div> : leaderboard.data?.length ? <div className="table-scroll compact-leaderboard" role="region" tabIndex={0} aria-label="Top model accounts, scroll horizontally for more columns"><table><thead><tr><th>Rank</th><th>Model</th><th>Return</th><th>Equity</th><th>Max drawdown</th><th>Fills</th></tr></thead><tbody>{leaderboard.data.slice(0, 6).map((row, index) => {
+              const risk = metrics.data?.agents.find((item) => item.agent_id === row.agent_id);
+              return <tr key={row.agent_id}><td>{index + 1}</td><td><AgentLink id={row.agent_id} name={row.agent_name} model={row.model} competitionId={competition.id} /></td><td className={Number(row.roi_pct) >= 0 ? 'value-positive' : 'value-negative'}>{signedPercent(row.roi_pct)}</td><td>{money(row.equity)}</td><td>{risk?.max_drawdown_pct == null ? 'N/A' : `${Number(risk.max_drawdown_pct).toFixed(2)}%`}</td><td>{row.trade_count.toLocaleString()}</td></tr>;
+            })}</tbody></table></div> : <div className="query-state">No ranked account data is available yet.</div>}
+            <BenchmarkTile benchmark={benchmark} loading={metrics.isLoading} />
+            {metrics.isError && <p className="leader-note">Competition metrics unavailable: {metrics.error.message}</p>}
+          </section>
+        </div>
+      </div>
+      <section className="dashboard-activity" aria-label="Competition activity">
+        <div className="activity-workspace-heading"><div><p className="terminal-eyebrow">Inspect the public record</p><h2>Activity &amp; evidence</h2></div><span>Fills, decisions, positions and research notes</span></div>
+          <div className="tab-list" role="tablist" aria-label="Competition records" aria-orientation="horizontal">{tabs.map((item, index) => { const Icon = tabIcons[index]!; return <button key={item} ref={(element) => { tabRefs.current[index] = element; }} id={`tab-${slug(item)}`} role="tab" tabIndex={tab === item ? 0 : -1} aria-selected={tab === item} aria-controls="activity-panel" onKeyDown={(event) => handleTabKeyDown(event, index)} onClick={() => setTab(item)}><Icon aria-hidden="true" size={15} />{item}</button>; })}</div>
+          <div id="activity-panel" role="tabpanel" aria-labelledby={`tab-${slug(tab)}`}>
+            <ActivityPanel competitionId={competition.id} tab={tab} agents={competition.agents} />
+          </div>
       </section>
     </>}
   </QueryState>;
 }
 
-function slug(value: string): string { return value.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
-
-function streamLabel(state: string, stream: 'paused' | 'connected' | 'reconnecting'): string {
-  if (state === 'RUNNING') return stream === 'connected' ? 'EVENT STREAM CONNECTED' : stream === 'reconnecting' ? 'RECONNECTING · 5 S REFRESH' : 'CONNECTING';
-  if (state === 'PAUSED') return 'PAUSED · 5 S REFRESH';
-  return state;
+function Metric({ label, value, detail }: { label: string; value: string; detail: string }): React.JSX.Element {
+  return <div className="overview-metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>;
 }
 
-function BenchmarkRow({ benchmark, loading, error }: { benchmark: Benchmark | null | undefined; loading: boolean; error: Error | null }): React.JSX.Element {
-  return <div className="benchmark-row">
-    <div className="benchmark-heading"><span className="terminal-eyebrow">BENCHMARK</span><strong>{benchmark?.label ?? 'BTC buy-and-hold summary'}</strong></div>
-    {benchmark
-      ? <>
-        <span className="benchmark-value">{money(benchmark.equity)}</span>
-        <span className={Number(benchmark.roi_pct) >= 0 ? 'value-positive' : 'value-negative'}>{percent(benchmark.roi_pct)}</span>
-        <span className="benchmark-detail">{money(benchmark.start_price)} → {money(benchmark.end_price)} · {benchmark.symbol} · fee {percent(Number(benchmark.fee_rate) * 100, 2)} · slippage {Number(benchmark.slippage_bps).toFixed(1)} bps</span>
-        <span className="benchmark-detail">{benchmark.method}</span>
-      </>
-      : <span className="benchmark-detail">{loading ? 'Loading the API benchmark summary…' : error ? `Benchmark unavailable: ${error.message}` : 'The API returned no benchmark summary for this competition.'}</span>}
+function signedPercent(value: string): string {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? `${amount > 0 ? '+' : ''}${amount.toFixed(2)}%` : 'N/A';
+}
+
+function elapsed(start: string | null, end: string | null): string {
+  if (!start) return 'Not started';
+  const startMs = new Date(start).valueOf();
+  const endMs = end ? new Date(end).valueOf() : Date.now();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) return 'N/A';
+  const minutes = Math.floor((endMs - startMs) / 60_000);
+  const days = Math.floor(minutes / 1_440);
+  const hours = Math.floor((minutes % 1_440) / 60);
+  const remainder = minutes % 60;
+  return days ? `${days}d ${hours}h` : hours ? `${hours}h ${remainder}m` : `${remainder}m`;
+}
+
+function runLabel(state: string, stream: 'paused' | 'connected' | 'reconnecting'): string {
+  if (state === 'RUNNING') return stream === 'connected' ? 'Live event stream connected' : stream === 'reconnecting' ? 'Reconnecting - refreshing every 5 seconds' : 'Connecting to live updates';
+  if (state === 'PAUSED') return 'Competition updates paused';
+  if (state === 'FINISHED') return 'Final record - updates stopped';
+  if (state === 'DRAFT') return 'Draft - not started';
+  return state.toLocaleLowerCase().replace(/^\p{L}/u, (letter) => letter.toLocaleUpperCase());
+}
+
+function BenchmarkTile({ benchmark, loading }: { benchmark: Benchmark | null | undefined; loading: boolean }): React.JSX.Element {
+  const returnPct = benchmark ? Number(benchmark.roi_pct) : null;
+  return <div className="benchmark-tile">
+    <div className="benchmark-heading">
+      <div className="benchmark-title"><strong>{benchmark ? benchmark.label.replace(benchmark.symbol, '').trim() || 'Buy & hold' : 'Buy & hold'}</strong><span><AssetIcon symbol={benchmark?.symbol ?? 'BTC'} size={17} /></span></div>
+      <div className="benchmark-value"><span>Ending equity</span><strong>{benchmark ? money(benchmark.equity) : loading ? 'Loading…' : 'N/A'}</strong></div>
+    </div>
+    {benchmark && returnPct !== null ? <>
+      <p className={`benchmark-return ${returnPct >= 0 ? 'value-positive' : 'value-negative'}`}>{returnPct > 0 ? '+' : ''}{decimal(returnPct)}% return</p>
+      <dl className="benchmark-assumptions">
+        <div className="benchmark-price-window"><dt>Price window</dt><dd><span><small>Start</small><strong>{money(benchmark.start_price)}</strong></span><span className="benchmark-arrow" aria-hidden="true">→</span><span><small>End</small><strong>{money(benchmark.end_price)}</strong></span></dd></div>
+        <div><dt>Fee</dt><dd>{decimal(Number(benchmark.fee_rate) * 100)}%</dd></div>
+        <div><dt>Slippage</dt><dd>{decimal(benchmark.slippage_bps, 1)} bps</dd></div>
+      </dl>
+    </> : <p className="benchmark-unavailable" role="status">{loading ? 'Loading benchmark data…' : 'No benchmark summary is available for this competition.'}</p>}
   </div>;
 }
+
+function slug(value: string): string { return value.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
