@@ -146,4 +146,3 @@ def _transaction(db: Session) -> Iterator[None]:
         return
     with db.begin():
         yield
-

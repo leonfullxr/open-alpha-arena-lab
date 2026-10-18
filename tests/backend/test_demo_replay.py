@@ -298,12 +298,14 @@ def test_demo_is_durable_idempotent_and_reproducible_after_engine_restart(tmp_pa
         assert preserved_v2_prompt.template_bytes == legacy_v2_prompt_bytes
         fixture_prompt = db.get(PromptVersion, stable_id("demo:v4:prompt"))
         assert fixture_prompt is not None and fixture_prompt.version == 4
-        agents = list(
-            db.scalars(select(AgentRun).where(AgentRun.competition_id == competition_id))
-        )
+        agents = list(db.scalars(select(AgentRun).where(AgentRun.competition_id == competition_id)))
         assert {agent.name for agent in agents} == {
-            "Atlas", "Vector", "Grok (simulated)", "Gemini (simulated)",
-            "Claude (simulated)", "Codex (simulated)",
+            "Atlas",
+            "Vector",
+            "Grok (simulated)",
+            "Gemini (simulated)",
+            "Claude (simulated)",
+            "Codex (simulated)",
         }
         assert all(agent.provider == "MockLLMAdapter" for agent in agents)
         original_leaderboard = [

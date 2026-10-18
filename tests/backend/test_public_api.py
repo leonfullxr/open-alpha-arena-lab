@@ -67,9 +67,7 @@ def test_public_endpoints_emit_safe_paged_durable_demo_data() -> None:
             assert equity["total"] == 126
             assert equity["limit"] == 5 and equity["offset"] == 0
 
-            chart = client.get(
-                f"{root}/competitions/{competition_id}/chart?range=ALL&points=3"
-            )
+            chart = client.get(f"{root}/competitions/{competition_id}/chart?range=ALL&points=3")
             chart_body = chart.json()
             assert chart.status_code == 200
             assert chart_body["range"] == "ALL"
@@ -405,9 +403,7 @@ def test_live_ticker_uses_latest_collector_snapshot_and_unknown_competition_is_4
             assert response.status_code == 200, response.text
             assert response.json()[0]["mark"] == "100"
             assert response.json()[0]["stale"] is False
-            assert client.get(
-                "/ticker?competition_id=missing-competition"
-            ).status_code == 404
+            assert client.get("/ticker?competition_id=missing-competition").status_code == 404
     finally:
         public_app.dependency_overrides.pop(get_db, None)
         engine.dispose()

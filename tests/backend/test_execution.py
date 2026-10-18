@@ -596,9 +596,7 @@ def test_protective_exit_runs_without_response_or_complete_quote_universe() -> N
     assert db.scalar(select(func.count()).select_from(Order)) == 2
     protective_order = db.scalar(select(Order).where(Order.kind == "PROTECTIVE_EXIT"))
     protective_fill = db.scalar(
-        select(Fill)
-        .join(Order, Order.id == Fill.order_id)
-        .where(Order.kind == "PROTECTIVE_EXIT")
+        select(Fill).join(Order, Order.id == Fill.order_id).where(Order.kind == "PROTECTIVE_EXIT")
     )
     protective_event = db.scalar(
         select(DomainEvent).where(DomainEvent.event_type == "position.protective_exit")

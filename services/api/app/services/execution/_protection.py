@@ -229,5 +229,3 @@ def _engine_quote(row: MarketQuote, now: datetime) -> Quote:
         _timedelta_seconds(now - source_at),
         _timestamp_seconds(source_at),
     )
-
-

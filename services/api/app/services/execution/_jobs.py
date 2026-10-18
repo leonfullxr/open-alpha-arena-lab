@@ -108,9 +108,7 @@ def execute_job(
                 False,
             )
 
-        accepted, rejected = _apply_proposals(
-            db, context, batch, allow_new_entries=ledger_clean
-        )
+        accepted, rejected = _apply_proposals(db, context, batch, allow_new_entries=ledger_clean)
         _persist_account_and_equity(db, context)
         context.job.state = "TERMINAL"
         context.job.terminal_result = "SUCCESS" if rejected == 0 else "RISK_REJECTED"
@@ -441,4 +439,3 @@ def _sync_positions(db: Session, context: _Context, changed_symbol: str) -> None
         changed_symbol,
         context.now,
     )
-

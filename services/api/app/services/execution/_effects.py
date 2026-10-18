@@ -192,4 +192,3 @@ def _append_event(
             event_at=at,
         )
     )
-
