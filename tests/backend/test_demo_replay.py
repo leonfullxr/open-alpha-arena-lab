@@ -212,20 +212,20 @@ def test_demo_is_durable_idempotent_and_reproducible_after_engine_restart(tmp_pa
             persisted_ended_at = persisted_ended_at.replace(tzinfo=UTC)
         assert last_logical_at <= persisted_ended_at
         first_values = [(row.account_id, row.round_index, str(row.equity)) for row in snapshot]
-        assert len(first_values) == 42
+        assert len(first_values) == 126
         assert all(
             value == "10000.000000000000000000"
             for _, round_index, value in first_values
             if round_index == 0
         )
         assert all(row.equity > Decimal("0") for row in snapshot)
-        assert db.scalar(select(func.count()).select_from(InvocationAttempt)) == 40
-        assert db.scalar(select(func.count()).select_from(InvocationResult)) == 40
-        assert db.scalar(select(func.count()).select_from(TradeProposal)) == 80
-        assert db.scalar(select(func.count()).select_from(RiskEvaluation)) == 80
+        assert db.scalar(select(func.count()).select_from(InvocationAttempt)) == 120
+        assert db.scalar(select(func.count()).select_from(InvocationResult)) == 120
+        assert db.scalar(select(func.count()).select_from(TradeProposal)) == 240
+        assert db.scalar(select(func.count()).select_from(RiskEvaluation)) == 240
         decisions = list(db.scalars(select(RiskEvaluation).order_by(RiskEvaluation.id)))
-        assert sum(row.decision == "ACCEPTED" for row in decisions) == 40
-        assert sum(row.decision == "REJECTED" for row in decisions) == 40
+        assert sum(row.decision == "ACCEPTED" for row in decisions) == 120
+        assert sum(row.decision == "REJECTED" for row in decisions) == 120
         assert all(
             row.reasons == [] if row.decision == "ACCEPTED" else len(row.reasons) == 1
             for row in decisions
@@ -272,9 +272,9 @@ def test_demo_is_durable_idempotent_and_reproducible_after_engine_restart(tmp_pa
             assert all(fill.executed_at == round_row.logical_at for fill in order_fills)
         # Repeating the seed returns the existing replay without appending any rows.
         assert seed_demo(db, 20) == competition_id
-        assert db.scalar(select(func.count()).select_from(EquitySample)) == 42
-        assert db.scalar(select(func.count()).select_from(TradeProposal)) == 80
-        assert db.scalar(select(func.count()).select_from(RiskEvaluation)) == 80
+        assert db.scalar(select(func.count()).select_from(EquitySample)) == 126
+        assert db.scalar(select(func.count()).select_from(TradeProposal)) == 240
+        assert db.scalar(select(func.count()).select_from(RiskEvaluation)) == 240
         assert db.get(Competition, legacy_id) == legacy
         preserved_v2 = db.get(Competition, legacy_v2_id)
         assert preserved_v2 is not None
@@ -296,8 +296,18 @@ def test_demo_is_durable_idempotent_and_reproducible_after_engine_restart(tmp_pa
         preserved_v2_prompt = db.get(PromptVersion, stable_id("demo:v2:prompt"))
         assert preserved_v2_prompt is not None
         assert preserved_v2_prompt.template_bytes == legacy_v2_prompt_bytes
-        fixture_prompt = db.get(PromptVersion, stable_id("demo:v3:prompt"))
-        assert fixture_prompt is not None and fixture_prompt.version == 3
+        fixture_prompt = db.get(PromptVersion, stable_id("demo:v4:prompt"))
+        assert fixture_prompt is not None and fixture_prompt.version == 4
+        agents = list(db.scalars(select(AgentRun).where(AgentRun.competition_id == competition_id)))
+        assert {agent.name for agent in agents} == {
+            "Atlas",
+            "Vector",
+            "Grok (simulated)",
+            "Gemini (simulated)",
+            "Claude (simulated)",
+            "Codex (simulated)",
+        }
+        assert all(agent.provider == "MockLLMAdapter" for agent in agents)
         original_leaderboard = [
             str(a.cash) for a in db.scalars(select(Account).order_by(Account.id))
         ]
@@ -352,7 +362,7 @@ def test_demo_is_durable_idempotent_and_reproducible_after_engine_restart(tmp_pa
                 rules_bytes = base64.b64decode(rules_body["bytes_base64"], validate=True)
                 assert hashlib.sha256(rules_bytes).hexdigest() == rules_body["sha256"]
                 assert rules_bytes == competition.rules_bytes
-                assert rules_body["public"]["fixture_source"] == "fixture-replay-v3"
+                assert rules_body["public"]["fixture_source"] == "fixture-replay-v4"
                 assert rules_body["withheld_fields"] is False
                 assert rules_body["bytes_withheld"] is False
                 trade_response = client.get(
@@ -389,7 +399,7 @@ def test_demo_is_durable_idempotent_and_reproducible_after_engine_restart(tmp_pa
                 )
                 assert decision_page.status_code == 200
                 body = decision_page.json()
-                assert body["total"] == 40
+                assert body["total"] == 120
                 decision = body["items"][0]
                 assert decision["validation_status"] == "VALID"
                 assert decision["execution_result"] == "SUCCESS"

@@ -8,7 +8,8 @@
     "api:generate": "openapi-typescript contracts/public.openapi.json -o apps/web/src/api/public.generated.ts && openapi-typescript contracts/admin.openapi.json -o apps/web/src/admin/admin.generated.ts",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
-    "check": "npm run typecheck && npm run build"
+    "test:frontend": "node --test tests/frontend/*.test.mjs",
+    "check": "npm run typecheck && npm run test:frontend && npm run build"
   },
   "dependencies": {
     "@tanstack/react-query": "5.90.2",

@@ -9,6 +9,7 @@ dev-down:
 
 test:
 	npm run typecheck
+	npm run test:frontend
 	PYTHONPATH=services/api uv run pytest
 
 lint:
@@ -24,6 +25,7 @@ check:
 	git diff --exit-code -- apps/web/src/api/public.generated.ts apps/web/src/admin/admin.generated.ts
 	npm run typecheck
 	npm run build
+	npm run test:frontend
 	uv run ruff check services/api tests
 	uv run mypy services/api
 	PYTHONPATH=services/api uv run pytest

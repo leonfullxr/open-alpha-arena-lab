@@ -877,7 +877,7 @@ def test_offline_workers_complete_twenty_rounds_with_two_agents_across_restart(
 
     monkeypatch.setattr("app.worker._MAX_PARALLEL_DISPATCH", 1)
     monkeypatch.setattr("app.worker.reconcile_ledger", sqlite_numeric_is_balanced)
-    monkeypatch.setattr("app.services.execution.reconcile_ledger", sqlite_numeric_is_balanced)
+    monkeypatch.setattr("app.services.execution._jobs.reconcile_ledger", sqlite_numeric_is_balanced)
     _run_twenty_round_worker_lifecycle(tmp_path, lambda path: create_engine(f"sqlite:///{path}"))
 
 

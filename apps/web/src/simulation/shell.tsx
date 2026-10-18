@@ -1,8 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, Bot, LayoutDashboard, Moon, PanelLeftClose, PanelLeftOpen, Sun, Trophy } from 'lucide-react';
-import { getCompetition, getCompetitions, getStatus, getTicker } from './api';
+import { CompetitionLiveStatusProvider, useCompetitionWorkspace } from './competition-reads';
 import { AssetIcon } from './asset-action-icons';
 import { marketPrice } from './ui';
 
@@ -14,24 +13,14 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
   const [collapsed, setCollapsed] = useState(() => window.localStorage.getItem('oaal-sidebar') === 'collapsed');
   useEffect(() => { window.localStorage.setItem('oaal-theme', dark ? 'dark' : 'light'); }, [dark]);
   useEffect(() => { window.localStorage.setItem('oaal-sidebar', collapsed ? 'collapsed' : 'expanded'); }, [collapsed]);
-  const competitions = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions, refetchInterval: 15_000 });
   const pathCompetition = location.pathname.split('/')[2];
-  const scoped = useQuery({
-    queryKey: ['competition', pathCompetition ?? ''],
-    queryFn: () => getCompetition(pathCompetition ?? ''),
-    enabled: Boolean(pathCompetition),
-    refetchInterval: (query) => ['RUNNING', 'PAUSED', 'DRAFT'].includes(query.state.data?.state ?? '') ? 5_000 : false,
-  });
-  const scopedCompetition = scoped.data;
-  const refreshMarket = scopedCompetition?.state === 'RUNNING' || scopedCompetition?.state === 'PAUSED';
-  const status = useQuery({ queryKey: ['status'], queryFn: getStatus, refetchInterval: refreshMarket ? 5_000 : false });
-  const ticker = useQuery({ queryKey: ['ticker', scopedCompetition?.id], queryFn: () => getTicker(scopedCompetition?.id), refetchInterval: refreshMarket ? 5_000 : false });
-  const selected = scopedCompetition ?? competitions.data?.[0];
+  const workspace = useCompetitionWorkspace(pathCompetition);
+  const { competitions, scopedCompetition, selected, status, ticker, marketRefreshing: refreshMarket, liveStatus } = workspace;
   const competitionPath = selected ? `/simulation/${encodeURIComponent(selected.id)}` : '/simulation';
   const stale = ticker.data?.some((quote) => quote.stale) ?? false;
   const tickerLabel = status.isError || ticker.isError ? 'API unavailable' : refreshMarket ? stale ? 'Stale market data' : 'Refreshing market data' : scopedCompetition ? 'Market refresh stopped' : 'Market data idle';
 
-  return <div className="terminal" data-theme={dark ? 'dark' : 'light'}>
+  return <CompetitionLiveStatusProvider state={liveStatus}><div className="terminal" data-theme={dark ? 'dark' : 'light'}>
     <a className="terminal-skip" href="#terminal-main">Skip to content</a>
     <div className={`terminal-shell${collapsed ? ' is-collapsed' : ''}`}>
       <aside className="terminal-sidebar">
@@ -77,7 +66,7 @@ export function SimulationShell({ children }: { children: ReactNode }): React.JS
         <footer className="terminal-footer"><span>Open Alpha Arena Lab</span><span>Paper trading · public evidence</span><a href="/#methodology">Methodology <ArrowUpRight aria-hidden="true" size={13} /></a></footer>
       </div>
     </div>
-  </div>;
+  </div></CompetitionLiveStatusProvider>;
 }
 
 function formatTimestamp(value: string): string {

@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowUpRight, FileSearch2 } from 'lucide-react';
 import { ActionIcon, AssetIcon } from './asset-action-icons';
-import { getArtifact, getCompetitionRules, getDecisionHistory, getFundingEvidence, getFundingHistory, getPositionHistory, getTradeHistory, type Agent, type Decision, type FundingEvidence, type FundingPayment, type Position, type RulesArtifact, type Trade } from './api';
+import { getArtifact, getFundingEvidence, type Agent, type Decision, type FundingEvidence, type FundingPayment, type Position, type RulesArtifact, type Trade } from './api';
+import { competitionReadOptions } from './competition-reads';
 import { decimal, money, timestamp } from './ui';
 
 export type ActivityTab = 'Live trades' | 'Model chat' | 'Positions' | 'Research notes';
@@ -42,9 +43,9 @@ export function ActivityPanel({ tab, competitionId, agentId, agents = [], highli
   }, [tab, setSearchParams]);
   const effectiveAgent = agentId ?? selectedAgent;
   const query = { limit: PAGE_SIZE, offset: page * PAGE_SIZE, ...(effectiveAgent ? { agent_id: effectiveAgent } : {}), ...(symbol ? { symbol } : {}) };
-  const trades = useQuery({ queryKey: ['competition', competitionId, 'trades', query], queryFn: () => getTradeHistory(competitionId, query), enabled: Boolean(competitionId) && tab === 'Live trades' });
-  const decisions = useQuery({ queryKey: ['competition', competitionId, 'decisions', query], queryFn: () => getDecisionHistory(competitionId, query), enabled: Boolean(competitionId) && tab === 'Model chat' });
-  const positions = useQuery({ queryKey: ['competition', competitionId, 'positions', query], queryFn: () => getPositionHistory(competitionId, query), enabled: Boolean(competitionId) && tab === 'Positions' });
+  const trades = useQuery({ ...competitionReadOptions.trades(competitionId, query), enabled: Boolean(competitionId) && tab === 'Live trades' });
+  const decisions = useQuery({ ...competitionReadOptions.decisions(competitionId, query), enabled: Boolean(competitionId) && tab === 'Model chat' });
+  const positions = useQuery({ ...competitionReadOptions.positions(competitionId, query), enabled: Boolean(competitionId) && tab === 'Positions' });
   const active = tab === 'Live trades' ? trades : tab === 'Model chat' ? decisions : tab === 'Positions' ? positions : undefined;
   const total = active?.data?.total ?? 0;
   const pageCount = Math.ceil(total / PAGE_SIZE);
@@ -148,7 +149,7 @@ function FundingSection({ competitionId, agentId, symbol }: { competitionId: str
   const [page, setPage] = useState(0);
   useEffect(() => { setPage(0); }, [competitionId, agentId, symbol]);
   const query = { limit: PAGE_SIZE, offset: page * PAGE_SIZE, ...(agentId ? { agent_id: agentId } : {}), ...(symbol ? { symbol } : {}) };
-  const funding = useQuery({ queryKey: ['competition', competitionId, 'funding', query], queryFn: () => getFundingHistory(competitionId, query), enabled: Boolean(competitionId) });
+  const funding = useQuery({ ...competitionReadOptions.funding(competitionId, query), enabled: Boolean(competitionId) });
   const total = funding.data?.total ?? 0;
   const pageCount = Math.ceil(total / PAGE_SIZE);
   useEffect(() => {
@@ -291,7 +292,7 @@ function shortHash(value: string | null): string {
 }
 
 function Readme({ competitionId }: { competitionId: string }): React.JSX.Element {
-  const rules = useQuery({ queryKey: ['competition', competitionId, 'rules'], queryFn: () => getCompetitionRules(competitionId), enabled: Boolean(competitionId) });
+  const rules = useQuery({ ...competitionReadOptions.rules(competitionId), enabled: Boolean(competitionId) });
   return <div className="readme-content">
     <h3>Reading this competition</h3>
     <p>Records are served by the public API. Finished paper runs use saved market and account records; their source label identifies the run. They are not a live trading session.</p>

@@ -2,7 +2,7 @@
 
 An open laboratory for AI trading experiments. Models receive shared market data, manage independent virtual accounts, and publish their decisions and execution evidence. Paper trading only. Independent project; not affiliated with Nof1.
 
-The editorial landing and competition terminal load separately. Default startup uses a deterministic 20-round offline replay with two mock agents. It needs no provider credentials and makes no external requests at runtime.
+The editorial landing and competition terminal load separately. Default startup uses a deterministic 20-round offline replay with six simulated model identities, all backed by mock adapters. It needs no provider credentials and makes no external requests at runtime.
 
 The approved landing and simulation frontend are deployed on the persistent Workers.dev host. The public data backend is not configured, and the proposed custom-domain route is not configured. See the [session closeout](docs/session-closeout-2026-10-16.md) for the current release state and next work.
 

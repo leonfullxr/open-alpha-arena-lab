@@ -30,10 +30,21 @@ def test_public_endpoints_emit_safe_paged_durable_demo_data() -> None:
         competition_id = seed_demo(db, 20)
         competition = db.get(Competition, competition_id)
         assert competition is not None
-        agent = db.scalar(
-            select(AgentRun).where(AgentRun.competition_id == competition_id).limit(1)
+        agents = list(
+            db.scalars(
+                select(AgentRun)
+                .where(AgentRun.competition_id == competition_id)
+                .order_by(AgentRun.manifest_order)
+            )
         )
-        assert agent is not None
+        assert [agent.name for agent in agents] == [
+            "Atlas",
+            "Vector",
+            "Grok (simulated)",
+            "Gemini (simulated)",
+            "Claude (simulated)",
+            "Codex (simulated)",
+        ]
 
     def test_session():
         with Session(engine) as db:
@@ -53,19 +64,20 @@ def test_public_endpoints_emit_safe_paged_durable_demo_data() -> None:
             equity = equity_response.json()
             assert equity_response.status_code == 200
             assert len(equity["items"]) == 5
-            assert equity["total"] == 42
+            assert equity["total"] == 126
             assert equity["limit"] == 5 and equity["offset"] == 0
 
-            chart = client.get(
-                f"{root}/competitions/{competition_id}/chart?range=ALL&points=3"
-            )
+            chart = client.get(f"{root}/competitions/{competition_id}/chart?range=ALL&points=3")
             chart_body = chart.json()
             assert chart.status_code == 200
             assert chart_body["range"] == "ALL"
             assert chart_body["points"] == 3
-            assert chart_body["total_raw"] == 42
+            assert chart_body["total_raw"] == 126
             assert chart_body["sampled"]
-            assert len(chart_body["items"]) <= 6
+            assert len(chart_body["items"]) == 18
+            assert {item["agent_id"] for item in chart_body["items"]} == {
+                agent.id for agent in agents
+            }
             for agent_id in {item["agent_id"] for item in chart_body["items"]}:
                 agent_points = [
                     item for item in chart_body["items"] if item["agent_id"] == agent_id
@@ -86,14 +98,14 @@ def test_public_endpoints_emit_safe_paged_durable_demo_data() -> None:
             )
             decisions = decisions_response.json()
             assert decisions_response.status_code == 200
-            assert len(decisions["items"]) == 2 and decisions["total"] == 40
+            assert len(decisions["items"]) == 2 and decisions["total"] == 120
             first = decisions["items"][0]
             assert "reasoning" not in first and "private_reasoning" not in first
             artifact = client.get(first["artifact_url"])
             assert artifact.status_code == 200
             assert artifact.json()["prompt_sha256"] == first["prompt_sha256"]
 
-            model = client.get(f"{root}/models/{agent.id}").json()
+            model = client.get(f"{root}/models/{agents[0].id}").json()
             assert model["source_label"] == "DEMO REPLAY"
             assert "api_key_env" not in model and "api_key" not in model
             before = len(client.get(f"{root}/competitions").json())
@@ -391,9 +403,7 @@ def test_live_ticker_uses_latest_collector_snapshot_and_unknown_competition_is_4
             assert response.status_code == 200, response.text
             assert response.json()[0]["mark"] == "100"
             assert response.json()[0]["stale"] is False
-            assert client.get(
-                "/ticker?competition_id=missing-competition"
-            ).status_code == 404
+            assert client.get("/ticker?competition_id=missing-competition").status_code == 404
     finally:
         public_app.dependency_overrides.pop(get_db, None)
         engine.dispose()

@@ -45,6 +45,7 @@ jobs:
       - run: git diff --exit-code -- apps/web/src/api/public.generated.ts apps/web/src/admin/admin.generated.ts
       - run: npm run build
       - run: npm run typecheck
+      - run: npm run test:frontend
       - run: npm ci --prefix deploy/worker
       - run: npm --prefix deploy/worker run typecheck
       - run: npm --prefix deploy/worker test

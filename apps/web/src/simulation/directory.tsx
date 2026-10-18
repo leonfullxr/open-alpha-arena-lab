@@ -1,11 +1,12 @@
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
-import { getCompetitions, type Competition } from './api';
+import { type Competition } from './api';
+import { competitionReadOptions } from './competition-reads';
 import { money, PageHeading, QueryState, StatusBadge } from './ui';
 
 export default function DirectoryPage(): React.JSX.Element {
-  const query = useQuery({ queryKey: ['competitions'], queryFn: getCompetitions });
+  const query = useQuery(competitionReadOptions.competitions());
   const baseline = query.data?.filter((item) => item.profile === 'alpha_2025_baseline') ?? [];
   const extended = query.data?.filter((item) => item.profile === 'research_extended') ?? [];
   const other = query.data?.filter((item) => item.profile !== 'alpha_2025_baseline' && item.profile !== 'research_extended') ?? [];

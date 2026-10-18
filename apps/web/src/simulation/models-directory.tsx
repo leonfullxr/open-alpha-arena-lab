@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { getCompetition, getLeaderboard } from './api';
+import { competitionReadOptions } from './competition-reads';
 import { AgentLink, money, PageHeading, QueryState } from './ui';
 
 export default function ModelsDirectoryPage(): React.JSX.Element {
   const { competitionId = '' } = useParams();
-  const competition = useQuery({ queryKey: ['competition', competitionId], queryFn: () => getCompetition(competitionId), enabled: Boolean(competitionId) });
-  const rankings = useQuery({ queryKey: ['competition', competitionId, 'leaderboard'], queryFn: () => getLeaderboard(competitionId), enabled: Boolean(competitionId) });
+  const competition = useQuery({ ...competitionReadOptions.competition(competitionId), enabled: Boolean(competitionId) });
+  const rankings = useQuery({ ...competitionReadOptions.leaderboard(competitionId), enabled: Boolean(competitionId) });
 
   return <QueryState loading={competition.isLoading} error={competition.error} retry={() => void competition.refetch()}>
     {competition.data && <>

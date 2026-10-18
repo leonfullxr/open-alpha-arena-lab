@@ -14,6 +14,8 @@ Inference dispatch is not exactly-once: uncertain dispatches are audited and nev
 
 Public API `/api/v1/public/*` is read-only, bounded and separately documented. Admin API `/api/v1/admin/*` requires authenticated RBAC and uses a separate OpenAPI document and frontend types. This intentionally refines the master brief's shared endpoint prefix.
 
+The simulation frontend owns public read keys and query options in one module. Competition, leaderboard, chart, metrics, filtered history, model, status and ticker observers reuse those typed options across routes. The shell owns one live subscription for the selected route competition; stream events and reconnect polling refresh matching public reads, including model status. Permanent API errors do not refresh automatically, and retryable errors wait through their typed cooldown or `Retry-After`. Competition rules and evidence artifacts remain view-owned immutable reads.
+
 Planned production path: browser -> Worker with Static Assets -> service-authenticated Cloudflare Tunnel -> Debian API. Fixed origin `https://arena-origin.leonfuller.com`; planned custom-domain frontend target `arena.leonfuller.com`. Worker allowlists paths and methods, strips visitor internal headers, streams SSE, and validates admin Access JWT independently of backend RBAC. The origin transport token does not grant visitor admin rights. Local Argon2id sessions and production Access modes are mutually exclusive. Default offline demo makes no external requests.
 
 The [Worker guide](../deploy/worker/README.md) describes the frontend-only deployment boundary. The [session closeout](session-closeout-2026-10-16.md) records the current release and hosted route status. Plan and review backend resources as a separate deployment. Tailscale remains the server recovery channel.
@@ -31,3 +33,9 @@ The Worker validates the visitor's Access JWT and forwards that same signed valu
 Financial operations use a Decimal precision-60 context. Amounts are quantized to 18 fractional digits before ledger balancing and insertion, with numeric(38,18) overflow rejected. Exact snapshot/prompt bytes are hashed before storing; queryable JSON is not the evidence hash source.
 
 Inference leases govern dispatch and whether a provider response is accepted. Once a timely response is durably `RESPONDED`, paper execution uses the current job/attempt fences and database row locks; it does not expire with the inference lease. Execution performs no external I/O, and committed terminal outcomes are idempotent. Reconciliation checks the persisted pre-execution account/ledger snapshot before inline protective effects; drift blocks new entries while protective exits remain available.
+
+## Paper execution ownership
+
+The paper execution package owns applying responded jobs and running independent protective exit cycles. Its public entry points are `execute_job` and `run_protective_exit_cycle`; they return the canonical `ExecutionReceipt` and `ProtectionCycleReceipt` types. Both paths use shared account, position, fill, ledger, and event persistence operations. The entry points call shared operations to load execution context, apply protective checks, and persist effects. Those shared operations do not call either public entry point.
+
+Each entry point uses one SQLAlchemy transaction. If the `Session` already has a transaction, the operation runs in a nested transaction (savepoint) and leaves the outer transaction under its caller's control. Otherwise, the operation starts and commits a transaction. The independent protective exit cycle keeps its scan and effects for all competitions in that transaction, so an error rolls back the cycle's changes together.
